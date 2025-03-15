@@ -188,6 +188,19 @@ func dropMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]stru
 	return false, nil
 }
 
+func keepMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]struct{}) (bool, error) {
+	for d := range *checks {
+		value, err := expr.Run(d, *params)
+		if err != nil {
+			return false, fmt.Errorf("failed to evaluate : %v", err.Error())
+		}
+		if value.(bool) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func normalizeUnits(message lp2.CCMessage) (bool, error) {
 	if in_unit, ok := message.GetMeta("unit"); ok {
 		u := units.NewUnit(in_unit)

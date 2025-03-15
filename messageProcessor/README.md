@@ -34,6 +34,15 @@ The message processor uses the following configuration
 		"tag.hostname == 'this_host'",
 		"meta.unit != 'MB'"
 	],
+	"keep_messages": [
+		"name_of_message_to_keep"
+	],
+	"keep_messages_if": [
+		"condition_when_to_keep_message",
+		"name == 'keep_this'",
+		"tag.hostname == 'this_host'",
+		"meta.unit != 'MB'"
+	],
 	"rename_messages" : {
 		"old_message_name" : "new_message_name"
 	},
@@ -151,7 +160,28 @@ The options `change_unit_prefix` and `normalize_units` are only applied to CCMet
 
 With `add_base_env`, one can specifiy mykey=myvalue pairs that can be used in conditions like `tag.type == mykey`.
 
-The order in which each message is processed, can be specified with the `stage_order` option. The stage names are the keys in the JSON configuration, thus `change_unit_prefix`, `move_field_to_meta_if`, etc. Stages can be listed multiple times.
+The order in which each message is processed, can be specified with the `stage_order` option. The stage names are the keys in the JSON configuration, thus `change_unit_prefix`, `move_field_to_meta_if`, etc. Stages can be listed multiple times. If no `stage_order` is provided, the stages are traversed in the following order:
+1. `drop_by_name`
+2. `drop_by_type`
+3. `drop_if`
+4. `keep_by_name`
+5. `keep_if`
+6. `add_tag`
+7. `delete_tag`
+8. `move_tag_to_meta`
+9. `move_tag_to_fields`
+10. `add_meta`
+11. `delete_meta`
+12. `move_meta_to_tags`
+13. `move_meta_to_fields`
+14. `add_field`
+15. `delete_field`
+16. `move_field_to_tags`
+17. `move_field_to_meta`
+18. `rename`
+19. `rename_if`
+20. `change_unit_prefix`
+21. `normalize_unit`
 
 ### Using the component
 In order to load the configuration from a `json.RawMessage`:
