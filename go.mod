@@ -7,7 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/ClusterCockpit/cc-backend v1.4.2
 	github.com/ClusterCockpit/cc-units v0.4.0
-	github.com/expr-lang/expr v1.16.9
+	github.com/expr-lang/expr v1.17.0
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/influxdata/line-protocol v0.0.0-20210922203350-b1ad95c89adf
