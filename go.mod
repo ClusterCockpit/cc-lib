@@ -6,6 +6,7 @@ toolchain go1.24.0
 
 require (
 	github.com/ClusterCockpit/cc-backend v1.4.2
+	github.com/ClusterCockpit/cc-metric-collector v0.7.0
 	github.com/ClusterCockpit/cc-units v0.4.0
 	github.com/expr-lang/expr v1.17.0
 	github.com/gorilla/mux v1.8.1
@@ -15,6 +16,7 @@ require (
 	github.com/nats-io/nats.go v1.39.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/stmcginnis/gofish v0.20.0
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f
 )
 
