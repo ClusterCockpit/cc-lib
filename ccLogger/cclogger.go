@@ -143,10 +143,18 @@ func Info(v ...interface{}) {
 	InfoLog.Output(2, printStr(v...))
 }
 
+func ComponentInfo(component string, v ...interface{}) {
+	InfoLog.Print(fmt.Sprintf("[%s] ", component), v)
+}
+
 // Prints to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warn(v ...interface{}) {
 	WarnLog.Output(2, printStr(v...))
+}
+
+func ComponentWarn(component string, v ...interface{}) {
+	WarnLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
 // Prints to ERROR writer without string formatting; application continues.
