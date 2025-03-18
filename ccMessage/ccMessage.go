@@ -33,6 +33,34 @@ const (
 	CCMSG_TYPE_INVALID = MAX_CCMSG_TYPE + 1
 )
 
+func (t CCMessageType) String() string {
+	switch t {
+	case CCMSG_TYPE_EVENT:
+		return "event"
+	case CCMSG_TYPE_METRIC:
+		return "metric"
+	case CCMSG_TYPE_LOG:
+		return "log"
+	case CCMSG_TYPE_CONTROL:
+		return "control"
+	}
+	return "invalid"
+}
+
+func (t CCMessageType) FieldKey() string {
+	switch t {
+	case CCMSG_TYPE_EVENT:
+		return "event"
+	case CCMSG_TYPE_METRIC:
+		return "value"
+	case CCMSG_TYPE_LOG:
+		return "log"
+	case CCMSG_TYPE_CONTROL:
+		return "control"
+	}
+	return "invalid"
+}
+
 // Most functions are derived from github.com/influxdata/line-protocol/metric.go
 // The metric type is extended with an extra meta information list re-using the Tag
 // type.
@@ -260,6 +288,12 @@ func NewMessage(
 		meta:   maps.Clone(meta),
 		fields: make(map[string]interface{}, len(fields)),
 		tm:     tm,
+	}
+	if m.tags == nil {
+		m.tags = make(map[string]string)
+	}
+	if m.meta == nil {
+		m.meta = make(map[string]string)
 	}
 
 	// deep copy fields
