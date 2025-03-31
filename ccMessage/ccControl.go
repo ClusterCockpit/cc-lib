@@ -45,10 +45,6 @@ func (m *ccMessage) IsControl() bool {
 	return false
 }
 
-func (m *ccMessage) IsControlMessage() bool {
-	return m.IsControl()
-}
-
 func (m *ccMessage) GetControlValue() string {
 	if m.IsControl() {
 		if v, ok := m.GetField("control"); ok {

@@ -120,6 +120,9 @@ type CCMessage interface {
 	GetLogValue() string
 	IsEvent() bool
 	GetEventValue() string
+	IsControl() bool
+	GetControlValue() string
+	GetControlMethod() string
 }
 
 // String implements the stringer interface for data type ccMessage
