@@ -12,7 +12,7 @@ hugo_path: docs/reference/cc-lib/messageProcessor/_index.md
 
 # Message Processor Component
 
-Multiple parts of in the ClusterCockit ecosystem require the processing of CCMessages.
+Multiple parts of in the ClusterCockpit ecosystem require the processing of CCMessages.
 The main CC application using it is `cc-metric-collector`. The processing part there was originally in the metric router, the central
 hub connecting collectors (reading local data), receivers (receiving remote data) and sinks (sending data). Already in early stages, the
 lack of flexibility caused some trouble:
