@@ -37,5 +37,5 @@ The `prometheus` sink publishes all metrics via an HTTP server ready to be scrap
 - `port`: Portnumber (as string) for the HTTP server
 - `path`: Path where the metrics should be servered. The metrics will be published at `host`:`port`/`path`
 - `group_as_namespace`: Most metrics contain a group as meta information like 'memory', 'load'. With this the metric names are extended to `group`_`name` if possible.
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)

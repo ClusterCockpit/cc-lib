@@ -56,7 +56,7 @@ The `influxasync` sink uses the official [InfluxDB golang client](https://pkg.go
 - `max_retries`: Maximal number of retry attempts
 - `max_retry_time`: Maximal time to retry failed writes, default 168h (one week)
 - `precision`: Precision of the timestamp. Valid values are 's', 'ms', 'us' and 'ns'. (default is 's')
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)
 
 For information about the calculation of the retry interval settings, see [offical influxdb-client-go documentation](https://github.com/influxdata/influxdb-client-go#handling-of-failed-async-writes)

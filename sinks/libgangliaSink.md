@@ -41,7 +41,7 @@ The `libganglia` sink has probably less overhead compared to the `ganglia` sink 
 - `add_ganglia_group`: Add a Ganglia metric group based on meta information. Some old versions of `gmetric` do not support the `--group` option
 - `add_type_to_name`: Ganglia commonly uses only node-level metrics but with cc-metric-collector, there are metrics for cpus, memory domains, CPU sockets and the whole node. In order to get  eeng, this option prefixes the metric name with `<type><type-id>_` or `device_` depending on the metric tags and meta information. For metrics of the whole node `type=node`, no prefix is added
 - `add_units`: Add metric value unit if there is a `unit` entry in the metric tags or meta information
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md)  (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md)  (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)
 
 ### Ganglia Installation

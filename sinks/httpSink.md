@@ -47,7 +47,7 @@ The `http` sink uses POST requests to a HTTP server to submit the metrics in the
 - `flush_delay`: Batch all writes arriving in during this duration (default '1s', batching can be disabled by setting it to 0)
 - `batch_size`: Maximal batch size. If `batch_size` is reached before the end of `flush_delay`, the metrics are sent without further delay
 - `precision`: Precision of the timestamp. Valid values are 's', 'ms', 'us' and 'ns'. (default is 's')
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)
 
 ### Using `http` sink for communication with cc-metric-store
