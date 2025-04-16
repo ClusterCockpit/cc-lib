@@ -1,3 +1,15 @@
+<!--
+---
+title: Message processor for ClusterCockpit
+description: Message processor for filtering and manipulating ClusterCockpit messages
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/messageProcessor/_index.md
+---
+-->
+
+
 # Message Processor Component
 
 Multiple parts of in the ClusterCockit ecosystem require the processing of CCMessages.

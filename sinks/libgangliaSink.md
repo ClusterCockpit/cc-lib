@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to Ganglia
+description: Message sink for Ganglia monitoring system using `libganglia`
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/libganglia.md
+---
+-->
+
 ## `libganglia` sink
 
 The `libganglia` sink interacts directly with the library of the [Ganglia Monitoring System](http://ganglia.info/) to submit the metrics. Consequently, it needs to be installed on all nodes. But this is commonly the case if you want to use Ganglia, because it requires at least a node daemon (`gmond` or `ganglia-monitor`) to work.

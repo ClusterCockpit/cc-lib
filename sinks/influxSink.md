@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to InfluxDB
+description: Message sink for InfluxDB
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/influx.md
+---
+-->
+
 ## `influxdb` sink
 
 The `influxdb` sink uses the official [InfluxDB golang client](https://pkg.go.dev/github.com/influxdata/influxdb-client-go/v2) to write the metrics to an InfluxDB database in a **blocking** fashion. It provides only support for V2 write endpoints (InfluxDB 1.8.0 or later).

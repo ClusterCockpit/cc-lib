@@ -1,3 +1,15 @@
+<!--
+---
+title: Message sink to NATS
+description: Message sink to NATS pub/sub network
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/nats.md
+---
+-->
+
+
 ## `nats` sink
 
 The `nats` sink publishes all metrics into a NATS network. The publishing key is the database name provided in the configuration file

@@ -1,3 +1,14 @@
+<!--
+---
+title: Message receivers
+description: Message receivers for ClusterCockpit
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/_index.md
+---
+-->
+
 # CCMetric receivers
 
 This folder contains the ReceiveManager and receiver implementations for the cc-metric-collector.

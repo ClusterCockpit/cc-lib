@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to HTTP
+description: Message sink for HTTP endpoints
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/http.md
+---
+-->
+
 ## `http` sink
 
 The `http` sink uses POST requests to a HTTP server to submit the metrics in the InfluxDB line-protocol format. It uses JSON web tokens for authentification. The sink creates batches of metrics before sending, to reduce the HTTP traffic.

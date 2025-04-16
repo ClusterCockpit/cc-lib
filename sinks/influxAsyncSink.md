@@ -1,3 +1,15 @@
+<!--
+---
+title: Message sink to InfluxDB (async)
+description: Message sink for InfluxDB using asynchronous sending methods
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/influx_async.md
+---
+-->
+
+
 ## `influxasync` sink
 
 The `influxasync` sink uses the official [InfluxDB golang client](https://pkg.go.dev/github.com/influxdata/influxdb-client-go/v2) to write the metrics to an InfluxDB database in a **non-blocking** fashion. It provides only support for V2 write endpoints (InfluxDB 1.8.0 or later).

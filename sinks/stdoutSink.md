@@ -1,3 +1,15 @@
+<!--
+---
+title: Message sink to stdout or file
+description: Message sink to stdout or file
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/stdout.md
+---
+-->
+
+
 ## `stdout` sink
 
 The `stdout` sink is the most simple sink provided by cc-metric-collector. It writes all metrics in InfluxDB line-procol format to the configurable output file or the common special files `stdout` and `stderr`.

@@ -1,3 +1,15 @@
+<!--
+---
+title: Message receiver for NATS pub-sub networks
+description: Message receiver for NATS pub-sub networks
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/nats.md
+---
+-->
+
+
 ## `nats` receiver
 
 The `nats` receiver can be used receive metrics from the NATS network. The `nats` receiver subscribes to the topic `database` and listens on `address` and `port` for metrics in the InfluxDB line protocol.

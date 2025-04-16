@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to Ganglia
+description: Message sink for Ganglia monitoring system using `gmetric`
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/ganglia.md
+---
+-->
+
 ## `ganglia` sink
 
 The `ganglia` sink uses the `gmetric` tool of the [Ganglia Monitoring System](http://ganglia.info/) to submit the metrics
