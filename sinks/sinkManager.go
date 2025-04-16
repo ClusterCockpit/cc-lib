@@ -31,17 +31,6 @@ type SinkManager interface {
 	Close()
 }
 
-// Map of all available sinks
-var AvailableSinks = map[string]func(name string, config json.RawMessage) (Sink, error){
-	"ganglia":     NewGangliaSink,
-	"stdout":      NewStdoutSink,
-	"nats":        NewNatsSink,
-	"influxdb":    NewInfluxSink,
-	"influxasync": NewInfluxAsyncSink,
-	"http":        NewHttpSink,
-	"prometheus":  NewPrometheusSink,
-}
-
 // Metric collector manager data structure
 type sinkManager struct {
 	input      chan lp.CCMessage // input channel
