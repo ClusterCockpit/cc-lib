@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to InfluxDB
+description: Message sink for InfluxDB
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/influx.md
+---
+-->
+
 ## `influxdb` sink
 
 The `influxdb` sink uses the official [InfluxDB golang client](https://pkg.go.dev/github.com/influxdata/influxdb-client-go/v2) to write the metrics to an InfluxDB database in a **blocking** fashion. It provides only support for V2 write endpoints (InfluxDB 1.8.0 or later).
@@ -38,7 +49,7 @@ The `influxdb` sink uses the official [InfluxDB golang client](https://pkg.go.de
 - `flush_delay`: Group metrics coming in to a single batch
 - `batch_size`: Maximal batch size. If `batch_size` is reached before the end of `flush_delay`, the metrics are sent without further delay
 - `precision`: Precision of the timestamp. Valid values are 's', 'ms', 'us' and 'ns'. (default is 's')
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)
 
 Influx client options:

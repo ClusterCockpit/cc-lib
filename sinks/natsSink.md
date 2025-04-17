@@ -1,3 +1,15 @@
+<!--
+---
+title: Message sink to NATS
+description: Message sink to NATS pub/sub network
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/nats.md
+---
+-->
+
+
 ## `nats` sink
 
 The `nats` sink publishes all metrics into a NATS network. The publishing key is the database name provided in the configuration file
@@ -33,7 +45,7 @@ The `nats` sink publishes all metrics into a NATS network. The publishing key is
 - `nkey_file`: Path to credentials file with NKEY
 - `flush_delay`: Maximum time until metrics are sent out (default '5s')
 - `precision`: Precision of the timestamp. Valid values are 's', 'ms', 'us' and 'ns'. (default is 's')
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md)  (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md)  (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)
 
 ### Using `nats` sink for communication with cc-metric-store

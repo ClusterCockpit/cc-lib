@@ -1,3 +1,15 @@
+<!--
+---
+title: Message sink to mimic a Prometheus endpoint
+description: Message sink to mimic a Prometheus endpoint
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/prometheus.md
+---
+-->
+
+
 ## `prometheus` sink
 
 The `prometheus` sink publishes all metrics via an HTTP server ready to be scraped by a [Prometheus](https://prometheus.io) server. It creates gauge metrics for all node metrics and gauge vectors for all metrics with a subtype like 'device', 'cpu' or 'socket'. 
@@ -25,5 +37,5 @@ The `prometheus` sink publishes all metrics via an HTTP server ready to be scrap
 - `port`: Portnumber (as string) for the HTTP server
 - `path`: Path where the metrics should be servered. The metrics will be published at `host`:`port`/`path`
 - `group_as_namespace`: Most metrics contain a group as meta information like 'memory', 'load'. With this the metric names are extended to `group`_`name` if possible.
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)

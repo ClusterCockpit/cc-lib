@@ -1,3 +1,14 @@
+<!--
+---
+title: Message receiver for IPMI endpoints
+description: Query metrics from remote IPMI sources
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/ipmi.md
+---
+-->
+
 ## IPMI Receiver
 
 The IPMI Receiver uses `ipmi-sensors` from the [FreeIPMI](https://www.gnu.org/software/freeipmi/) project to read IPMI sensor readings and sensor data repository (SDR) information. The available metrics depend on the sensors provided by the hardware vendor but typically contain temperature, fan speed, voltage and power metrics.

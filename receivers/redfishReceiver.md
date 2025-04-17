@@ -1,3 +1,14 @@
+<!--
+---
+title: Message receiver for Redfish endpoints
+description: Query metrics from remote Redfish sources
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/redfish.md
+---
+-->
+
 ## Redfish receiver
 
 The Redfish receiver uses the [Redfish (specification)](https://www.dmtf.org/standards/redfish) to query thermal and power metrics. Thermal metrics may include various fan speeds and temperatures. Power metrics may include the current power consumption of various hardware components. It may also include the minimum, maximum and average power consumption of these components in a given time interval. The receiver will poll each configured redfish device once in a given interval. Multiple devices can be accessed in parallel to increase throughput.

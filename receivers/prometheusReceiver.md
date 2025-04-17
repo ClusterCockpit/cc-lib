@@ -1,3 +1,15 @@
+<!--
+---
+title: Message scraper for Prometheus
+description: Message scraper for Prometheus monitoring endpoints
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/prometheus.md
+---
+-->
+
+
 ## `prometheus` receiver
 
 The `prometheus` receiver can be used to scrape the metrics of a single `prometheus` client. It does **not** use any official Golang library but making simple HTTP get requests and parse the response.

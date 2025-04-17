@@ -1,3 +1,14 @@
+<!--
+---
+title: Message receivers
+description: Message receivers for ClusterCockpit
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/_index.md
+---
+-->
+
 # CCMetric receivers
 
 This folder contains the ReceiveManager and receiver implementations for the cc-metric-collector.
@@ -23,10 +34,10 @@ This allows to specify
 - [`prometheus`](./prometheusReceiver.md): Scrape data from a Prometheus client
 - [`http`](./httpReceiver.md): Listen for HTTP Post requests transporting metrics in InfluxDB line protocol
 - [`ipmi`](./ipmiReceiver.md): Read IPMI sensor readings
-- [`redfish`](redfishReceiver.md) Use the Redfish (specification) to query thermal and power metrics
+- [`redfish`](./redfishReceiver.md) Use the Redfish (specification) to query thermal and power metrics
 
 ## Contributing own receivers
 
 A receiver contains a few functions and is derived from the type `Receiver` (in `metricReceiver.go`):
 
-For an example, check the [sample receiver](./sampleReceiver.go)
+For an example, check the [sample receiver](https://github.com/ClusterCockpit/cc-lib/blob/main/receivers/sampleReceiver.go)
