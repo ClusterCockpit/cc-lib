@@ -14,7 +14,7 @@ func NewGetControl(name string,
 	meta map[string]string,
 	tm time.Time,
 ) (CCMessage, error) {
-	m, err := NewMessage(name, tags, meta, map[string]interface{}{"control": ""}, tm)
+	m, err := NewMessage(name, tags, meta, map[string]any{"control": ""}, tm)
 	if err == nil {
 		m.AddTag("method", "GET")
 	}
@@ -27,7 +27,7 @@ func NewPutControl(name string,
 	value string,
 	tm time.Time,
 ) (CCMessage, error) {
-	m, err := NewMessage(name, tags, meta, map[string]interface{}{"control": value}, tm)
+	m, err := NewMessage(name, tags, meta, map[string]any{"control": value}, tm)
 	if err == nil {
 		m.AddTag("method", "PUT")
 	}

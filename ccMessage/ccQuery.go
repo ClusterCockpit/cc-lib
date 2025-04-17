@@ -9,17 +9,17 @@ import (
 	"time"
 )
 
-func NewLog(name string,
+func NewQuery(name string,
 	tags map[string]string,
 	meta map[string]string,
-	log string,
+	q string,
 	tm time.Time,
 ) (CCMessage, error) {
-	return NewMessage(name, tags, meta, map[string]any{"log": log}, tm)
+	return NewMessage(name, tags, meta, map[string]any{"query": q}, tm)
 }
 
-func (m *ccMessage) IsLog() bool {
-	if v, ok := m.GetField("log"); ok {
+func (m *ccMessage) IsQuery() bool {
+	if v, ok := m.GetField("query"); ok {
 		if reflect.TypeOf(v) == reflect.TypeOf("string") {
 			return true
 		}
@@ -27,9 +27,9 @@ func (m *ccMessage) IsLog() bool {
 	return false
 }
 
-func (m *ccMessage) GetLogValue() string {
+func (m *ccMessage) GetQueryValue() string {
 	if m.IsLog() {
-		if v, ok := m.GetField("log"); ok {
+		if v, ok := m.GetField("query"); ok {
 			return v.(string)
 		}
 	}
