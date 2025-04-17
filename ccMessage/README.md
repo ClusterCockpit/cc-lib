@@ -1,3 +1,14 @@
+<!--
+---
+title: ClusterCockpit messages
+description: Description of ClusterCockpit message format and interface
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/ccMessage/_index.md
+---
+-->
+
 # ClusterCockpit messages
 
 As described in the [ClusterCockpit specifications](https://github.com/ClusterCockpit/cc-specifications), the whole ClusterCockpit stack uses metrics, events and control in the InfluxDB line protocol format. This is also the input and output format for the ClusterCockpit Metric Collector but internally it uses an extended format while processing, named CCMessage.

@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sink to Ganglia
+description: Message sink for Ganglia monitoring system using `gmetric`
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/ganglia.md
+---
+-->
+
 ## `ganglia` sink
 
 The `ganglia` sink uses the `gmetric` tool of the [Ganglia Monitoring System](http://ganglia.info/) to submit the metrics
@@ -21,5 +32,5 @@ The `ganglia` sink uses the `gmetric` tool of the [Ganglia Monitoring System](ht
 - `type`: makes the sink an `ganglia` sink
 - `gmetric_path`: Path to `gmetric` executable (optional). If not given, the sink searches in `$PATH` for `gmetric`.
 - `add_ganglia_group`: Add `--group=X` based on meta information to the `gmetric` call. Some old versions of `gmetric` do not support the `--group` option.
-- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../pkg/messageProcessor/README.md) (optional)
+- `process_messages`: Process messages with given rules before progressing or dropping, see [here](../messageProcessor/README.md) (optional)
 - `meta_as_tags`: print all meta information as tags in the output (deprecated, optional)

@@ -1,3 +1,14 @@
+<!--
+---
+title: Message sinks
+description: Message sinks for ClusterCockpit
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/sinks/_index.md
+---
+-->
+
 # CCMetric sinks
 
 This folder contains the SinkManager and sink implementations for the cc-metric-collector.

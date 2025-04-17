@@ -1,3 +1,14 @@
+<!--
+---
+title: Message receiver for HTTP
+description: Receiving messages over HTTP from remote sources
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/receivers/http.md
+---
+-->
+
 ## `http` receiver
 
 The `http` receiver can be used receive metrics through HTTP POST requests.
