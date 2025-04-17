@@ -106,20 +106,20 @@ func printfStr(format string, v ...interface{}) string {
 // Prints to STDOUT without string formatting; application continues.
 // Used for special cases not requiring log information like date or location.
 func Print(v ...interface{}) {
-	fmt.Fprint(os.Stdout, v...)
+	fmt.Fprintln(os.Stdout, v...)
 }
 
 // Prints to STDOUT without string formatting; application exits with error code 0.
 // Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
 func Exit(v ...interface{}) {
-	fmt.Fprint(os.Stdout, v...)
+	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(0)
 }
 
 // Prints to STDOUT without string formatting; application exits with error code 1.
 // Used for terminating with message after to be expected errors, e.g. wrong arguments or during init().
 func Abort(v ...interface{}) {
-	fmt.Fprint(os.Stdout, v...)
+	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(1)
 }
 
@@ -130,7 +130,7 @@ func ComponentPrint(component string, v ...interface{}) {
 // Prints to DEBUG writer without string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debug(v ...interface{}) {
-	DebugLog.Output(2, printStr(v...))
+	DebugLog.Output(3, printStr(v...))
 }
 
 func ComponentDebug(component string, v ...interface{}) {
@@ -140,7 +140,7 @@ func ComponentDebug(component string, v ...interface{}) {
 // Prints to INFO writer without string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Info(v ...interface{}) {
-	InfoLog.Output(2, printStr(v...))
+	InfoLog.Output(3, printStr(v...))
 }
 
 func ComponentInfo(component string, v ...interface{}) {
@@ -150,7 +150,7 @@ func ComponentInfo(component string, v ...interface{}) {
 // Prints to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warn(v ...interface{}) {
-	WarnLog.Output(2, printStr(v...))
+	WarnLog.Output(3, printStr(v...))
 }
 
 func ComponentWarn(component string, v ...interface{}) {
@@ -160,7 +160,7 @@ func ComponentWarn(component string, v ...interface{}) {
 // Prints to ERROR writer without string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Error(v ...interface{}) {
-	ErrLog.Output(2, printStr(v...))
+	ErrLog.Output(3, printStr(v...))
 }
 
 func ComponentError(component string, v ...interface{}) {
@@ -170,7 +170,7 @@ func ComponentError(component string, v ...interface{}) {
 // Prints to CRITICAL writer without string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatal(v ...interface{}) {
-	CritLog.Output(2, printStr(v...))
+	CritLog.Output(3, printStr(v...))
 	os.Exit(1)
 }
 
@@ -205,31 +205,31 @@ func Abortf(format string, v ...interface{}) {
 // Prints to DEBUG writer with string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debugf(format string, v ...interface{}) {
-	DebugLog.Output(2, printfStr(format, v...))
+	DebugLog.Output(3, printfStr(format, v...))
 }
 
 // Prints to INFO writer with string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Infof(format string, v ...interface{}) {
-	InfoLog.Output(2, printfStr(format, v...))
+	InfoLog.Output(3, printfStr(format, v...))
 }
 
 // Prints to WARNING writer with string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warnf(format string, v ...interface{}) {
-	WarnLog.Output(2, printfStr(format, v...))
+	WarnLog.Output(3, printfStr(format, v...))
 }
 
 // Prints to ERROR writer with string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Errorf(format string, v ...interface{}) {
-	ErrLog.Output(2, printfStr(format, v...))
+	ErrLog.Output(3, printfStr(format, v...))
 }
 
 // Prints to CRITICAL writer with string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatalf(format string, v ...interface{}) {
-	CritLog.Output(2, printfStr(format, v...))
+	CritLog.Output(3, printfStr(format, v...))
 	os.Exit(1)
 }
 

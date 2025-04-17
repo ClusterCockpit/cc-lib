@@ -163,7 +163,26 @@ The options `change_unit_prefix` and `normalize_units` are only applied to CCMet
 
 With `add_base_env`, one can specifiy mykey=myvalue pairs that can be used in conditions like `tag.type == mykey`.
 
-The order in which each message is processed, can be specified with the `stage_order` option. The stage names are the keys in the JSON configuration, thus `change_unit_prefix`, `move_field_to_meta_if`, etc. Stages can be listed multiple times.
+The order in which each message is processed, can be specified with the `stage_order` option. The stage names are the keys in the JSON configuration, thus `change_unit_prefix`, `move_field_to_meta_if`, etc. Stages can be listed multiple times. The default order for the stages is:
+1. `drop_by_name`
+2. `drop_by_type`
+3. `drop_if`
+4. `add_tag`
+5. `delete_tag`
+6. `move_tag_to_meta`
+7. `move_tag_to_fields`
+8. `add_meta`
+9. `delete_meta`
+10. `move_meta_to_tags`
+11. `move_meta_to_fields`
+12. `add_field`
+13. `delete_field`
+14. `move_field_to_tags`
+15. `move_field_to_meta`
+16. `rename`
+17. `rename_if`
+18. `change_unit_prefix`
+19. `normalize_unit`
 
 ### Using the component
 In order to load the configuration from a `json.RawMessage`:
