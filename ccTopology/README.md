@@ -1,3 +1,15 @@
+<!--
+---
+title: Topology package for ClusterCockpit
+description: Topology package for ClusterCockpit
+categories: [cc-lib]
+tags: ['Admin', 'Developer']
+weight: 2
+hugo_path: docs/reference/cc-lib/ccTopology/_index.md
+---
+-->
+
+
 # ccTopology
 
 The `ccTopology` package provides easy access to topology information, mainly for the local node.
