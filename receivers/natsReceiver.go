@@ -1,15 +1,3 @@
-<!--
----
-title: Message receiver for IPMI endpoint
-description: Query metrics from remote IPMI sources
-categories: [cc-lib]
-tags: ['Admin', 'Developer']
-weight: 2
-hugo_path: docs/reference/cc-lib/receivers/ipmi.md
----
--->
-
-
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
