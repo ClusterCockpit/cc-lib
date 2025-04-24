@@ -1,7 +1,8 @@
 package ccTopology
 
 /*
-#cgo LDFLAGS:  -lhwloc
+#cgo LDFLAGS: -lhwloc
+#cgo linux LDFLAGS: -Wl,--unresolved-symbols=ignore-in-object-files -lhwloc
 #cgo CFLAGS: -Ihwloc -I.
 #include "hwloc.h"
 #include "autogen/config.h"
