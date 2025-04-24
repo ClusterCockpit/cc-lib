@@ -1,7 +1,7 @@
 package ccTopology
 
 /*
-#cgo LDFLAGS: -Wl,--unresolved-symbols=ignore-in-object-files -lhwloc
+#cgo LDFLAGS:  -lhwloc
 #cgo CFLAGS: -Ihwloc -I.
 #include "hwloc.h"
 #include "autogen/config.h"
@@ -89,6 +89,7 @@ hwloc_obj_t _hwloc_get_child(hwloc_obj_t obj, unsigned int offset) {
 
 */
 import "C"
+
 import (
 	"encoding/json"
 	"fmt"
@@ -102,34 +103,38 @@ const DEBUG bool = true
 
 type HWLOC_OBJ_TYPE int
 
-const HWLOC_TYPE_MACHINE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MACHINE
-const HWLOC_TYPE_PACKAGE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PACKAGE
-const HWLOC_TYPE_CORE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_CORE
-const HWLOC_TYPE_PU HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PU
-const HWLOC_TYPE_L1CACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L1CACHE
-const HWLOC_TYPE_L2CACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L2CACHE
-const HWLOC_TYPE_L3CACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L3CACHE
-const HWLOC_TYPE_L4CACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L4CACHE
-const HWLOC_TYPE_L5CACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L5CACHE
-const HWLOC_TYPE_L1ICACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L1ICACHE
-const HWLOC_TYPE_L2ICACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L2ICACHE
-const HWLOC_TYPE_L3ICACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L3ICACHE
-const HWLOC_TYPE_GROUP HWLOC_OBJ_TYPE = C.HWLOC_OBJ_GROUP
-const HWLOC_TYPE_NUMANODE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_NUMANODE
-const HWLOC_TYPE_PCI_DEVICE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PCI_DEVICE
-const HWLOC_TYPE_OS_DEVICE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_OS_DEVICE
-const HWLOC_TYPE_MEMCACHE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MEMCACHE
-const HWLOC_TYPE_MISC HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MISC
-const HWLOC_TYPE_DIE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_DIE
+const (
+	HWLOC_TYPE_MACHINE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MACHINE
+	HWLOC_TYPE_PACKAGE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PACKAGE
+	HWLOC_TYPE_CORE       HWLOC_OBJ_TYPE = C.HWLOC_OBJ_CORE
+	HWLOC_TYPE_PU         HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PU
+	HWLOC_TYPE_L1CACHE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L1CACHE
+	HWLOC_TYPE_L2CACHE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L2CACHE
+	HWLOC_TYPE_L3CACHE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L3CACHE
+	HWLOC_TYPE_L4CACHE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L4CACHE
+	HWLOC_TYPE_L5CACHE    HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L5CACHE
+	HWLOC_TYPE_L1ICACHE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L1ICACHE
+	HWLOC_TYPE_L2ICACHE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L2ICACHE
+	HWLOC_TYPE_L3ICACHE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_L3ICACHE
+	HWLOC_TYPE_GROUP      HWLOC_OBJ_TYPE = C.HWLOC_OBJ_GROUP
+	HWLOC_TYPE_NUMANODE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_NUMANODE
+	HWLOC_TYPE_PCI_DEVICE HWLOC_OBJ_TYPE = C.HWLOC_OBJ_PCI_DEVICE
+	HWLOC_TYPE_OS_DEVICE  HWLOC_OBJ_TYPE = C.HWLOC_OBJ_OS_DEVICE
+	HWLOC_TYPE_MEMCACHE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MEMCACHE
+	HWLOC_TYPE_MISC       HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MISC
+	HWLOC_TYPE_DIE        HWLOC_OBJ_TYPE = C.HWLOC_OBJ_DIE
+)
 
 type HWLOC_OBJ_OSDEV_TYPE int
 
-const HWLOC_OBJ_OSDEV_BLOCK HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_BLOCK
-const HWLOC_OBJ_OSDEV_GPU HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_GPU
-const HWLOC_OBJ_OSDEV_NETWORK HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_NETWORK
-const HWLOC_OBJ_OSDEV_OPENFABRICS HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_OPENFABRICS
-const HWLOC_OBJ_OSDEV_DMA HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_DMA
-const HWLOC_OBJ_OSDEV_COPROC HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_COPROC
+const (
+	HWLOC_OBJ_OSDEV_BLOCK       HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_BLOCK
+	HWLOC_OBJ_OSDEV_GPU         HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_GPU
+	HWLOC_OBJ_OSDEV_NETWORK     HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_NETWORK
+	HWLOC_OBJ_OSDEV_OPENFABRICS HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_OPENFABRICS
+	HWLOC_OBJ_OSDEV_DMA         HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_DMA
+	HWLOC_OBJ_OSDEV_COPROC      HWLOC_OBJ_OSDEV_TYPE = C.HWLOC_OBJ_OSDEV_COPROC
+)
 
 type Object struct {
 	Type         HWLOC_OBJ_TYPE `json:"type"`
@@ -272,8 +277,8 @@ func (t *topology) UnmarshalJSON(in []byte) error {
 }
 
 func convertObject(hwloc_obj C.hwloc_obj_t) Object {
-	//ty := HWLOC_OBJ_TYPE(hwloc_obj._type)
-	//fmt.Printf("HwlocObject Type %s with ID %d SubType '%s' Name '%s' LogIdx %d Infos %d\n", ty.String(), int(hwloc_obj.os_index), C.GoString(hwloc_obj.subtype), C.GoString(hwloc_obj.name), int(hwloc_obj.logical_index), int(hwloc_obj.infos_count))
+	// ty := HWLOC_OBJ_TYPE(hwloc_obj._type)
+	// fmt.Printf("HwlocObject Type %s with ID %d SubType '%s' Name '%s' LogIdx %d Infos %d\n", ty.String(), int(hwloc_obj.os_index), C.GoString(hwloc_obj.subtype), C.GoString(hwloc_obj.name), int(hwloc_obj.logical_index), int(hwloc_obj.infos_count))
 	o := Object{
 		Type:         HWLOC_OBJ_TYPE(hwloc_obj._type),
 		ID:           uint(hwloc_obj.os_index),
@@ -457,7 +462,6 @@ func (t *topology) traverseObject(hwtopo C.hwloc_topology_t, hwloc_obj C.hwloc_o
 }
 
 func (t *topology) init() error {
-
 	var hwtopo C.hwloc_topology_t
 	ret := C.hwloc_topology_init(&hwtopo)
 	if ret != 0 {
@@ -537,21 +541,27 @@ func getChildrenIdStringsOfType(o Object, t HWLOC_OBJ_TYPE, out *[]string) {
 func (t *topology) GetHwthreads() []uint {
 	return t.getTypeObjectIds(HWLOC_TYPE_PU)
 }
+
 func (t *topology) GetHwthreadStrings() []string {
 	return t.getTypeObjectIdStrings(HWLOC_TYPE_PU)
 }
+
 func (t *topology) GetCores() []uint {
 	return t.getTypeObjectIds(HWLOC_TYPE_CORE)
 }
+
 func (t *topology) GetCoreStrings() []string {
 	return t.getTypeObjectIdStrings(HWLOC_TYPE_CORE)
 }
+
 func (t *topology) GetSockets() []uint {
 	return t.getTypeObjectIds(HWLOC_TYPE_PACKAGE)
 }
+
 func (t *topology) GetSocketStrings() []string {
 	return t.getTypeObjectIdStrings(HWLOC_TYPE_PACKAGE)
 }
+
 func (t *topology) GetDies() []uint {
 	out := t.getTypeObjectIds(HWLOC_TYPE_DIE)
 	if len(out) == 0 {
@@ -567,12 +577,15 @@ func (t *topology) GetDieStrings() []string {
 	}
 	return out
 }
+
 func (t *topology) GetMemoryDomains() []uint {
 	return t.getTypeObjectIds(HWLOC_TYPE_NUMANODE)
 }
+
 func (t *topology) GetMemoryDomainStrings() []string {
 	return t.getTypeObjectIdStrings(HWLOC_TYPE_NUMANODE)
 }
+
 func (t *topology) GetPciDevices() []uint {
 	out := make([]uint, 0)
 	for _, o := range t.objects {
@@ -586,6 +599,7 @@ func (t *topology) GetPciDevices() []uint {
 	}
 	return out
 }
+
 func (t *topology) GetPciDeviceStrings() []string {
 	out := make([]string, 0)
 	for _, o := range t.objects {
