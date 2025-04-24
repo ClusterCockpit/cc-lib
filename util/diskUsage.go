@@ -7,7 +7,7 @@ package util
 import (
 	"os"
 
-	"github.com/ClusterCockpit/cc-backend/pkg/log"
+	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
 func DiskUsage(dirpath string) float64 {
@@ -15,14 +15,14 @@ func DiskUsage(dirpath string) float64 {
 
 	dir, err := os.Open(dirpath)
 	if err != nil {
-		log.Errorf("DiskUsage() error: %v", err)
+		cclog.Errorf("DiskUsage() error: %v", err)
 		return 0
 	}
 	defer dir.Close()
 
 	files, err := dir.Readdir(-1)
 	if err != nil {
-		log.Errorf("DiskUsage() error: %v", err)
+		cclog.Errorf("DiskUsage() error: %v", err)
 		return 0
 	}
 

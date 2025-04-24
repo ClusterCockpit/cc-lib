@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ClusterCockpit/cc-backend/pkg/log"
+	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
@@ -49,13 +49,13 @@ func Validate(k Kind, r io.Reader) (err error) {
 	}
 
 	if err != nil {
-		log.Errorf("Error while compiling json schema for kind '%#v'", k)
+		cclog.Errorf("Error while compiling json schema for kind '%#v'", k)
 		return err
 	}
 
-	var v interface{}
+	var v any
 	if err := json.NewDecoder(r).Decode(&v); err != nil {
-		log.Warnf("Error while decoding raw json schema: %#v", err)
+		cclog.Warnf("Error while decoding raw json schema: %#v", err)
 		return err
 	}
 

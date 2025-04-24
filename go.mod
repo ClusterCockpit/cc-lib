@@ -5,9 +5,6 @@ go 1.23.0
 toolchain go1.24.0
 
 require (
-	github.com/ClusterCockpit/cc-backend v1.4.2
-	github.com/ClusterCockpit/cc-metric-collector v0.7.0
-	github.com/ClusterCockpit/cc-units v0.4.0
 	github.com/NVIDIA/go-nvml v0.12.4-1
 	github.com/expr-lang/expr v1.17.0
 	github.com/gorilla/mux v1.8.1

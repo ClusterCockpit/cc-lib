@@ -8,7 +8,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/ClusterCockpit/cc-backend/pkg/log"
+	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
 func CheckFileExists(filePath string) bool {
@@ -19,7 +19,7 @@ func CheckFileExists(filePath string) bool {
 func GetFilesize(filePath string) int64 {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		log.Errorf("Error on Stat %s: %v", filePath, err)
+		cclog.Errorf("Error on Stat %s: %v", filePath, err)
 		return 0
 	}
 	return fileInfo.Size()
@@ -28,7 +28,7 @@ func GetFilesize(filePath string) int64 {
 func GetFilecount(path string) int {
 	files, err := os.ReadDir(path)
 	if err != nil {
-		log.Errorf("Error on ReadDir %s: %v", path, err)
+		cclog.Errorf("Error on ReadDir %s: %v", path, err)
 		return 0
 	}
 

@@ -10,7 +10,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/ClusterCockpit/cc-backend/pkg/log"
+	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
 // A custom float type is used so that (Un)MarshalJSON and
@@ -19,8 +19,10 @@ import (
 // a pointer has a bigger overhead.
 type Float float64
 
-var NaN Float = Float(math.NaN())
-var nullAsBytes []byte = []byte("null")
+var (
+	NaN         Float  = Float(math.NaN())
+	nullAsBytes []byte = []byte("null")
+)
 
 func (f Float) IsNaN() bool {
 	return math.IsNaN(float64(f))
@@ -45,7 +47,7 @@ func (f *Float) UnmarshalJSON(input []byte) error {
 
 	val, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		log.Warn("Error while parsing custom float")
+		cclog.Warn("Error while parsing custom float")
 		return err
 	}
 	*f = Float(val)

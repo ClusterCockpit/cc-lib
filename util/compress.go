@@ -9,21 +9,20 @@ import (
 	"io"
 	"os"
 
-	"github.com/ClusterCockpit/cc-backend/pkg/log"
+	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
 func CompressFile(fileIn string, fileOut string) error {
 	originalFile, err := os.Open(fileIn)
 	if err != nil {
-		log.Errorf("CompressFile() error: %v", err)
+		cclog.Errorf("CompressFile() error: %v", err)
 		return err
 	}
 	defer originalFile.Close()
 
 	gzippedFile, err := os.Create(fileOut)
-
 	if err != nil {
-		log.Errorf("CompressFile() error: %v", err)
+		cclog.Errorf("CompressFile() error: %v", err)
 		return err
 	}
 	defer gzippedFile.Close()
@@ -33,12 +32,12 @@ func CompressFile(fileIn string, fileOut string) error {
 
 	_, err = io.Copy(gzipWriter, originalFile)
 	if err != nil {
-		log.Errorf("CompressFile() error: %v", err)
+		cclog.Errorf("CompressFile() error: %v", err)
 		return err
 	}
 	gzipWriter.Flush()
 	if err := os.Remove(fileIn); err != nil {
-		log.Errorf("CompressFile() error: %v", err)
+		cclog.Errorf("CompressFile() error: %v", err)
 		return err
 	}
 
@@ -48,7 +47,7 @@ func CompressFile(fileIn string, fileOut string) error {
 func UncompressFile(fileIn string, fileOut string) error {
 	gzippedFile, err := os.Open(fileIn)
 	if err != nil {
-		log.Errorf("UncompressFile() error: %v", err)
+		cclog.Errorf("UncompressFile() error: %v", err)
 		return err
 	}
 	defer gzippedFile.Close()
@@ -58,18 +57,18 @@ func UncompressFile(fileIn string, fileOut string) error {
 
 	uncompressedFile, err := os.Create(fileOut)
 	if err != nil {
-		log.Errorf("UncompressFile() error: %v", err)
+		cclog.Errorf("UncompressFile() error: %v", err)
 		return err
 	}
 	defer uncompressedFile.Close()
 
 	_, err = io.Copy(uncompressedFile, gzipReader)
 	if err != nil {
-		log.Errorf("UncompressFile() error: %v", err)
+		cclog.Errorf("UncompressFile() error: %v", err)
 		return err
 	}
 	if err := os.Remove(fileIn); err != nil {
-		log.Errorf("UncompressFile() error: %v", err)
+		cclog.Errorf("UncompressFile() error: %v", err)
 		return err
 	}
 
