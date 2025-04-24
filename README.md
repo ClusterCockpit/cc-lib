@@ -16,3 +16,11 @@ Common ClusterCockpit golang packages:
 - `ccConfig`
 - `ccLogger`
 - `ccMessages`
+- `ccTopology`
+- `ccUnits`
+- `hostlist`
+- `messageProcessor`
+- `receivers`
+- `sinks`
+- `schema`
+- `util`
