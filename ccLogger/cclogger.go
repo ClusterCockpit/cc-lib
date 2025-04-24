@@ -2,6 +2,14 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
+// Package cclogger implements a simple log wrapper for the standard log package
+//
+// cclogger provides a simple way of logging with different levels.
+// Time/Date are not logged because systemd adds
+// them (default, can be changed by setting logdate to true.
+// Additionally log output can be set to a file. Default output is stderr.
+// Uses these prefixes: https://www.freedesktop.org/software/systemd/man/sd-daemon.html
 package cclogger
 
 import (
@@ -10,12 +18,6 @@ import (
 	"log"
 	"os"
 )
-
-// Provides a simple way of logging with different levels.
-// Time/Date are not logged because systemd adds
-// them for us (Default, can be changed by flag '--logdate true').
-//
-// Uses these prefixes: https://www.freedesktop.org/software/systemd/man/sd-daemon.html
 
 var (
 	DebugWriter io.Writer = os.Stderr
@@ -43,8 +45,9 @@ var (
 
 var loglevel string = "info"
 
-/* CONFIG */
-
+// Init initializes cclogger. lvl indicates the loglevel with such values as
+// "debug", "info", "warn", "err", "fatal", "crit". If logdate is set to true a
+// date and time is added to the log output.
 func Init(lvl string, logdate bool) {
 	switch lvl {
 	case "crit":
@@ -83,158 +86,188 @@ func Init(lvl string, logdate bool) {
 	loglevel = lvl
 }
 
-/* HELPER */
-
+// Loglevel returns the current loglevel
 func Loglevel() string {
 	return loglevel
+}
+
+// SetOutputFile sets the output of selected loglevels to a file indicated by
+// the logfile function argument. All loggers lower than lvl are set to the
+// output file. Example: If lvl is warn, the warn, info, and debug loggers
+// will write to logfile.
+func SetOutputFile(lvl string, logfile string) {
+	logFile, err := os.OpenFile(logfile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer logFile.Close()
+
+	switch lvl {
+	case "crit":
+		CritLog.SetOutput(logFile)
+		fallthrough
+	case "err", "fatal":
+		ErrLog.SetOutput(logFile)
+		fallthrough
+	case "warn":
+		WarnLog.SetOutput(logFile)
+		fallthrough
+	case "info":
+		InfoLog.SetOutput(logFile)
+		fallthrough
+	case "debug":
+		DebugLog.SetOutput(logFile)
+	default:
+		fmt.Printf("pkg/log: Flag 'loglevel' has invalid value %#v\npkg/log\n", lvl)
+	}
 }
 
 /* PRIVATE HELPER */
 
 // Return unformatted string
-func printStr(v ...interface{}) string {
+func printStr(v ...any) string {
 	return fmt.Sprint(v...)
 }
 
 // Return formatted string
-func printfStr(format string, v ...interface{}) string {
+func printfStr(format string, v ...any) string {
 	return fmt.Sprintf(format, v...)
 }
 
 /* PRINT */
 
-// Prints to STDOUT without string formatting; application continues.
+// Print logs to STDOUT without string formatting; application continues.
 // Used for special cases not requiring log information like date or location.
-func Print(v ...interface{}) {
+func Print(v ...any) {
 	fmt.Fprintln(os.Stdout, v...)
 }
 
-// Prints to STDOUT without string formatting; application exits with error code 0.
+// Exit logs to STDOUT without string formatting; application exits with error code 0.
 // Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
-func Exit(v ...interface{}) {
+func Exit(v ...any) {
 	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(0)
 }
 
-// Prints to STDOUT without string formatting; application exits with error code 1.
+// Abort logs to STDOUT without string formatting; application exits with error code 1.
 // Used for terminating with message after to be expected errors, e.g. wrong arguments or during init().
-func Abort(v ...interface{}) {
+func Abort(v ...any) {
 	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(1)
 }
 
-func ComponentPrint(component string, v ...interface{}) {
+func ComponentPrint(component string, v ...any) {
 	InfoLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
-// Prints to DEBUG writer without string formatting; application continues.
+// Debug logs to DEBUG writer without string formatting; application continues.
 // Used for logging additional information, primarily for development.
-func Debug(v ...interface{}) {
+func Debug(v ...any) {
 	DebugLog.Output(3, printStr(v...))
 }
 
-func ComponentDebug(component string, v ...interface{}) {
+func ComponentDebug(component string, v ...any) {
 	DebugLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
-// Prints to INFO writer without string formatting; application continues.
+// Info logs to INFO writer without string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
-func Info(v ...interface{}) {
+func Info(v ...any) {
 	InfoLog.Output(3, printStr(v...))
 }
 
-func ComponentInfo(component string, v ...interface{}) {
+func ComponentInfo(component string, v ...any) {
 	InfoLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
-// Prints to WARNING writer without string formatting; application continues.
+// Warn logs to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
-func Warn(v ...interface{}) {
+func Warn(v ...any) {
 	WarnLog.Output(3, printStr(v...))
 }
 
-func ComponentWarn(component string, v ...interface{}) {
+func ComponentWarn(component string, v ...any) {
 	WarnLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
-// Prints to ERROR writer without string formatting; application continues.
+// Error logs to ERROR writer without string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
-func Error(v ...interface{}) {
+func Error(v ...any) {
 	ErrLog.Output(3, printStr(v...))
 }
 
-func ComponentError(component string, v ...interface{}) {
+func ComponentError(component string, v ...any) {
 	ErrLog.Print(fmt.Sprintf("[%s] ", component), v)
 }
 
-// Prints to CRITICAL writer without string formatting; application exits with error code 1.
+// Fatal writes to CRITICAL writer without string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
-func Fatal(v ...interface{}) {
+func Fatal(v ...any) {
 	CritLog.Output(3, printStr(v...))
 	os.Exit(1)
 }
 
-// Prints to PANIC function without string formatting; application exits with panic.
+// Panic logs to PANIC function without string formatting; application exits with panic.
 // Used for terminating on unexpected errors with stacktrace.
-func Panic(v ...interface{}) {
+func Panic(v ...any) {
 	panic(printStr(v...))
 }
 
 /* PRINT FORMAT*/
 
-// Prints to STDOUT with string formatting; application continues.
+// Printf logs to STDOUT with string formatting; application continues.
 // Used for special cases not requiring log information like date or location.
-func Printf(format string, v ...interface{}) {
+func Printf(format string, v ...any) {
 	fmt.Fprintf(os.Stdout, format, v...)
 }
 
-// Prints to STDOUT with string formatting; application exits with error code 0.
+// Exitf logs to STDOUT with string formatting; application exits with error code 0.
 // Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
-func Exitf(format string, v ...interface{}) {
+func Exitf(format string, v ...any) {
 	fmt.Fprintf(os.Stdout, format, v...)
 	os.Exit(0)
 }
 
-// Prints to STDOUT with string formatting; application exits with error code 1.
+// Abortf logs to STDOUT with string formatting; application exits with error code 1.
 // Used for terminating with message after to be expected errors, e.g. wrong arguments or during init().
-func Abortf(format string, v ...interface{}) {
+func Abortf(format string, v ...any) {
 	fmt.Fprintf(os.Stdout, format, v...)
 	os.Exit(1)
 }
 
-// Prints to DEBUG writer with string formatting; application continues.
+// Debugf logs to DEBUG writer with string formatting; application continues.
 // Used for logging additional information, primarily for development.
-func Debugf(format string, v ...interface{}) {
+func Debugf(format string, v ...any) {
 	DebugLog.Output(3, printfStr(format, v...))
 }
 
-// Prints to INFO writer with string formatting; application continues.
+// Infof log to INFO writer with string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
-func Infof(format string, v ...interface{}) {
+func Infof(format string, v ...any) {
 	InfoLog.Output(3, printfStr(format, v...))
 }
 
-// Prints to WARNING writer with string formatting; application continues.
+// Warnf logs to WARNING writer with string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
-func Warnf(format string, v ...interface{}) {
+func Warnf(format string, v ...any) {
 	WarnLog.Output(3, printfStr(format, v...))
 }
 
-// Prints to ERROR writer with string formatting; application continues.
+// Errorf logs to ERROR writer with string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
-func Errorf(format string, v ...interface{}) {
+func Errorf(format string, v ...any) {
 	ErrLog.Output(3, printfStr(format, v...))
 }
 
-// Prints to CRITICAL writer with string formatting; application exits with error code 1.
+// Fatalf logs to CRITICAL writer with string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
-func Fatalf(format string, v ...interface{}) {
+func Fatalf(format string, v ...any) {
 	CritLog.Output(3, printfStr(format, v...))
 	os.Exit(1)
 }
 
-// Prints to PANIC function with string formatting; application exits with panic.
+// Panicf logs to PANIC function with string formatting; application exits with panic.
 // Used for terminating on unexpected errors with stacktrace.
-func Panicf(format string, v ...interface{}) {
+func Panicf(format string, v ...any) {
 	panic(printfStr(format, v...))
 }
