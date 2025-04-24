@@ -1,4 +1,18 @@
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 package ccTopology
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+)
 
 /*
 #cgo LDFLAGS: -lhwloc
@@ -91,15 +105,6 @@ hwloc_obj_t _hwloc_get_child(hwloc_obj_t obj, unsigned int offset) {
 */
 import "C"
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-)
-
 const DEBUG bool = true
 
 type HWLOC_OBJ_TYPE int
@@ -185,12 +190,7 @@ var filterPciClasses = []string{
 }
 
 func skipPciDevice(obj Object) bool {
-	for _, f := range filterPciClasses {
-		if f == obj.Infos["class_id"] {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(filterPciClasses, obj.Infos["class_id"])
 }
 
 // func (t *HWLOC_OBJ_TYPE) String() string {
@@ -451,11 +451,12 @@ func (t *topology) traverseObject(hwtopo C.hwloc_topology_t, hwloc_obj C.hwloc_o
 	for i := range int(hwloc_obj.arity) {
 		obj.Children = append(obj.Children, t.traverseObject(hwtopo, C._hwloc_get_child(hwloc_obj, C.uint(i))))
 	}
-	if obj.Type == HWLOC_TYPE_MACHINE {
+	switch obj.Type {
+	case HWLOC_TYPE_MACHINE:
 		obj.Children = append(obj.Children, t.additionalMachineOps(hwtopo)...)
-	} else if obj.Type == HWLOC_TYPE_PACKAGE {
+	case HWLOC_TYPE_PACKAGE:
 		obj.Children = append(obj.Children, t.additionalPackageOps(hwtopo, obj)...)
-	} else if obj.Type == HWLOC_TYPE_NUMANODE {
+	case HWLOC_TYPE_NUMANODE:
 		obj.Children = append(obj.Children, t.additionalNumaOps(hwtopo, obj)...)
 	}
 	t.objects = append(t.objects, &obj)

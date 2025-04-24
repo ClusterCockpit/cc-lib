@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -33,7 +33,6 @@ func TestValidateConfig(t *testing.T) {
 }
 
 func TestValidateJobMeta(t *testing.T) {
-
 }
 
 func TestValidateCluster(t *testing.T) {

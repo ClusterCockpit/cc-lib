@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -145,7 +145,7 @@ const (
 	JobStateOutOfMemory JobState = "out_of_memory"
 )
 
-func (e *JobState) UnmarshalGQL(v interface{}) error {
+func (e *JobState) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("SCHEMA/JOB > enums must be strings")

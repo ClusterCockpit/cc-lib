@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -55,7 +55,7 @@ func (f *Float) UnmarshalJSON(input []byte) error {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface.
-func (f *Float) UnmarshalGQL(v interface{}) error {
+func (f *Float) UnmarshalGQL(v any) error {
 	f64, ok := v.(float64)
 	if !ok {
 		return errors.New("invalid Float scalar")
@@ -97,7 +97,7 @@ func (s *Series) MarshalJSON() ([]byte, error) {
 	buf = strconv.AppendFloat(buf, s.Statistics.Max, 'f', 2, 64)
 	buf = append(buf, '}')
 	buf = append(buf, `,"data":[`...)
-	for i := 0; i < len(s.Data); i++ {
+	for i := range s.Data {
 		if i != 0 {
 			buf = append(buf, ',')
 		}

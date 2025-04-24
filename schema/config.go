@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -150,7 +150,7 @@ type ProgramConfig struct {
 
 	// If overwritten, at least all the options in the defaults below must
 	// be provided! Most options here can be overwritten by the user.
-	UiDefaults map[string]interface{} `json:"ui-defaults"`
+	UiDefaults map[string]any `json:"ui-defaults"`
 
 	// If exists, will enable dynamic zoom in frontend metric plots using the configured values
 	EnableResampling *ResampleConfig `json:"enable-resampling"`

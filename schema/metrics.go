@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -95,7 +95,7 @@ func (e *MetricScope) Max(other MetricScope) MetricScope {
 	return other
 }
 
-func (e *MetricScope) UnmarshalGQL(v interface{}) error {
+func (e *MetricScope) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("SCHEMA/METRICS > enums must be strings")
@@ -161,7 +161,7 @@ func (jm *JobMetric) AddStatisticsSeries() {
 		// ssum := 0.0
 		smin, smed, smax := math.MaxFloat32, make([]float64, seriesCount), -math.MaxFloat32
 		notnan := 0
-		for j := 0; j < seriesCount; j++ {
+		for j := range seriesCount {
 			x := float64(jm.Series[j].Data[i])
 			if math.IsNaN(x) {
 				continue
@@ -312,7 +312,7 @@ func (jm *JobMetric) AddPercentiles(ps []int) bool {
 	}
 
 	data := make([][]float64, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		vals := make([]float64, 0, len(jm.Series))
 		for _, series := range jm.Series {
 			if i < len(series.Data) {
@@ -334,7 +334,7 @@ func (jm *JobMetric) AddPercentiles(ps []int) bool {
 		}
 
 		percentiles := make([]Float, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			sorted := data[i]
 			percentiles[i] = Float(sorted[(len(sorted)*p)/100])
 		}

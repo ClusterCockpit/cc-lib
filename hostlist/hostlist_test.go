@@ -1,3 +1,7 @@
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 package hostlist
 
 import (
@@ -5,7 +9,6 @@ import (
 )
 
 func TestExpand(t *testing.T) {
-
 	// Compare two slices of strings
 	equal := func(a, b []string) bool {
 		if len(a) != len(b) {
