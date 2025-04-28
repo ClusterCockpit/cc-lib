@@ -190,18 +190,16 @@ func dropMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]stru
 }
 
 func keepMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]struct{}) (bool, error) {
-	drop := false
 	for d := range *checks {
-
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return false, fmt.Errorf("failed to evaluate : %v", err.Error())
 		}
 		if value.(bool) {
-			drop = true
+			return false, nil
 		}
 	}
-	return drop, nil
+	return true, nil
 }
 
 func normalizeUnits(message lp2.CCMessage) (bool, error) {

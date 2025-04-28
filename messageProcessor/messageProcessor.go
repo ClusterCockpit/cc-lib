@@ -26,27 +26,28 @@ type messageProcessorTagConfig struct {
 
 type messageProcessorConfig struct {
 	StageOrder       []string                    `json:"stage_order,omitempty"`        // List of stages to execute them in the specified order and to skip unrequired ones
-	DropMessages     []string                    `json:"drop_messages,omitempty"`      // List of metric names to drop. For fine-grained dropping use drop_messages_if
+	DropMessages     []string                    `json:"drop_messages,omitempty"`      // List of message names to drop. For fine-grained dropping use drop_messages_if
 	DropMessagesIf   []string                    `json:"drop_messages_if,omitempty"`   // List of evaluatable terms to drop messages
-	RenameMessages   map[string]string           `json:"rename_messages,omitempty"`    // Map of metric names to rename
+	RenameMessages   map[string]string           `json:"rename_messages,omitempty"`    // Map of message names to rename
 	RenameMessagesIf map[string]string           `json:"rename_messages_if,omitempty"` // Map to rename metric name based on a condition
 	NormalizeUnits   bool                        `json:"normalize_units,omitempty"`    // Check unit meta flag and normalize it using cc-units
 	ChangeUnitPrefix map[string]string           `json:"change_unit_prefix,omitempty"` // Add prefix that should be applied to the messages
-	AddTagsIf        []messageProcessorTagConfig `json:"add_tags_if,omitempty"`                  // List of tags that are added when the condition is met
-	DelTagsIf        []messageProcessorTagConfig `json:"delete_tags_if,omitempty"`               // List of tags that are removed when the condition is met
-	AddMetaIf        []messageProcessorTagConfig `json:"add_meta_if,omitempty"`                  // List of meta infos that are added when the condition is met
-	DelMetaIf        []messageProcessorTagConfig `json:"delete_meta_if,omitempty"`               // List of meta infos that are removed when the condition is met
-	AddFieldIf       []messageProcessorTagConfig `json:"add_field_if,omitempty"`                 // List of fields that are added when the condition is met
-	DelFieldIf       []messageProcessorTagConfig `json:"delete_field_if,omitempty"`              // List of fields that are removed when the condition is met
-	DropByType       []string                    `json:"drop_by_message_type,omitempty"`         // List of message types that should be dropped
-	MoveTagToMeta    []messageProcessorTagConfig `json:"move_tag_to_meta_if,omitempty"`
-	MoveTagToField   []messageProcessorTagConfig `json:"move_tag_to_field_if,omitempty"`
-	MoveMetaToTag    []messageProcessorTagConfig `json:"move_meta_to_tag_if,omitempty"`
-	MoveMetaToField  []messageProcessorTagConfig `json:"move_meta_to_field_if,omitempty"`
-	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if,omitempty"`
-	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if,omitempty"`
-	AddBaseEnv       map[string]interface{}      `json:"add_base_env,omitempty"`
+	AddTagsIf        []messageProcessorTagConfig `json:"add_tags_if"`                  // List of tags that are added when the condition is met
+	DelTagsIf        []messageProcessorTagConfig `json:"delete_tags_if"`               // List of tags that are removed when the condition is met
+	AddMetaIf        []messageProcessorTagConfig `json:"add_meta_if"`                  // List of meta infos that are added when the condition is met
+	DelMetaIf        []messageProcessorTagConfig `json:"delete_meta_if"`               // List of meta infos that are removed when the condition is met
+	AddFieldIf       []messageProcessorTagConfig `json:"add_field_if"`                 // List of fields that are added when the condition is met
+	DelFieldIf       []messageProcessorTagConfig `json:"delete_field_if"`              // List of fields that are removed when the condition is met
+	DropByType       []string                    `json:"drop_by_message_type"`         // List of message types that should be dropped
+	MoveTagToMeta    []messageProcessorTagConfig `json:"move_tag_to_meta_if"`          // List of tags that are moved to meta infos when the condition is met
+	MoveTagToField   []messageProcessorTagConfig `json:"move_tag_to_field_if"`         // List of tags that are moved to fields when the condition is met
+	MoveMetaToTag    []messageProcessorTagConfig `json:"move_meta_to_tag_if"`          // List of meta infos that are moved to tags when the condition is met
+	MoveMetaToField  []messageProcessorTagConfig `json:"move_meta_to_field_if"`        // List of meta infos that are moved to fields when the condition is met
+	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if"`         // List of fields that are moved to tags when the condition is met
+	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if"`        // List of fields that are moved to meta infos when the condition is met
+	AddBaseEnv       map[string]interface{}      `json:"add_base_env"`                 // Map of key value pairs that can be used for evaluation
 	KeepMessagesIf   []string                    `json:"keep_messages_if,omitempty"`   // List of evaluatable terms to keep messages
+	KeepMessages     []string                    `json:"keep_messages,omitempty"`      // List of message names to keep
 }
 
 type messageProcessor struct {
@@ -62,6 +63,8 @@ type messageProcessor struct {
 	dropMessages     map[string]struct{}      // internal lookup map
 	dropTypes        map[string]struct{}      // internal lookup map
 	dropMessagesIf   map[*vm.Program]struct{} // pre-processed dropMessagesIf
+	keepMessages     map[string]struct{}      // internal lookup map
+	keepMessagesIf   map[*vm.Program]struct{} // pre-processed keepMessagesIf
 	renameMessages   map[string]string        // internal lookup map
 	renameMessagesIf map[*vm.Program]string   // pre-processed RenameMessagesIf
 	changeUnitPrefix map[*vm.Program]string   // pre-processed ChangeUnitPrefix
@@ -78,7 +81,6 @@ type messageProcessor struct {
 	moveMetaToField  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveMetaToField
 	moveFieldToTag   map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToTag
 	moveFieldToMeta  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToMeta
-	keepMessagesIf   map[*vm.Program]struct{} // pre-processed keepMessagesIf
 }
 
 type MessageProcessor interface {
@@ -88,42 +90,62 @@ type MessageProcessor interface {
 	// Function to add variables to the base evaluation environment
 	AddBaseEnv(env map[string]interface{}) error
 	// Functions to add and remove rules
+	// Drop messages based only on the message name
 	AddDropMessagesByName(name string) error
 	RemoveDropMessagesByName(name string)
+	// Drop messages based on an evaluable boolean condition
 	AddDropMessagesByCondition(condition string) error
 	RemoveDropMessagesByCondition(condition string)
+	// Rename messages based on an evaluable boolean condition
+	AddRenameMessageByCondition(condition string, name string) error
+	RemoveRenameMessageByCondition(condition string)
+	// Rename messages based only on the message name
+	AddRenameMessageByName(from, to string) error
+	RemoveRenameMessageByName(from string)
+	// Keep messages based only on the message name
+	AddKeepMessagesByName(name string) error
+	RemoveKeepMessagesByName(name string)
+	// Keep messages based on an evaluable boolean condition
 	AddKeepMessagesByCondition(condition string) error
 	RemoveKeepMessagesByCondition(condition string)
-	AddRenameMetricByCondition(condition string, name string) error
-	RemoveRenameMetricByCondition(condition string)
-	AddRenameMetricByName(from, to string) error
-	RemoveRenameMetricByName(from string)
+	// Normalize units in tags or meta infos of metric messages
 	SetNormalizeUnits(settings bool)
+	// Change the unit prefix with value conversion in tags or meta infos of metric messages
 	AddChangeUnitPrefix(condition string, prefix string) error
 	RemoveChangeUnitPrefix(condition string)
+	// Add tags to messages based on an evaluable boolean condition
 	AddAddTagsByCondition(condition, key, value string) error
 	RemoveAddTagsByCondition(condition string)
+	// Delete tags to messages based on an evaluable boolean condition
 	AddDeleteTagsByCondition(condition, key, value string) error
 	RemoveDeleteTagsByCondition(condition string)
+	// Add meta info to messages based on an evaluable boolean condition
 	AddAddMetaByCondition(condition, key, value string) error
 	RemoveAddMetaByCondition(condition string)
+	// Delete meta info to messages based on an evaluable boolean condition
 	AddDeleteMetaByCondition(condition, key, value string) error
 	RemoveDeleteMetaByCondition(condition string)
+	// Move tags to meta infos based on an evaluable boolean condition
 	AddMoveTagToMeta(condition, key, value string) error
 	RemoveMoveTagToMeta(condition string)
+	// Move tags to fields based on an evaluable boolean condition
 	AddMoveTagToFields(condition, key, value string) error
 	RemoveMoveTagToFields(condition string)
+	// Move meta infos to tags based on an evaluable boolean condition
 	AddMoveMetaToTags(condition, key, value string) error
 	RemoveMoveMetaToTags(condition string)
+	// Move meta infos to fields based on an evaluable boolean condition
 	AddMoveMetaToFields(condition, key, value string) error
 	RemoveMoveMetaToFields(condition string)
+	// Move fields to tags based on an evaluable boolean condition. Values get stringified.
 	AddMoveFieldToTags(condition, key, value string) error
 	RemoveMoveFieldToTags(condition string)
+	// Move fields to meta infos based on an evaluable boolean condition. Values get stringified.
 	AddMoveFieldToMeta(condition, key, value string) error
 	RemoveMoveFieldToMeta(condition string)
 	// Read in a JSON configuration
 	FromConfigJSON(config json.RawMessage) error
-	// Processing functions for legacy CCMetric and current CCMessage
+	// Processing functions for legacy CCMessage and current CCMessage
 	ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 	// EvalToBool(condition string, parameters map[string]interface{}) (bool, error)
 	// EvalToFloat64(condition string, parameters map[string]interface{}) (float64, error)
@@ -134,7 +156,6 @@ const (
 	STAGENAME_DROP_BY_NAME       string = "drop_by_name"
 	STAGENAME_DROP_BY_TYPE       string = "drop_by_type"
 	STAGENAME_DROP_IF            string = "drop_if"
-	STAGENAME_KEEP_IF            string = "keep_if"
 	STAGENAME_ADD_TAG            string = "add_tag"
 	STAGENAME_DELETE_TAG         string = "delete_tag"
 	STAGENAME_MOVE_TAG_META      string = "move_tag_to_meta"
@@ -151,12 +172,15 @@ const (
 	STAGENAME_RENAME_IF          string = "rename_if"
 	STAGENAME_CHANGE_UNIT_PREFIX string = "change_unit_prefix"
 	STAGENAME_NORMALIZE_UNIT     string = "normalize_unit"
+	STAGENAME_KEEP_BY_NAME       string = "keep_by_name"
+	STAGENAME_KEEP_IF            string = "keep_if"
 )
 
 var StageNames = []string{
 	STAGENAME_DROP_BY_NAME,
 	STAGENAME_DROP_BY_TYPE,
 	STAGENAME_DROP_IF,
+	STAGENAME_KEEP_BY_NAME,
 	STAGENAME_KEEP_IF,
 	STAGENAME_ADD_TAG,
 	STAGENAME_DELETE_TAG,
@@ -324,6 +348,7 @@ func (mp *messageProcessor) init() error {
 	mp.moveTagToField = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.moveTagToMeta = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.normalizeUnits = false
+	mp.keepMessages = make(map[string]struct{})
 	mp.keepMessagesIf = make(map[*vm.Program]struct{})
 	return nil
 }
@@ -368,6 +393,21 @@ func (mp *messageProcessor) AddDropMessagesByType(typestring string) error {
 func (mp *messageProcessor) RemoveDropMessagesByType(typestring string) {
 	mp.mutex.Lock()
 	delete(mp.dropTypes, typestring)
+	mp.mutex.Unlock()
+}
+
+func (mp *messageProcessor) AddKeepMessagesByName(name string) error {
+	mp.mutex.Lock()
+	if _, ok := mp.keepMessages[name]; !ok {
+		mp.keepMessages[name] = struct{}{}
+	}
+	mp.mutex.Unlock()
+	return nil
+}
+
+func (mp *messageProcessor) RemoveKeepMessagesByName(name string) {
+	mp.mutex.Lock()
+	delete(mp.keepMessages, name)
 	mp.mutex.Unlock()
 }
 
@@ -495,7 +535,7 @@ func (mp *messageProcessor) RemoveKeepMessagesByCondition(condition string) {
 	mp.mutex.Unlock()
 }
 
-func (mp *messageProcessor) AddRenameMetricByCondition(condition string, name string) error {
+func (mp *messageProcessor) AddRenameMessageByCondition(condition string, name string) error {
 	var err error
 	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
 	if err != nil {
@@ -512,7 +552,7 @@ func (mp *messageProcessor) AddRenameMetricByCondition(condition string, name st
 	return nil
 }
 
-func (mp *messageProcessor) RemoveRenameMetricByCondition(condition string) {
+func (mp *messageProcessor) RemoveRenameMessageByCondition(condition string) {
 	mp.mutex.Lock()
 	if e, ok := mp.mapping[condition]; ok {
 		delete(mp.mapping, condition)
@@ -551,7 +591,7 @@ func (mp *messageProcessor) RemoveChangeUnitPrefix(condition string) {
 	mp.mutex.Unlock()
 }
 
-func (mp *messageProcessor) AddRenameMetricByName(from, to string) error {
+func (mp *messageProcessor) AddRenameMessageByName(from, to string) error {
 	mp.mutex.Lock()
 	if _, ok := mp.renameMessages[from]; !ok {
 		mp.renameMessages[from] = to
@@ -560,7 +600,7 @@ func (mp *messageProcessor) AddRenameMetricByName(from, to string) error {
 	return nil
 }
 
-func (mp *messageProcessor) RemoveRenameMetricByName(from string) {
+func (mp *messageProcessor) RemoveRenameMessageByName(from string) {
 	mp.mutex.Lock()
 	delete(mp.renameMessages, from)
 	mp.mutex.Unlock()
@@ -684,13 +724,13 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 		}
 	}
 	for k, v := range c.RenameMessagesIf {
-		err = mp.AddRenameMetricByCondition(k, v)
+		err = mp.AddRenameMessageByCondition(k, v)
 		if err != nil {
 			return fmt.Errorf("failed to process config JSON: %v", err.Error())
 		}
 	}
 	for k, v := range c.RenameMessages {
-		err = mp.AddRenameMetricByName(k, v)
+		err = mp.AddRenameMessageByName(k, v)
 		if err != nil {
 			return fmt.Errorf("failed to process config JSON: %v", err.Error())
 		}
@@ -849,6 +889,26 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 					return nil, nil
 				}
 			}
+		case STAGENAME_KEEP_BY_NAME:
+			if len(mp.keepMessages) > 0 {
+				// cclog.ComponentDebug("MessageProcessor", "Dropping by message name ", name)
+				if _, ok := mp.keepMessages[name]; !ok {
+					// cclog.ComponentDebug("MessageProcessor", "Drop")
+					return nil, nil
+				}
+			}
+		case STAGENAME_KEEP_IF:
+			if len(mp.keepMessagesIf) > 0 {
+				// cclog.ComponentDebug("MessageProcessor", "Dropping by condition")
+				drop, err := keepMessagesIf(&params, &mp.keepMessagesIf)
+				if err != nil {
+					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+				}
+				if drop {
+					// cclog.ComponentDebug("MessageProcessor", "Drop")
+					return nil, nil
+				}
+			}
 		case STAGENAME_RENAME_BY_NAME:
 			if len(mp.renameMessages) > 0 {
 				// cclog.ComponentDebug("MessageProcessor", "Renaming by name match")
@@ -988,18 +1048,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 					cclog.ComponentDebug("MessageProcessor", "skipped, no metric")
 				}
 			}
-		case STAGENAME_KEEP_IF:
-			if len(mp.keepMessagesIf) > 0 {
-				// cclog.ComponentDebug("MessageProcessor", "Keeping by condition")
-				keep, err := keepMessagesIf(&params, &mp.keepMessagesIf)
-				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
-				}
-				if !keep {
-					// cclog.ComponentDebug("MessageProcessor", "Keep")
-					return nil, nil
-				}
-			}
+
 		}
 	}
 

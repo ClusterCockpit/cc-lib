@@ -70,6 +70,11 @@ var test_configs = []Configs{
 		drop:   true,
 	},
 	{
+		name:   "keep_by_name",
+		config: json.RawMessage(`{"keep_messages": [ "net_bytes_in"]}`),
+		drop:   false,
+	},
+	{
 		name:   "drop_by_type_match",
 		config: json.RawMessage(`{"drop_by_message_type": [ "metric"]}`),
 		drop:   true,
@@ -87,6 +92,11 @@ var test_configs = []Configs{
 		name:   "double_dropif_match_nomatch",
 		config: json.RawMessage(`{"drop_messages_if": [ "name == 'net_bytes_in' && tags.type == 'node'", "name == 'testname' && tags.type == 'socket' && tags.typeid % 2 == 1"]}`),
 		drop:   true,
+	},
+	{
+		name:   "single_keepif_match",
+		config: json.RawMessage(`{"keep_messages_if": [ "name == 'net_bytes_in' && tags.type == 'node'"]}`),
+		drop:   false,
 	},
 	{
 		name:   "rename_simple",
