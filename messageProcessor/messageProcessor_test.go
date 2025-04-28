@@ -301,6 +301,26 @@ var test_configs = []Configs{
 			return nil
 		},
 	},
+	{
+		name:   "single_keepif_match",
+		config: json.RawMessage(`{"keep_messages_if": [ "name == 'net_bytes_in' && tags.type == 'node'"]}`),
+		drop:   false,
+	},
+	{
+		name:   "single_keepif_nomatch",
+		config: json.RawMessage(`{"keep_messages_if": [ "name == 'foobar' && tags.type == 'node'"]}`),
+		drop:   true,
+	},
+	{
+		name:   "double_keepif_match_nomatch",
+		config: json.RawMessage(`{"keep_messages_if": [ "name == 'net_bytes_in' && tags.type == 'node'", "name == 'testname' && tags.type == 'socket' && tags.typeid % 2 == 1"]}`),
+		drop:   false,
+	},
+	{
+		name:   "double_keepif_nomatch_match",
+		config: json.RawMessage(`{"keep_messages_if": [ "name == 'testname' && tags.type == 'socket' && tags.typeid % 2 == 1", "name == 'net_bytes_in' && tags.type == 'node'"]}`),
+		drop:   false,
+	},
 }
 
 func TestConfigList(t *testing.T) {

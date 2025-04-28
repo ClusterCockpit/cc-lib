@@ -32,20 +32,21 @@ type messageProcessorConfig struct {
 	RenameMessagesIf map[string]string           `json:"rename_messages_if,omitempty"` // Map to rename metric name based on a condition
 	NormalizeUnits   bool                        `json:"normalize_units,omitempty"`    // Check unit meta flag and normalize it using cc-units
 	ChangeUnitPrefix map[string]string           `json:"change_unit_prefix,omitempty"` // Add prefix that should be applied to the messages
-	AddTagsIf        []messageProcessorTagConfig `json:"add_tags_if"`                  // List of tags that are added when the condition is met
-	DelTagsIf        []messageProcessorTagConfig `json:"delete_tags_if"`               // List of tags that are removed when the condition is met
-	AddMetaIf        []messageProcessorTagConfig `json:"add_meta_if"`                  // List of meta infos that are added when the condition is met
-	DelMetaIf        []messageProcessorTagConfig `json:"delete_meta_if"`               // List of meta infos that are removed when the condition is met
-	AddFieldIf       []messageProcessorTagConfig `json:"add_field_if"`                 // List of fields that are added when the condition is met
-	DelFieldIf       []messageProcessorTagConfig `json:"delete_field_if"`              // List of fields that are removed when the condition is met
-	DropByType       []string                    `json:"drop_by_message_type"`         // List of message types that should be dropped
-	MoveTagToMeta    []messageProcessorTagConfig `json:"move_tag_to_meta_if"`
-	MoveTagToField   []messageProcessorTagConfig `json:"move_tag_to_field_if"`
-	MoveMetaToTag    []messageProcessorTagConfig `json:"move_meta_to_tag_if"`
-	MoveMetaToField  []messageProcessorTagConfig `json:"move_meta_to_field_if"`
-	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if"`
-	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if"`
-	AddBaseEnv       map[string]interface{}      `json:"add_base_env"`
+	AddTagsIf        []messageProcessorTagConfig `json:"add_tags_if,omitempty"`                  // List of tags that are added when the condition is met
+	DelTagsIf        []messageProcessorTagConfig `json:"delete_tags_if,omitempty"`               // List of tags that are removed when the condition is met
+	AddMetaIf        []messageProcessorTagConfig `json:"add_meta_if,omitempty"`                  // List of meta infos that are added when the condition is met
+	DelMetaIf        []messageProcessorTagConfig `json:"delete_meta_if,omitempty"`               // List of meta infos that are removed when the condition is met
+	AddFieldIf       []messageProcessorTagConfig `json:"add_field_if,omitempty"`                 // List of fields that are added when the condition is met
+	DelFieldIf       []messageProcessorTagConfig `json:"delete_field_if,omitempty"`              // List of fields that are removed when the condition is met
+	DropByType       []string                    `json:"drop_by_message_type,omitempty"`         // List of message types that should be dropped
+	MoveTagToMeta    []messageProcessorTagConfig `json:"move_tag_to_meta_if,omitempty"`
+	MoveTagToField   []messageProcessorTagConfig `json:"move_tag_to_field_if,omitempty"`
+	MoveMetaToTag    []messageProcessorTagConfig `json:"move_meta_to_tag_if,omitempty"`
+	MoveMetaToField  []messageProcessorTagConfig `json:"move_meta_to_field_if,omitempty"`
+	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if,omitempty"`
+	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if,omitempty"`
+	AddBaseEnv       map[string]interface{}      `json:"add_base_env,omitempty"`
+	KeepMessagesIf   []string                    `json:"keep_messages_if,omitempty"`   // List of evaluatable terms to keep messages
 }
 
 type messageProcessor struct {
@@ -77,6 +78,7 @@ type messageProcessor struct {
 	moveMetaToField  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveMetaToField
 	moveFieldToTag   map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToTag
 	moveFieldToMeta  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToMeta
+	keepMessagesIf   map[*vm.Program]struct{} // pre-processed keepMessagesIf
 }
 
 type MessageProcessor interface {
@@ -90,6 +92,8 @@ type MessageProcessor interface {
 	RemoveDropMessagesByName(name string)
 	AddDropMessagesByCondition(condition string) error
 	RemoveDropMessagesByCondition(condition string)
+	AddKeepMessagesByCondition(condition string) error
+	RemoveKeepMessagesByCondition(condition string)
 	AddRenameMetricByCondition(condition string, name string) error
 	RemoveRenameMetricByCondition(condition string)
 	AddRenameMetricByName(from, to string) error
@@ -130,6 +134,7 @@ const (
 	STAGENAME_DROP_BY_NAME       string = "drop_by_name"
 	STAGENAME_DROP_BY_TYPE       string = "drop_by_type"
 	STAGENAME_DROP_IF            string = "drop_if"
+	STAGENAME_KEEP_IF            string = "keep_if"
 	STAGENAME_ADD_TAG            string = "add_tag"
 	STAGENAME_DELETE_TAG         string = "delete_tag"
 	STAGENAME_MOVE_TAG_META      string = "move_tag_to_meta"
@@ -152,6 +157,7 @@ var StageNames = []string{
 	STAGENAME_DROP_BY_NAME,
 	STAGENAME_DROP_BY_TYPE,
 	STAGENAME_DROP_IF,
+	STAGENAME_KEEP_IF,
 	STAGENAME_ADD_TAG,
 	STAGENAME_DELETE_TAG,
 	STAGENAME_MOVE_TAG_META,
@@ -318,6 +324,7 @@ func (mp *messageProcessor) init() error {
 	mp.moveTagToField = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.moveTagToMeta = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.normalizeUnits = false
+	mp.keepMessagesIf = make(map[*vm.Program]struct{})
 	return nil
 }
 
@@ -460,6 +467,30 @@ func (mp *messageProcessor) RemoveDropMessagesByCondition(condition string) {
 	if e, ok := mp.mapping[condition]; ok {
 		delete(mp.mapping, condition)
 		delete(mp.dropMessagesIf, e)
+	}
+	mp.mutex.Unlock()
+}
+
+func (mp *messageProcessor) AddKeepMessagesByCondition(condition string) error {
+	var err error
+	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
+	if err != nil {
+		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
+	}
+	mp.mutex.Lock()
+	if _, ok := mp.keepMessagesIf[evaluable]; !ok {
+		mp.mapping[condition] = evaluable
+		mp.keepMessagesIf[evaluable] = struct{}{}
+	}
+	mp.mutex.Unlock()
+	return nil
+}
+
+func (mp *messageProcessor) RemoveKeepMessagesByCondition(condition string) {
+	mp.mutex.Lock()
+	if e, ok := mp.mapping[condition]; ok {
+		delete(mp.mapping, condition)
+		delete(mp.keepMessagesIf, e)
 	}
 	mp.mutex.Unlock()
 }
@@ -748,6 +779,12 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 			return fmt.Errorf("failed to process config JSON: %v", err.Error())
 		}
 	}
+	for _, m := range c.KeepMessagesIf {
+		err = mp.AddKeepMessagesByCondition(m)
+		if err != nil {
+			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+		}
+	}
 	if len(c.AddBaseEnv) > 0 {
 		err = mp.AddBaseEnv(c.AddBaseEnv)
 		if err != nil {
@@ -949,6 +986,18 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 					}
 				} else {
 					cclog.ComponentDebug("MessageProcessor", "skipped, no metric")
+				}
+			}
+		case STAGENAME_KEEP_IF:
+			if len(mp.keepMessagesIf) > 0 {
+				// cclog.ComponentDebug("MessageProcessor", "Keeping by condition")
+				keep, err := keepMessagesIf(&params, &mp.keepMessagesIf)
+				if err != nil {
+					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+				}
+				if !keep {
+					// cclog.ComponentDebug("MessageProcessor", "Keep")
+					return nil, nil
 				}
 			}
 		}

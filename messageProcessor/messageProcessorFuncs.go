@@ -176,16 +176,32 @@ func moveFieldToMeta(message lp2.CCMessage, params *map[string]interface{}, chec
 }
 
 func dropMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]struct{}) (bool, error) {
+	drop := false
 	for d := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
 			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
 		}
 		if value.(bool) {
-			return true, nil
+			drop = true
 		}
 	}
-	return false, nil
+	return drop, nil
+}
+
+func keepMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]struct{}) (bool, error) {
+	drop := false
+	for d := range *checks {
+
+		value, err := expr.Run(d, *params)
+		if err != nil {
+			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
+		}
+		if value.(bool) {
+			drop = true
+		}
+	}
+	return drop, nil
 }
 
 func normalizeUnits(message lp2.CCMessage) (bool, error) {
