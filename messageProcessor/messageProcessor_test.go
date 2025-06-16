@@ -129,6 +129,26 @@ var test_configs = []Configs{
 		},
 	},
 	{
+		name:   "add_tag_no_cond",
+		config: json.RawMessage(`{"add_tags_if": [{"key" : "cluster", "value" : "mycluster"}]}`),
+		check: func(msg lp.CCMessage) error {
+			if !msg.HasTag("cluster") {
+				return errors.New("expected new tag 'cluster' but not present")
+			}
+			return nil
+		},
+	},
+	{
+		name:   "add_tag_any_cond",
+		config: json.RawMessage(`{"add_tags_if": [{"if": "*", "key" : "cluster", "value" : "mycluster"}]}`),
+		check: func(msg lp.CCMessage) error {
+			if !msg.HasTag("cluster") {
+				return errors.New("expected new tag 'cluster' but not present")
+			}
+			return nil
+		},
+	},
+	{
 		name:   "del_tag",
 		config: json.RawMessage(`{"delete_tags_if": [{"if": "name == 'net_bytes_in'", "key" : "type"}]}`),
 		check: func(msg lp.CCMessage) error {
