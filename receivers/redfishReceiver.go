@@ -1,5 +1,11 @@
 //go:build linux
 
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+// additional authors:
+// Holger Obermaier (NHR@KIT)
 package receivers
 
 import (
@@ -17,8 +23,8 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	"github.com/ClusterCockpit/cc-lib/hostlist"
 	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
-	"github.com/ClusterCockpit/cc-metric-collector/pkg/hostlist"
 
 	// See: https://pkg.go.dev/github.com/stmcginnis/gofish
 	"github.com/stmcginnis/gofish"
@@ -27,7 +33,6 @@ import (
 )
 
 type RedfishReceiverClientConfig struct {
-
 	// Hostname the redfish service belongs to
 	Hostname string
 
@@ -86,7 +91,6 @@ func setMetricValue(value any) map[string]interface{} {
 
 // sendMetric sends the metric through the sink channel
 func (r *RedfishReceiver) sendMetric(mp mp.MessageProcessor, name string, tags map[string]string, meta map[string]string, value any, timestamp time.Time) {
-
 	deleteEmptyTags(tags)
 	deleteEmptyTags(meta)
 	y, err := lp.NewMessage(name, tags, meta, setMetricValue(value), timestamp)
@@ -106,8 +110,8 @@ func (r *RedfishReceiver) sendMetric(mp mp.MessageProcessor, name string, tags m
 // Redfish URI: /redfish/v1/Chassis/{ChassisId}/Sensors/{SensorId}
 func (r *RedfishReceiver) readSensors(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis) error {
-
+	chassis *redfish.Chassis,
+) error {
 	writeTemperatureSensor := func(sensor *redfish.Sensor) {
 		tags := map[string]string{
 			"hostname": clientConfig.Hostname,
@@ -251,7 +255,6 @@ func (r *RedfishReceiver) readSensors(
 			}
 		}
 	} else {
-
 		common.CollectCollection(
 			func(uri string) {
 				sensor, err := redfish.GetSensor(chassis.GetClient(), uri)
@@ -283,7 +286,6 @@ func (r *RedfishReceiver) readSensors(
 				}
 			},
 			clientConfig.readSensorURLs[chassis.ID])
-
 	}
 	return nil
 }
@@ -295,8 +297,8 @@ func (r *RedfishReceiver) readSensors(
 // -> on Lenovo servers /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics links to /redfish/v1/Chassis/{ChassisId}/Sensors/{SensorId}
 func (r *RedfishReceiver) readThermalMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis) error {
-
+	chassis *redfish.Chassis,
+) error {
 	// Get thermal information for each chassis
 	thermal, err := chassis.Thermal()
 	if err != nil {
@@ -405,8 +407,8 @@ func (r *RedfishReceiver) readThermalMetrics(
 // -> deprecated in favor of the PowerSubsystem schema
 func (r *RedfishReceiver) readPowerMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis) error {
-
+	chassis *redfish.Chassis,
+) error {
 	// Get power information for each chassis
 	power, err := chassis.Power()
 	if err != nil {
@@ -457,9 +459,8 @@ func (r *RedfishReceiver) readPowerMetrics(
 		// IntervalInMin shall represent the time interval (or window), in minutes,
 		// in which the PowerMetrics properties are measured over.
 		// Should be an integer, but some Dell implementations return as a float
-		intervalInMin :=
-			strconv.FormatFloat(
-				float64(pc.PowerMetrics.IntervalInMin), 'f', -1, 32)
+		intervalInMin := strconv.FormatFloat(
+			float64(pc.PowerMetrics.IntervalInMin), 'f', -1, 32)
 
 		// Set tags
 		tags := map[string]string{
@@ -503,8 +504,8 @@ func (r *RedfishReceiver) readPowerMetrics(
 // Redfish URI: /redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/ProcessorMetrics
 func (r *RedfishReceiver) readProcessorMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	processor *redfish.Processor) error {
-
+	processor *redfish.Processor,
+) error {
 	timestamp := time.Now()
 
 	// URL to processor metrics
@@ -593,7 +594,6 @@ func (r *RedfishReceiver) readProcessorMetrics(
 // readMetrics reads redfish thermal, power and processor metrics from the redfish device
 // configured in clientConfig
 func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig) error {
-
 	// Connect to redfish service
 	c, err := gofish.Connect(clientConfig.gofish)
 	if err != nil {
@@ -617,10 +617,9 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 	}
 
 	// Get all chassis managed by this service
-	isChassisListRequired :=
-		clientConfig.doSensors ||
-			clientConfig.doThermalMetrics ||
-			clientConfig.doPowerMetric
+	isChassisListRequired := clientConfig.doSensors ||
+		clientConfig.doThermalMetrics ||
+		clientConfig.doPowerMetric
 	var chassisList []*redfish.Chassis
 	if isChassisListRequired {
 		chassisList, err = c.Service.Chassis()
@@ -694,7 +693,6 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 // doReadMetrics reads metrics from all configure redfish devices.
 // To compensate latencies of the Redfish devices a fanout is used.
 func (r *RedfishReceiver) doReadMetric() {
-
 	// Create wait group and input channel for workers
 	var workerWaitGroup sync.WaitGroup
 	workerInput := make(chan *RedfishReceiverClientConfig, r.config.fanout)
@@ -719,7 +717,6 @@ func (r *RedfishReceiver) doReadMetric() {
 
 	// Distribute client configs to workers
 	for i := range r.config.ClientConfigs {
-
 		// Check done channel status
 		select {
 		case workerInput <- &r.config.ClientConfigs[i]:
@@ -953,18 +950,14 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 		}
 
 		// Which metrics should be collected
-		doPowerMetric :=
-			!(configJSON.DisablePowerMetrics ||
-				clientConfigJSON.DisablePowerMetrics)
-		doProcessorMetrics :=
-			!(configJSON.DisableProcessorMetrics ||
-				clientConfigJSON.DisableProcessorMetrics)
-		doSensors :=
-			!(configJSON.DisableSensors ||
-				clientConfigJSON.DisableSensors)
-		doThermalMetrics :=
-			!(configJSON.DisableThermalMetrics ||
-				clientConfigJSON.DisableThermalMetrics)
+		doPowerMetric := !(configJSON.DisablePowerMetrics ||
+			clientConfigJSON.DisablePowerMetrics)
+		doProcessorMetrics := !(configJSON.DisableProcessorMetrics ||
+			clientConfigJSON.DisableProcessorMetrics)
+		doSensors := !(configJSON.DisableSensors ||
+			clientConfigJSON.DisableSensors)
+		doThermalMetrics := !(configJSON.DisableThermalMetrics ||
+			clientConfigJSON.DisableThermalMetrics)
 
 		// Is metrics excluded globally or per client
 		isExcluded := make(map[string]bool)

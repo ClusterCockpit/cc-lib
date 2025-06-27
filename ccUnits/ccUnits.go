@@ -1,3 +1,8 @@
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 // Unit system for cluster monitoring metrics like bytes, flops and events
 package ccunits
 
@@ -74,9 +79,9 @@ func (u *unit) GetUnitDenominator() Measure {
 // GetPrefixPrefixFactor creates the default conversion function between two prefixes.
 // It returns a conversation function for the value.
 func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value interface{}) interface{} {
-	var factor = 1.0
-	var in_prefix = float64(in)
-	var out_prefix = float64(out)
+	factor := 1.0
+	in_prefix := float64(in)
+	out_prefix := float64(out)
 	factor = in_prefix / out_prefix
 	conv := func(value interface{}) interface{} {
 		switch v := value.(type) {
@@ -179,7 +184,7 @@ func GetUnitPrefixStringFactor(in Unit, out string) (func(value interface{}) int
 // GetUnitStringPrefixStringFactor gets the conversion function and resulting unit for a unit and a prefix when both are only string representations.
 // This is just a wrapper for GetUnitPrefixFactor with the given input unit and the desired output prefix.
 func GetUnitStringPrefixStringFactor(in string, out string) (func(value interface{}) interface{}, Unit) {
-	var i = NewUnit(in)
+	i := NewUnit(in)
 	return GetUnitPrefixStringFactor(i, out)
 }
 

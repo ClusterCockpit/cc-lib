@@ -1,5 +1,11 @@
 //go:build linux
 
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+// additional authors:
+// Holger Obermaier (NHR@KIT)
 package receivers
 
 import (
@@ -17,11 +23,10 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
-	"github.com/ClusterCockpit/cc-metric-collector/pkg/hostlist"
+	"github.com/ClusterCockpit/cc-lib/hostlist"
 )
 
 type IPMIReceiverClientConfig struct {
-
 	// Hostname the IPMI service belongs to
 	Protocol         string            // Protocol / tool to use for IPMI sensor reading
 	DriverType       string            // Out of band IPMI driver
@@ -367,7 +372,7 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 	r.config.Interval, err = time.ParseDuration(configJSON.IntervalString)
 	if err != nil {
 		err := fmt.Errorf(
-			"Failed to parse duration string interval='%s': %w",
+			"failed to parse duration string interval='%s': %w",
 			configJSON.IntervalString,
 			err,
 		)

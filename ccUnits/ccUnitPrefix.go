@@ -1,3 +1,7 @@
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 package ccunits
 
 import (
@@ -40,110 +44,112 @@ type PrefixData struct {
 }
 
 // Different names and regex used for input and output
-var InvalidPrefixLong string = "Invalid"
-var InvalidPrefixShort string = "inval"
-var PrefixDataMap map[Prefix]PrefixData = map[Prefix]PrefixData{
-	Base: {
-		Long:  "",
-		Short: "",
-		Regex: "^$",
-	},
-	Kilo: {
-		Long:  "Kilo",
-		Short: "K",
-		Regex: "^[kK]$",
-	},
-	Mega: {
-		Long:  "Mega",
-		Short: "M",
-		Regex: "^[M]$",
-	},
-	Giga: {
-		Long:  "Giga",
-		Short: "G",
-		Regex: "^[gG]$",
-	},
-	Tera: {
-		Long:  "Tera",
-		Short: "T",
-		Regex: "^[tT]$",
-	},
-	Peta: {
-		Long:  "Peta",
-		Short: "P",
-		Regex: "^[pP]$",
-	},
-	Exa: {
-		Long:  "Exa",
-		Short: "E",
-		Regex: "^[eE]$",
-	},
-	Zetta: {
-		Long:  "Zetta",
-		Short: "Z",
-		Regex: "^[zZ]$",
-	},
-	Yotta: {
-		Long:  "Yotta",
-		Short: "Y",
-		Regex: "^[yY]$",
-	},
-	Milli: {
-		Long:  "Milli",
-		Short: "m",
-		Regex: "^[m]$",
-	},
-	Micro: {
-		Long:  "Micro",
-		Short: "u",
-		Regex: "^[u]$",
-	},
-	Nano: {
-		Long:  "Nano",
-		Short: "n",
-		Regex: "^[n]$",
-	},
-	Kibi: {
-		Long:  "Kibi",
-		Short: "Ki",
-		Regex: "^[kK][i]$",
-	},
-	Mebi: {
-		Long:  "Mebi",
-		Short: "Mi",
-		Regex: "^[M][i]$",
-	},
-	Gibi: {
-		Long:  "Gibi",
-		Short: "Gi",
-		Regex: "^[gG][i]$",
-	},
-	Tebi: {
-		Long:  "Tebi",
-		Short: "Ti",
-		Regex: "^[tT][i]$",
-	},
-	Pebi: {
-		Long:  "Pebi",
-		Short: "Pi",
-		Regex: "^[pP][i]$",
-	},
-	Exbi: {
-		Long:  "Exbi",
-		Short: "Ei",
-		Regex: "^[eE][i]$",
-	},
-	Zebi: {
-		Long:  "Zebi",
-		Short: "Zi",
-		Regex: "^[zZ][i]$",
-	},
-	Yobi: {
-		Long:  "Yobi",
-		Short: "Yi",
-		Regex: "^[yY][i]$",
-	},
-}
+var (
+	InvalidPrefixLong  string                = "Invalid"
+	InvalidPrefixShort string                = "inval"
+	PrefixDataMap      map[Prefix]PrefixData = map[Prefix]PrefixData{
+		Base: {
+			Long:  "",
+			Short: "",
+			Regex: "^$",
+		},
+		Kilo: {
+			Long:  "Kilo",
+			Short: "K",
+			Regex: "^[kK]$",
+		},
+		Mega: {
+			Long:  "Mega",
+			Short: "M",
+			Regex: "^[M]$",
+		},
+		Giga: {
+			Long:  "Giga",
+			Short: "G",
+			Regex: "^[gG]$",
+		},
+		Tera: {
+			Long:  "Tera",
+			Short: "T",
+			Regex: "^[tT]$",
+		},
+		Peta: {
+			Long:  "Peta",
+			Short: "P",
+			Regex: "^[pP]$",
+		},
+		Exa: {
+			Long:  "Exa",
+			Short: "E",
+			Regex: "^[eE]$",
+		},
+		Zetta: {
+			Long:  "Zetta",
+			Short: "Z",
+			Regex: "^[zZ]$",
+		},
+		Yotta: {
+			Long:  "Yotta",
+			Short: "Y",
+			Regex: "^[yY]$",
+		},
+		Milli: {
+			Long:  "Milli",
+			Short: "m",
+			Regex: "^[m]$",
+		},
+		Micro: {
+			Long:  "Micro",
+			Short: "u",
+			Regex: "^[u]$",
+		},
+		Nano: {
+			Long:  "Nano",
+			Short: "n",
+			Regex: "^[n]$",
+		},
+		Kibi: {
+			Long:  "Kibi",
+			Short: "Ki",
+			Regex: "^[kK][i]$",
+		},
+		Mebi: {
+			Long:  "Mebi",
+			Short: "Mi",
+			Regex: "^[M][i]$",
+		},
+		Gibi: {
+			Long:  "Gibi",
+			Short: "Gi",
+			Regex: "^[gG][i]$",
+		},
+		Tebi: {
+			Long:  "Tebi",
+			Short: "Ti",
+			Regex: "^[tT][i]$",
+		},
+		Pebi: {
+			Long:  "Pebi",
+			Short: "Pi",
+			Regex: "^[pP][i]$",
+		},
+		Exbi: {
+			Long:  "Exbi",
+			Short: "Ei",
+			Regex: "^[eE][i]$",
+		},
+		Zebi: {
+			Long:  "Zebi",
+			Short: "Zi",
+			Regex: "^[zZ][i]$",
+		},
+		Yobi: {
+			Long:  "Yobi",
+			Short: "Yi",
+			Regex: "^[yY][i]$",
+		},
+	}
+)
 
 // String returns the long string for the prefix like 'Kilo' or 'Mega'
 func (p *Prefix) String() string {

@@ -1,3 +1,7 @@
+// Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+// All rights reserved. This file is part of cc-lib.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 package ccunits
 
 import "regexp"
@@ -29,80 +33,82 @@ type MeasureData struct {
 }
 
 // Different names and regex used for input and output
-var InvalidMeasureLong string = "Invalid"
-var InvalidMeasureShort string = "inval"
-var MeasuresMap map[Measure]MeasureData = map[Measure]MeasureData{
-	Bytes: {
-		Long:  "byte",
-		Short: "B",
-		Regex: "^([bB][yY]?[tT]?[eE]?[sS]?)",
-	},
-	Flops: {
-		Long:  "Flops",
-		Short: "Flops",
-		Regex: "^([fF][lL]?[oO]?[pP]?[sS]?)",
-	},
-	Percentage: {
-		Long:  "Percent",
-		Short: "%",
-		Regex: "^(%|[pP]ercent)",
-	},
-	TemperatureC: {
-		Long:  "DegreeC",
-		Short: "degC",
-		Regex: "^(deg[Cc]|°[cC])",
-	},
-	TemperatureF: {
-		Long:  "DegreeF",
-		Short: "degF",
-		Regex: "^(deg[fF]|°[fF])",
-	},
-	Rotation: {
-		Long:  "RPM",
-		Short: "RPM",
-		Regex: "^([rR][pP][mM])",
-	},
-	Frequency: {
-		Long:  "Hertz",
-		Short: "Hz",
-		Regex: "^([hH][eE]?[rR]?[tT]?[zZ])",
-	},
-	Time: {
-		Long:  "Seconds",
-		Short: "s",
-		Regex: "^([sS][eE]?[cC]?[oO]?[nN]?[dD]?[sS]?)",
-	},
-	Cycles: {
-		Long:  "Cycles",
-		Short: "cyc",
-		Regex: "^([cC][yY][cC]?[lL]?[eE]?[sS]?)",
-	},
-	Watt: {
-		Long:  "Watts",
-		Short: "W",
-		Regex: "^([wW][aA]?[tT]?[tT]?[sS]?)",
-	},
-	Joule: {
-		Long:  "Joules",
-		Short: "J",
-		Regex: "^([jJ][oO]?[uU]?[lL]?[eE]?[sS]?)",
-	},
-	Requests: {
-		Long:  "Requests",
-		Short: "requests",
-		Regex: "^([rR][eE][qQ][uU]?[eE]?[sS]?[tT]?[sS]?)",
-	},
-	Packets: {
-		Long:  "Packets",
-		Short: "packets",
-		Regex: "^([pP][aA]?[cC]?[kK][eE]?[tT][sS]?)",
-	},
-	Events: {
-		Long:  "Events",
-		Short: "events",
-		Regex: "^([eE][vV]?[eE]?[nN][tT][sS]?)",
-	},
-}
+var (
+	InvalidMeasureLong  string                  = "Invalid"
+	InvalidMeasureShort string                  = "inval"
+	MeasuresMap         map[Measure]MeasureData = map[Measure]MeasureData{
+		Bytes: {
+			Long:  "byte",
+			Short: "B",
+			Regex: "^([bB][yY]?[tT]?[eE]?[sS]?)",
+		},
+		Flops: {
+			Long:  "Flops",
+			Short: "Flops",
+			Regex: "^([fF][lL]?[oO]?[pP]?[sS]?)",
+		},
+		Percentage: {
+			Long:  "Percent",
+			Short: "%",
+			Regex: "^(%|[pP]ercent)",
+		},
+		TemperatureC: {
+			Long:  "DegreeC",
+			Short: "degC",
+			Regex: "^(deg[Cc]|°[cC])",
+		},
+		TemperatureF: {
+			Long:  "DegreeF",
+			Short: "degF",
+			Regex: "^(deg[fF]|°[fF])",
+		},
+		Rotation: {
+			Long:  "RPM",
+			Short: "RPM",
+			Regex: "^([rR][pP][mM])",
+		},
+		Frequency: {
+			Long:  "Hertz",
+			Short: "Hz",
+			Regex: "^([hH][eE]?[rR]?[tT]?[zZ])",
+		},
+		Time: {
+			Long:  "Seconds",
+			Short: "s",
+			Regex: "^([sS][eE]?[cC]?[oO]?[nN]?[dD]?[sS]?)",
+		},
+		Cycles: {
+			Long:  "Cycles",
+			Short: "cyc",
+			Regex: "^([cC][yY][cC]?[lL]?[eE]?[sS]?)",
+		},
+		Watt: {
+			Long:  "Watts",
+			Short: "W",
+			Regex: "^([wW][aA]?[tT]?[tT]?[sS]?)",
+		},
+		Joule: {
+			Long:  "Joules",
+			Short: "J",
+			Regex: "^([jJ][oO]?[uU]?[lL]?[eE]?[sS]?)",
+		},
+		Requests: {
+			Long:  "Requests",
+			Short: "requests",
+			Regex: "^([rR][eE][qQ][uU]?[eE]?[sS]?[tT]?[sS]?)",
+		},
+		Packets: {
+			Long:  "Packets",
+			Short: "packets",
+			Regex: "^([pP][aA]?[cC]?[kK][eE]?[tT][sS]?)",
+		},
+		Events: {
+			Long:  "Events",
+			Short: "events",
+			Regex: "^([eE][vV]?[eE]?[nN][tT][sS]?)",
+		},
+	}
+)
 
 // String returns the long string for the measure like 'Percent' or 'Seconds'
 func (m *Measure) String() string {
