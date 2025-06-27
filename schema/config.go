@@ -89,6 +89,8 @@ type ResampleConfig struct {
 }
 
 type CronFrequency struct {
+	// Duration Update Worker [Defaults to '2m']
+	CommitJobWorker string `json:"commit-job-worker"`
 	// Duration Update Worker [Defaults to '5m']
 	DurationWorker string `json:"duration-worker"`
 	// Metric-Footprint Update Worker [Defaults to '10m']
@@ -100,7 +102,7 @@ type ProgramConfig struct {
 	// Address where the http (or https) server will listen on (for example: 'localhost:80').
 	Addr string `json:"addr"`
 
-	// Addresses from which secured API endpoints can be reached
+	// Addresses from which secured admin API endpoints can be reached, can be wildcard "*"
 	ApiAllowedIPs []string `json:"apiAllowedIPs"`
 
 	// Drop root permissions once .env was read and the port was taken.
@@ -128,6 +130,8 @@ type ProgramConfig struct {
 	// Keep all metric data in the metric data repositories,
 	// do not write to the job-archive.
 	DisableArchive bool `json:"disable-archive"`
+
+	EnableJobTaggers bool `json:"enable-job-taggers"`
 
 	// Validate json input against schema
 	Validate bool `json:"validate"`

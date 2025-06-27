@@ -45,31 +45,31 @@ type SubCluster struct {
 	ThreadsPerCore  int            `json:"threadsPerCore"`
 }
 
+type Metric struct {
+	Name    string  `json:"name"`
+	Unit    Unit    `json:"unit"`
+	Peak    float64 `json:"peak"`
+	Normal  float64 `json:"normal"`
+	Caution float64 `json:"caution"`
+	Alert   float64 `json:"alert"`
+}
+
 type SubClusterConfig struct {
-	Name          string  `json:"name"`
-	Footprint     string  `json:"footprint,omitempty"`
-	Energy        string  `json:"energy"`
-	Peak          float64 `json:"peak"`
-	Normal        float64 `json:"normal"`
-	Caution       float64 `json:"caution"`
-	Alert         float64 `json:"alert"`
-	Remove        bool    `json:"remove"`
-	LowerIsBetter bool    `json:"lowerIsBetter"`
+	Metric
+	Footprint     string `json:"footprint,omitempty"`
+	Energy        string `json:"energy"`
+	Remove        bool   `json:"remove"`
+	LowerIsBetter bool   `json:"lowerIsBetter"`
 }
 
 type MetricConfig struct {
-	Unit          Unit                `json:"unit"`
+	Metric
 	Energy        string              `json:"energy"`
-	Name          string              `json:"name"`
 	Scope         MetricScope         `json:"scope"`
 	Aggregation   string              `json:"aggregation"`
 	Footprint     string              `json:"footprint,omitempty"`
 	SubClusters   []*SubClusterConfig `json:"subClusters,omitempty"`
-	Peak          float64             `json:"peak"`
-	Caution       float64             `json:"caution"`
-	Alert         float64             `json:"alert"`
 	Timestep      int                 `json:"timestep"`
-	Normal        float64             `json:"normal"`
 	LowerIsBetter bool                `json:"lowerIsBetter"`
 }
 
@@ -106,6 +106,38 @@ func (topo *Topology) GetSocketsFromHWThreads(
 			for _, hwthreadInSocket := range hwthreadsInSocket {
 				if hwthread == hwthreadInSocket {
 					socketsMap[socket] += 1
+				}
+			}
+		}
+	}
+
+	exclusive = true
+	hwthreadsPerSocket := len(topo.Node) / len(topo.Socket)
+	sockets = make([]int, 0, len(socketsMap))
+	for socket, count := range socketsMap {
+		sockets = append(sockets, socket)
+		exclusive = exclusive && count == hwthreadsPerSocket
+	}
+
+	return sockets, exclusive
+}
+
+// Return a list of socket IDs given a list of core IDs.  Even if just one
+// core is in that socket, add it to the list.  If no cores other than
+// those in the argument list are assigned to one of the sockets in the first
+// return value, return true as the second value.  TODO: Optimize this, there
+// must be a more efficient way/algorithm.
+func (topo *Topology) GetSocketsFromCores(
+	cores []int,
+) (sockets []int, exclusive bool) {
+	socketsMap := map[int]int{}
+	for _, core := range cores {
+		for _, hwthreadInCore := range topo.Core[core] {
+			for socket, hwthreadsInSocket := range topo.Socket {
+				for _, hwthreadInSocket := range hwthreadsInSocket {
+					if hwthreadInCore == hwthreadInSocket {
+						socketsMap[socket] += 1
+					}
 				}
 			}
 		}

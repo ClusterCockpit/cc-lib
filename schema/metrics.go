@@ -14,7 +14,10 @@ import (
 	"github.com/ClusterCockpit/cc-lib/util"
 )
 
-type JobData map[string]map[MetricScope]*JobMetric
+type (
+	JobData        map[string]map[MetricScope]*JobMetric
+	ScopedJobStats map[string]map[MetricScope][]*ScopedStats
+)
 
 type JobMetric struct {
 	StatisticsSeries *StatsSeries `json:"statisticsSeries,omitempty"`
@@ -28,6 +31,12 @@ type Series struct {
 	Hostname   string           `json:"hostname"`
 	Data       []Float          `json:"data"`
 	Statistics MetricStatistics `json:"statistics"`
+}
+
+type ScopedStats struct {
+	Hostname string            `json:"hostname"`
+	Id       *string           `json:"id,omitempty"`
+	Data     *MetricStatistics `json:"data"`
 }
 
 type MetricStatistics struct {
@@ -289,6 +298,21 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 
 	scopes[MetricScopeNode] = nodeJm
 	return true
+}
+
+func (jd *JobData) RoundMetricStats() {
+	// TODO: Make Digit-Precision Configurable? (Currently: Fixed to 2 Digits)
+	for _, scopes := range *jd {
+		for _, jm := range scopes {
+			for index := range jm.Series {
+				jm.Series[index].Statistics = MetricStatistics{
+					Avg: (math.Round(jm.Series[index].Statistics.Avg*100) / 100),
+					Min: (math.Round(jm.Series[index].Statistics.Min*100) / 100),
+					Max: (math.Round(jm.Series[index].Statistics.Max*100) / 100),
+				}
+			}
+		}
+	}
 }
 
 func (jm *JobMetric) AddPercentiles(ps []int) bool {

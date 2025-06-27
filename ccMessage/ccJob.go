@@ -12,7 +12,7 @@ import (
 	"github.com/ClusterCockpit/cc-lib/schema"
 )
 
-func NewJobStartEvent(job *schema.JobMeta) (CCMessage, error) {
+func NewJobStartEvent(job *schema.Job) (CCMessage, error) {
 	payload, err := json.Marshal(job)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func NewJobStartEvent(job *schema.JobMeta) (CCMessage, error) {
 	return NewEvent("start_job", nil, nil, string(payload), time.Unix(job.StartTime, 0))
 }
 
-func NewJobStopEvent(job *schema.JobMeta) (CCMessage, error) {
+func NewJobStopEvent(job *schema.Job) (CCMessage, error) {
 	payload, err := json.Marshal(job)
 	if err != nil {
 		return nil, err
@@ -44,11 +44,11 @@ func (m *ccMessage) IsJobEvent() (string, bool) {
 	return "", false
 }
 
-func (m *ccMessage) GetJob() (job *schema.JobMeta, err error) {
+func (m *ccMessage) GetJob() (job *schema.Job, err error) {
 	value := m.GetEventValue()
 	d := json.NewDecoder(strings.NewReader(value))
 	d.DisallowUnknownFields()
-	job = &schema.JobMeta{}
+	job = &schema.Job{}
 
 	if err = d.Decode(job); err == nil {
 		return job, nil
