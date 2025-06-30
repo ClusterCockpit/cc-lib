@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -54,8 +54,8 @@ func Validate(k Kind, r io.Reader) error {
 		return err
 	}
 
-	var v interface{}
-	if err = json.NewDecoder(r).Decode(&v); err != nil {
+	var v any
+	if err := json.NewDecoder(r).Decode(&v); err != nil {
 		cclog.Warnf("Error while decoding raw json schema: %#v", err)
 		return err
 	}

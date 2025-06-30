@@ -1,11 +1,12 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -50,12 +51,7 @@ type User struct {
 }
 
 func (u *User) HasProject(project string) bool {
-	for _, p := range u.Projects {
-		if p == project {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(u.Projects, project)
 }
 
 func GetRoleString(roleInt Role) string {
@@ -88,10 +84,8 @@ func IsValidRole(role string) bool {
 // Check if User has SPECIFIED role AND role is VALID
 func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 	if IsValidRole(role) {
-		for _, r := range u.Roles {
-			if r == role {
-				return true, true
-			}
+		if slices.Contains(u.Roles, role) {
+			return true, true
 		}
 		return false, true
 	}
@@ -100,12 +94,7 @@ func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 
 // Check if User has SPECIFIED role
 func (u *User) HasRole(role Role) bool {
-	for _, r := range u.Roles {
-		if r == GetRoleString(role) {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(u.Roles, GetRoleString(role))
 }
 
 // Check if User has ANY of the listed roles
