@@ -81,6 +81,7 @@ func IsValidRole(role string) bool {
 	return getRoleEnum(role) != RoleError
 }
 
+// Check if User has SPECIFIED role AND role is VALID
 func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 	if IsValidRole(role) {
 		if slices.Contains(u.Roles, role) {
@@ -91,11 +92,12 @@ func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 	return false, false
 }
 
+// Check if User has SPECIFIED role
 func (u *User) HasRole(role Role) bool {
 	return slices.Contains(u.Roles, GetRoleString(role))
 }
 
-// Role-Arrays are short: performance not impacted by nested loop
+// Check if User has ANY of the listed roles
 func (u *User) HasAnyRole(queryroles []Role) bool {
 	for _, ur := range u.Roles {
 		for _, qr := range queryroles {
@@ -107,7 +109,7 @@ func (u *User) HasAnyRole(queryroles []Role) bool {
 	return false
 }
 
-// Role-Arrays are short: performance not impacted by nested loop
+// Check if User has ALL of the listed roles
 func (u *User) HasAllRoles(queryroles []Role) bool {
 	target := len(queryroles)
 	matches := 0
@@ -127,7 +129,7 @@ func (u *User) HasAllRoles(queryroles []Role) bool {
 	}
 }
 
-// Role-Arrays are short: performance not impacted by nested loop
+// Check if User has NONE of the listed roles
 func (u *User) HasNotRoles(queryroles []Role) bool {
 	matches := 0
 	for _, ur := range u.Roles {
