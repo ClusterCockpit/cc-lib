@@ -163,47 +163,47 @@ func ComponentPrint(component string, v ...any) {
 // Debug logs to DEBUG writer without string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debug(v ...any) {
-	DebugLog.Output(3, printStr(v...))
+	DebugLog.Output(2, printStr(v...))
 }
 
 func ComponentDebug(component string, v ...any) {
-	DebugLog.Print(fmt.Sprintf("[%s] ", component), v)
+	DebugLog.Output(2, printStr(fmt.Sprintf("[%s] ", component), v))
 }
 
 // Info logs to INFO writer without string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Info(v ...any) {
-	InfoLog.Output(3, printStr(v...))
+	InfoLog.Output(2, printStr(v...))
 }
 
 func ComponentInfo(component string, v ...any) {
-	InfoLog.Print(fmt.Sprintf("[%s] ", component), v)
+	InfoLog.Output(2, printStr(fmt.Sprintf("[%s] ", component), v))
 }
 
 // Warn logs to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warn(v ...any) {
-	WarnLog.Output(3, printStr(v...))
+	WarnLog.Output(2, printStr(v...))
 }
 
 func ComponentWarn(component string, v ...any) {
-	WarnLog.Print(fmt.Sprintf("[%s] ", component), v)
+	WarnLog.Output(2, printStr(fmt.Sprintf("[%s] ", component), v))
 }
 
 // Error logs to ERROR writer without string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Error(v ...any) {
-	ErrLog.Output(3, printStr(v...))
+	ErrLog.Output(2, printStr(v...))
 }
 
 func ComponentError(component string, v ...any) {
-	ErrLog.Print(fmt.Sprintf("[%s] ", component), v)
+	ErrLog.Output(2, printStr(fmt.Sprintf("[%s] ", component), v))
 }
 
 // Fatal writes to CRITICAL writer without string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatal(v ...any) {
-	CritLog.Output(3, printStr(v...))
+	CritLog.Output(2, printStr(v...))
 	os.Exit(1)
 }
 
@@ -238,31 +238,31 @@ func Abortf(format string, v ...any) {
 // Debugf logs to DEBUG writer with string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debugf(format string, v ...any) {
-	DebugLog.Output(3, printfStr(format, v...))
+	DebugLog.Output(2, printfStr(format, v...))
 }
 
 // Infof log to INFO writer with string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Infof(format string, v ...any) {
-	InfoLog.Output(3, printfStr(format, v...))
+	InfoLog.Output(2, printfStr(format, v...))
 }
 
 // Warnf logs to WARNING writer with string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warnf(format string, v ...any) {
-	WarnLog.Output(3, printfStr(format, v...))
+	WarnLog.Output(2, printfStr(format, v...))
 }
 
 // Errorf logs to ERROR writer with string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Errorf(format string, v ...any) {
-	ErrLog.Output(3, printfStr(format, v...))
+	ErrLog.Output(2, printfStr(format, v...))
 }
 
 // Fatalf logs to CRITICAL writer with string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatalf(format string, v ...any) {
-	CritLog.Output(3, printfStr(format, v...))
+	CritLog.Output(2, printfStr(format, v...))
 	os.Exit(1)
 }
 
