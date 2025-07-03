@@ -18,6 +18,7 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
 	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
 )
 
@@ -91,18 +92,18 @@ func (r *HttpReceiver) Init(name string, config json.RawMessage) error {
 	if r.config.useBasicAuth && len(r.config.Password) == 0 {
 		return errors.New("basic authentication requires password")
 	}
-	// msgp, err := mp.NewMessageProcessor()
-	// if err != nil {
-	// 	return fmt.Errorf("initialization of message processor failed: %v", err.Error())
-	// }
-	// r.mp = msgp
-	// if len(r.config.MessageProcessor) > 0 {
-	// 	err = r.mp.FromConfigJSON(r.config.MessageProcessor)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
-	// 	}
-	// }
-	// r.mp.AddAddMetaByCondition("true", "source", r.name)
+	msgp, err := mp.NewMessageProcessor()
+	if err != nil {
+		return fmt.Errorf("initialization of message processor failed: %v", err.Error())
+	}
+	r.mp = msgp
+	if len(r.config.MessageProcessor) > 0 {
+		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
+		if err != nil {
+			return fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+		}
+	}
+	r.mp.AddAddMetaByCondition("true", "source", r.name)
 	//
 	//r.meta = map[string]string{"source": r.name}
 	p := r.config.Path
