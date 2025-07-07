@@ -21,7 +21,6 @@ type Kind int
 const (
 	Meta Kind = iota + 1
 	Data
-	Config
 	ClusterCfg
 )
 
@@ -43,8 +42,6 @@ func Validate(k Kind, r io.Reader) error {
 		s, err = jsonschema.Compile("embedfs://job-data.schema.json")
 	case ClusterCfg:
 		s, err = jsonschema.Compile("embedfs://cluster.schema.json")
-	case Config:
-		s, err = jsonschema.Compile("embedfs://config.schema.json")
 	default:
 		return fmt.Errorf("SCHEMA/VALIDATE > unkown schema kind: %#v", k)
 	}
