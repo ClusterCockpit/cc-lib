@@ -70,14 +70,7 @@
     "jobState": {
       "description": "Final state of job",
       "type": "string",
-      "enum": [
-        "completed",
-        "failed",
-        "cancelled",
-        "stopped",
-        "out_of_memory",
-        "timeout"
-      ]
+      "enum": ["completed", "failed", "stopped", "out_of_memory", "timeout"]
     },
     "startTime": {
       "description": "Start epoch time stamp in seconds",
@@ -117,9 +110,7 @@
             "description": "The configuration options of the node"
           }
         },
-        "required": [
-          "hostname"
-        ],
+        "required": ["hostname"],
         "minItems": 1
       }
     },
@@ -154,10 +145,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "type"
-        ]
+        "required": ["name", "type"]
       },
       "uniqueItems": true
     },
@@ -315,23 +303,12 @@
                 "$ref": "embedfs://job-metric-statistics.schema.json"
               }
             },
-            "required": [
-              "name",
-              "type",
-              "read_bw",
-              "write_bw"
-            ]
+            "required": ["name", "type", "read_bw", "write_bw"]
           },
           "minItems": 1
         }
       },
-      "required": [
-        "cpu_user",
-        "cpu_load",
-        "mem_used",
-        "flops_any",
-        "mem_bw"
-      ]
+      "required": ["cpu_user", "cpu_load", "mem_used", "flops_any", "mem_bw"]
     }
   },
   "required": [
