@@ -1,5 +1,5 @@
 // Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
-// All rights reserved.
+// All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 package schema
@@ -25,6 +25,7 @@ const (
 
 type Node struct {
 	ID              int64             `json:"id" db:"id"`
+	TimeStamp       int64             `json:"timeStamp" db:"time_stamp" example:"1649723812"`
 	Hostname        string            `json:"hostname" db:"hostname" example:"fritz"`
 	Cluster         string            `json:"cluster" db:"cluster" example:"fritz"`
 	SubCluster      string            `json:"subCluster" db:"subcluster" example:"main"`
@@ -36,6 +37,7 @@ type Node struct {
 	MemoryTotal     int               `json:"memoryTotal" db:"memory_total"`
 	GpusAllocated   int               `json:"gpusAllocated" db:"gpus_allocated"`
 	GpusTotal       int               `json:"gpusTotal" db:"gpus_total"`
+	JobsRunning     int64             `json:"jobsRunning" db:"jobs_running" example:"12"`
 	RawMetaData     []byte            `json:"-" db:"meta_data"`
 	MetaData        map[string]string `json:"metaData"`
 }

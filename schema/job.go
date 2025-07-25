@@ -48,6 +48,7 @@ type Job struct {
 	NumNodes           int32                    `json:"numNodes" db:"num_nodes" example:"2" minimum:"1"`
 	Statistics         map[string]JobStatistics `json:"statistics"`
 	ID                 *int64                   `json:"id,omitempty" db:"id"`
+	SubmitTime         int64                    `json:"submitTime,omitempty" db:"submit_time" example:"1649723812"`
 	StartTime          int64                    `json:"startTime" db:"start_time" example:"1649723812"`
 }
 
@@ -108,14 +109,18 @@ type Resource struct {
 type JobState string
 
 const (
-	JobStateRunning     JobState = "running"
-	JobStateCompleted   JobState = "completed"
-	JobStateFailed      JobState = "failed"
+	JobStateBootFail    JobState = "boot_fail"
 	JobStateCancelled   JobState = "cancelled"
-	JobStateStopped     JobState = "stopped"
-	JobStateTimeout     JobState = "timeout"
-	JobStatePreempted   JobState = "preempted"
+	JobStateCompleted   JobState = "completed"
+	JobStateDeadline    JobState = "deadline"
+	JobStateFailed      JobState = "failed"
+	JobStateNodeFail    JobState = "node_fail"
 	JobStateOutOfMemory JobState = "out_of_memory"
+	JobStatePending     JobState = "pending"
+	JobStatePreempted   JobState = "preempted"
+	JobStateRunning     JobState = "running"
+	JobStateSuspended   JobState = "suspended"
+	JobStateTimeout     JobState = "timeout"
 )
 
 func (j Job) GoString() string {
