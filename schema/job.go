@@ -149,9 +149,11 @@ func (e JobState) MarshalGQL(w io.Writer) {
 func (e JobState) Valid() bool {
 	return e == JobStateRunning ||
 		e == JobStateCompleted ||
+		e == JobStateDeadline ||
 		e == JobStateFailed ||
-		e == JobStateCancelled ||
-		e == JobStateStopped ||
+		e == JobStateNodeFail ||
+		e == JobStatePending ||
+		e == JobStateSuspended ||
 		e == JobStateTimeout ||
 		e == JobStatePreempted ||
 		e == JobStateOutOfMemory

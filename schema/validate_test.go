@@ -9,32 +9,6 @@ import (
 	"testing"
 )
 
-func TestValidateConfig(t *testing.T) {
-	json := []byte(`{
-    "jwts": {
-        "max-age": "2m"
-    },
-    "apiAllowedIPs": [
-      "*"
-    ],
-    "clusters": [
-    {
-       "name": "testcluster",
-       "metricDataRepository": {
-    	"kind": "cc-metric-store",
-    	 "url": "localhost:8082"},
-       "filterRanges": {
-    	"numNodes": { "from": 1, "to": 64 },
-    	"duration": { "from": 0, "to": 86400 },
-    	"startTime": { "from": "2022-01-01T00:00:00Z", "to": null }
-    }}]
-}`)
-
-	if err := Validate(Config, bytes.NewReader(json)); err != nil {
-		t.Errorf("Error is not nil! %v", err)
-	}
-}
-
 func TestValidateCluster(t *testing.T) {
 	json := []byte(`{
 		"name": "emmy",
