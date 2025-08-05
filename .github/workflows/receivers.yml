@@ -5,8 +5,8 @@ name: receivers
 
 on:
   push
-#    paths:
-#      - '$GITHUB_WORKFLOW/**'
+    paths:
+      - 'receivers/**'
 
 jobs:
   golang_test:
@@ -23,7 +23,7 @@ jobs:
     - name: Setup Golang
       uses: actions/setup-go@v5
       with:
-        go-version: 'latest'
+        go-version: '1.23'
         check-latest: true
 
     # Run 'go test' in specified test target
