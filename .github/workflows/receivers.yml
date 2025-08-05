@@ -3,10 +3,10 @@
 name: receivers
 
 
-on:
-  push:
-    paths:
-      - '$GITHUB_WORKFLOW/**'
+#on:
+#  push:
+#    paths:
+#      - '$GITHUB_WORKFLOW/**'
 
 jobs:
   golang_test:
