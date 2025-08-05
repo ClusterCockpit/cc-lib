@@ -4,7 +4,7 @@ name: receivers
 
 
 on:
-  push
+  push:
     paths:
       - 'receivers/**'
 
