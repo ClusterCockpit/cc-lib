@@ -29,5 +29,5 @@ jobs:
     # Run 'go test' in specified test target
     - name: Run Golang tests
       run: |
-        - cd receivers
-        - go test
+        cd receivers
+        go test
