@@ -40,7 +40,7 @@ func TestHttpReceiver(t *testing.T) {
 	r.SetSink(sink)
 	t.Log("Starting http receiver")
 	r.Start()
-	time.Sleep(time.Second)
+	time.Sleep(500 * time.Microsecond)
 
 	msgs := gen_messages(numMessage)
 	for _, m := range msgs {
