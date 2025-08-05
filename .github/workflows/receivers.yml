@@ -1,12 +1,12 @@
-env:
-  TESTTARGET: receivers
 
-name: $TESTTARGET
+
+name: receivers
+
 
 on:
   push:
     paths:
-      - '$TESTTARGET/**'
+      - '$GITHUB_WORKFLOW/**'
 
 jobs:
   golang test:
@@ -29,5 +29,5 @@ jobs:
     # Run 'go test' in specified test target
     - name: Run Golang tests
       run:
-        - cd $TESTTARGET
+        - cd $GITHUB_WORKFLOW
         - go test
