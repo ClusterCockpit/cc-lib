@@ -3,8 +3,8 @@
 name: receivers
 
 
-#on:
-#  push:
+on:
+  push
 #    paths:
 #      - '$GITHUB_WORKFLOW/**'
 
