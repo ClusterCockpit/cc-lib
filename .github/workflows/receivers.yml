@@ -9,7 +9,7 @@ on:
       - '$GITHUB_WORKFLOW/**'
 
 jobs:
-  golang test:
+  golang_test:
     runs-on: ubuntu-latest
     steps:
     # See: https://github.com/marketplace/actions/checkout
