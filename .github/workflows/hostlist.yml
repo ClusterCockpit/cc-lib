@@ -11,7 +11,8 @@ on:
       - 'go.mod'
 
 jobs:
-  golang_test:
+  hostlist:
+    name: Golang unit tests for hostlist
     runs-on: ubuntu-latest
     steps:
     # See: https://github.com/marketplace/actions/checkout

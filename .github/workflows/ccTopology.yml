@@ -11,7 +11,8 @@ on:
       - 'go.mod'
 
 jobs:
-  golang_test:
+  golang_unit_tests:
+    name: Golang unit tests for ccTopology
     runs-on: ubuntu-latest
     steps:
     # See: https://github.com/marketplace/actions/checkout
