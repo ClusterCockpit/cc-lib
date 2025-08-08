@@ -1,12 +1,12 @@
 
 
-name: receivers
+name: ccTopology
 
 
 on:
   push:
     paths:
-      - 'receivers/**'
+      - 'ccTopology/**'
       - 'go.sum'
       - 'go.mod'
 
@@ -28,8 +28,14 @@ jobs:
         go-version: '1.23'
         check-latest: true
 
+    - name: Setup Hwloc
+      run: |
+        apt --assume-yes install hwloc
+        ln -s $(find /usr/lib -name "libhwloc*" | head -n 1) libhwloc.so
+
+
     # Run 'go test' in specified test target
     - name: Run Golang tests
       run: |
-        cd receivers
+        cd ccTopology
         go test

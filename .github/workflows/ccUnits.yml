@@ -1,12 +1,12 @@
 
 
-name: receivers
+name: ccUnits
 
 
 on:
   push:
     paths:
-      - 'receivers/**'
+      - 'ccUnits/**'
       - 'go.sum'
       - 'go.mod'
 
@@ -31,5 +31,5 @@ jobs:
     # Run 'go test' in specified test target
     - name: Run Golang tests
       run: |
-        cd receivers
+        cd ccUnits
         go test
