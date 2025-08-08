@@ -82,10 +82,20 @@ type ccMessageJSON struct {
 	Tm     time.Time              `json:"timestamp"` // timestamp
 }
 
+type Precision byte
+
+const (
+	Nanosecond  Precision = Precision(lp2.Nanosecond)
+	Microsecond           = Precision(lp2.Microsecond)
+	Millisecond           = Precision(lp2.Millisecond)
+	Second                = Precision(lp2.Second)
+)
+
 // ccMessage access functions
 type CCMessage interface {
 	ToPoint(metaAsTags map[string]bool) *write.Point  // Generate influxDB point for data type ccMessage
 	ToLineProtocol(metaAsTags map[string]bool) string // Generate influxDB line protocol for data type ccMessage
+	ToILP(precision Precision) string                 // Generate influxDB line protocol for ccMessage with time precision
 	ToJSON(metaAsTags map[string]bool) (json.RawMessage, error)
 
 	Name() string        // Get metric name
@@ -151,6 +161,25 @@ func (m *ccMessage) ToLineProtocol(metaAsTags map[string]bool) string {
 	return write.PointToLineProtocol(
 		m.ToPoint(metaAsTags),
 		time.Nanosecond,
+	)
+}
+
+// ToILP generates influxDB line protocol for data type ccMessage with time precision specification
+func (m *ccMessage) ToILP(precision Precision) string {
+	t := time.Duration(time.Second)
+	switch precision {
+	case Nanosecond:
+		t = time.Nanosecond
+	case Microsecond:
+		t = time.Microsecond
+	case Millisecond:
+		t = time.Millisecond
+	case Second:
+		t = time.Second
+	}
+	return write.PointToLineProtocol(
+		influxdb2.NewPoint(m.name, m.tags, m.fields, m.tm),
+		t,
 	)
 }
 
