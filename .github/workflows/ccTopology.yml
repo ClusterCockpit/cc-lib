@@ -31,7 +31,7 @@ jobs:
 
     - name: Setup Hwloc
       run: |
-        apt --assume-yes install hwloc
+        sudo apt --assume-yes install hwloc
         ln -s $(find /usr/lib -name "libhwloc*" | head -n 1) libhwloc.so
 
 
