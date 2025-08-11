@@ -18,12 +18,13 @@ import (
 // @Description Information of a HPC job.
 
 type Job struct {
-	Cluster            string                   `json:"cluster" db:"cluster" example:"fritz"`
+	Cluster            string                   `json:"cluster" db:"hpc_cluster" example:"fritz"`
 	SubCluster         string                   `json:"subCluster" db:"subcluster" example:"main"`
 	Partition          string                   `json:"partition,omitempty" db:"cluster_partition" example:"main"`
 	Project            string                   `json:"project" db:"project" example:"abcd200"`
 	User               string                   `json:"user" db:"hpc_user" example:"abcd100h"`
-	State              JobState                 `json:"jobState" db:"job_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`
+	Shared             string                   `json:"shared" db:"shared" enums:"none,single_user,multi_user"`
+	State              JobState                 `json:"jobState" db:"job_state" example:"completed" enums:"boot_fail,cancelled,completed,deadline,failed,node_fail,out-of-memory,pending,preempted,running,suspended,timeout"`
 	Tags               []*Tag                   `json:"tags,omitempty"`
 	RawEnergyFootprint []byte                   `json:"-" db:"energy_footprint"`
 	RawFootprint       []byte                   `json:"-" db:"footprint"`
@@ -42,7 +43,6 @@ type Job struct {
 	Duration           int32                    `json:"duration" db:"duration" example:"43200" minimum:"1"`
 	SMT                int32                    `json:"smt,omitempty" db:"smt" example:"4"`
 	MonitoringStatus   int32                    `json:"monitoringStatus,omitempty" db:"monitoring_status" example:"1" minimum:"0" maximum:"3"`
-	Exclusive          int32                    `json:"exclusive" db:"exclusive" example:"1" minimum:"0" maximum:"2"`
 	NumAcc             int32                    `json:"numAcc,omitempty" db:"num_acc" example:"2" minimum:"1"`
 	NumHWThreads       int32                    `json:"numHwthreads,omitempty" db:"num_hwthreads" example:"20" minimum:"1"`
 	NumNodes           int32                    `json:"numNodes" db:"num_nodes" example:"2" minimum:"1"`
