@@ -9,6 +9,7 @@ on:
       - 'schema/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/schema.yml'
 
 jobs:
   golang_unit_tests:

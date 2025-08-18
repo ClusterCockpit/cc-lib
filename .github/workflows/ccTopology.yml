@@ -9,6 +9,7 @@ on:
       - 'ccTopology/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/ccTopology.yml'
 
 jobs:
   golang_unit_tests:

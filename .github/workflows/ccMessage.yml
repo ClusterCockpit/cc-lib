@@ -9,6 +9,7 @@ on:
       - 'ccMessage/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/ccMessage.yml'
 
 jobs:
   golang_unit_tests:

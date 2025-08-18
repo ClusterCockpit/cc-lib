@@ -9,6 +9,7 @@ on:
       - 'lrucache/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/lrucache.yml'
 
 jobs:
   golang_unit_tests:

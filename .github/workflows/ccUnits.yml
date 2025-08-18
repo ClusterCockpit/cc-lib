@@ -9,6 +9,7 @@ on:
       - 'ccUnits/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/ccUnits.yml'
 
 jobs:
   golang_unit_tests:

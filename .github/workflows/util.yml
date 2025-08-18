@@ -9,6 +9,7 @@ on:
       - 'util/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/util.yml'
 
 jobs:
   golang_unit_tests:

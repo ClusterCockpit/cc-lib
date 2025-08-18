@@ -9,6 +9,7 @@ on:
       - 'messageProcessor/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/messageProcessor.yml'
 
 jobs:
   golang_unit_tests:

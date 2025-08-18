@@ -9,6 +9,7 @@ on:
       - 'hostlist/**'
       - 'go.sum'
       - 'go.mod'
+      - '.github/workflows/hostlist.yml'
 
 jobs:
   hostlist:
