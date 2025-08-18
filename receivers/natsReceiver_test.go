@@ -61,7 +61,7 @@ func TestNatsReceiver(t *testing.T) {
 		}
 	}
 
-	time.Sleep(500 * time.Microsecond)
+	time.Sleep(time.Second)
 	recvm := make([]lp.CCMessage, 0, numMessage)
 	for i := 0; i < numMessage && len(sink) > 0; i++ {
 		recvm = append(recvm, <-sink)
