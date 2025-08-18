@@ -30,6 +30,8 @@ jobs:
         go-version: '1.23'
         check-latest: true
 
+    # Install hwloc but add a softlink back to ccTopology folder for testing
+    # Some hwloc packages do not install libhwloc.so, only libhwloc.so.X.Y
     - name: Setup Hwloc
       run: |
         sudo apt --assume-yes install hwloc
@@ -40,4 +42,5 @@ jobs:
     - name: Run Golang tests
       run: |
         cd ccTopology
-        go test
+        ls -la
+        CGO_LDFLAGS="-L$(pwd)" go test
