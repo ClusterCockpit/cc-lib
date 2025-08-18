@@ -6,7 +6,7 @@ toolchain go1.24.0
 
 require (
 	github.com/NVIDIA/go-nvml v0.12.9-0
-	github.com/expr-lang/expr v1.17.5
+	github.com/expr-lang/expr v1.17.6
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
