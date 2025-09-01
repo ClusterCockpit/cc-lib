@@ -12,7 +12,7 @@ require (
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/influxdata/line-protocol v0.0.0-20210922203350-b1ad95c89adf
 	github.com/influxdata/line-protocol/v2 v2.2.1
-	github.com/nats-io/nats-server/v2 v2.11.7
+	github.com/nats-io/nats-server/v2 v2.11.8
 	github.com/nats-io/nats.go v1.45.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -36,9 +36,9 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
