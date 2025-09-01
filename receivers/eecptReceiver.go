@@ -46,6 +46,21 @@ type EECPTReceiverConfig struct {
 	analysisInterval     time.Duration
 }
 
+type EECPTReceiverTask struct {
+	numDistsFilled int
+	dists          []struct {
+		useful        float64
+		usefulPlusMpi float64
+	}
+	distsLock sync.RWMutex
+	subtasks  []*EECPTReceiverTask
+}
+
+type EECPTReceiverJob struct {
+	jobLock sync.RWMutex
+	tasks   map[int64]*EECPTReceiverTask
+}
+
 type EECPTReceiver struct {
 	receiver
 	// meta   map[string]string
@@ -55,41 +70,98 @@ type EECPTReceiver struct {
 	referenceBuffer []interface{}
 	newBuffer       []interface{}
 	bufferLock      sync.Mutex
+	jobs            map[string]*EECPTReceiverJob
 	analysisTicker  *time.Ticker
 	analysisDone    chan bool
 }
 
-var chi2Limit = 155.40 /* 128 */
-func SetChiSquareLimit(length int) {
+const chiSquareDistThreshold float64 = 1.0e-12
+
+func GetChiSquareLimit(length int) float64 {
 	switch {
 	case length < 3:
-		chi2Limit = 3.8145
+		return 3.8145
 	case length < 5:
-		chi2Limit = 7.8147
+		return 7.8147
 	case length < 9:
-		chi2Limit = 1.4067e1
+		return 1.4067e1
 	case length < 17:
-		chi2Limit = 2.4996e1
+		return 2.4996e1
 	case length < 33:
-		chi2Limit = 4.4985e1
+		return 4.4985e1
 	case length < 65:
-		chi2Limit = 8.2529e1
+		return 8.2529e1
 	case length < 73:
-		chi2Limit = 9.1670e1
+		return 9.1670e1
 	case length < 129:
-		chi2Limit = 1.5430e2
+		return 1.5430e2
 	case length < 257:
-		chi2Limit = 2.9325e2
+		return 2.9325e2
 	case length < 513:
-		chi2Limit = 5.6470e2
-	default:
-		chi2Limit = 1.0985e3
+		return 5.6470e2
 	}
+	return 1.0985e3
 }
 
-func chiSquareAnalysis(reference []interface{}, new []interface{}) bool {
+func (task *EECPTReceiverTask) averages() (float64, float64) {
+	avgUseful := float64(0.0)
+	avgUsefulPlusMpi := float64(0.0)
+	task.distsLock.RLock()
+	for _, dist := range task.dists {
+		avgUseful += dist.useful
+		avgUsefulPlusMpi += dist.usefulPlusMpi
+	}
+	task.distsLock.RUnlock()
+	avgUseful /= float64(task.numDistsFilled)
+	avgUsefulPlusMpi /= float64(task.numDistsFilled)
+	return avgUseful, avgUsefulPlusMpi
+}
 
-	return false
+func (task *EECPTReceiverTask) reset() {
+	task.distsLock.RLock()
+	task.dists = task.dists[:0]
+	task.distsLock.RUnlock()
+}
+
+func (task *EECPTReceiverTask) add(useful, usefulPlusMpi float64) {
+	task.distsLock.Lock()
+	task.dists = append(task.dists, struct {
+		useful        float64
+		usefulPlusMpi float64
+	}{
+		useful:        useful,
+		usefulPlusMpi: usefulPlusMpi,
+	})
+	task.distsLock.Unlock()
+}
+
+func (job *EECPTReceiverJob) chiSquareAnalysis() bool {
+	result := float64(0.0)
+	for t := range job.tasks {
+		task := job.tasks[t]
+		avgUseful, avgUsefulPlusMpi := task.averages()
+
+		if avgUseful > chiSquareDistThreshold {
+			x := task.dists[task.numDistsFilled-1].useful - avgUseful
+			result += x * (x / avgUseful)
+		}
+		if avgUsefulPlusMpi > chiSquareDistThreshold {
+			x := task.dists[task.numDistsFilled-1].usefulPlusMpi - avgUsefulPlusMpi
+			result += x * (x / avgUsefulPlusMpi)
+		}
+	}
+	return result > GetChiSquareLimit(len(job.tasks))
+}
+
+func (job *EECPTReceiverJob) newTask(id int64) {
+	job.jobLock.Lock()
+	if _, ok := job.tasks[id]; !ok {
+		job.tasks[id] = new(EECPTReceiverTask)
+		job.tasks[id].dists = make([]struct {
+			useful        float64
+			usefulPlusMpi float64
+		}, 0)
+	}
 }
 
 func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
@@ -146,7 +218,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	if r.config.AnalysisBufferLength <= 0 {
 		return fmt.Errorf("buffer length of %d not allowed", r.config.AnalysisBufferLength)
 	}
-	SetChiSquareLimit(r.config.AnalysisBufferLength)
+	//SetChiSquareLimit(r.config.AnalysisBufferLength)
 
 	// Configure message processor
 	msgp, err := mp.NewMessageProcessor()
@@ -211,20 +283,22 @@ func (r *EECPTReceiver) Start() {
 				r.wg.Done()
 				return
 			case <-r.analysisTicker.C:
-				same := chiSquareAnalysis(r.referenceBuffer, r.newBuffer)
-				if same {
-					// new region
-					y, err := lp.NewEvent("region", map[string]string{"type": "node", "stype": "application"}, nil, "region changed", time.Now())
-					if err == nil {
-						m, err := r.mp.ProcessMessage(y)
-						if err == nil && m != nil {
-							r.sink <- m
+				for _, job := range r.jobs {
+					same := job.chiSquareAnalysis()
+					if same {
+						// new region
+						y, err := lp.NewEvent("region", map[string]string{"type": "node", "stype": "application"}, nil, "region changed", time.Now())
+						if err == nil {
+							m, err := r.mp.ProcessMessage(y)
+							if err == nil && m != nil {
+								r.sink <- m
+							}
 						}
+					} else {
+						r.referenceBuffer = r.referenceBuffer[:0]
+						r.referenceBuffer = append(r.referenceBuffer, r.newBuffer...)
+						r.newBuffer = r.newBuffer[:0]
 					}
-				} else {
-					r.referenceBuffer = r.referenceBuffer[:0]
-					r.referenceBuffer = append(r.referenceBuffer, r.newBuffer...)
-					r.newBuffer = r.newBuffer[:0]
 				}
 			}
 		}
@@ -308,18 +382,38 @@ func (r *EECPTReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
 				t,
 			)
 
-			r.bufferLock.Lock()
-			r.newBuffer = append(r.newBuffer, y)
-			if len(r.newBuffer) > r.config.AnalysisBufferLength {
-				r.newBuffer = r.newBuffer[1:]
-			}
-			r.bufferLock.Unlock()
+			if appl, ok := tags["application"]; ok {
+				if _, ok := r.jobs[appl]; !ok {
+					r.jobs[appl] = new(EECPTReceiverJob)
+				}
+				job := r.jobs[appl]
 
-			m, err := r.mp.ProcessMessage(y)
-			if err == nil && m != nil {
-				r.sink <- m
-			}
+				pid := int64(0)
+				if r, ok := fields["rank"]; ok {
+					switch rank := r.(type) {
+					case int, int32, int64:
+						pid = rank.(int64)
+					}
+				}
+				if _, ok := job.tasks[pid]; !ok {
+					job.newTask(pid)
+				}
 
+				task := job.tasks[pid]
+
+				job.bufferLock.Lock()
+				job.newBuffer = append(r.newBuffer, y)
+				if len(job.newBuffer) > r.config.AnalysisBufferLength {
+					job.newBuffer = job.newBuffer[1:]
+				}
+				job.bufferLock.Unlock()
+			}
+			if r.sink != nil {
+				m, err := r.mp.ProcessMessage(y)
+				if err == nil && m != nil {
+					r.sink <- m
+				}
+			}
 		}
 		// Check for IO errors
 		err := d.Err()
