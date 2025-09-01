@@ -33,6 +33,7 @@ type NatsReceiverConfig struct {
 type NatsReceiver struct {
 	receiver
 	nc *nats.Conn
+	sub *nats.Subscription
 	// meta   map[string]string
 	config NatsReceiverConfig
 }
@@ -41,7 +42,12 @@ type NatsReceiver struct {
 // Messages wil be handled by r._NatsReceive
 func (r *NatsReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
-	r.nc.Subscribe(r.config.Subject, r._NatsReceive)
+	sub, err := r.nc.Subscribe(r.config.Subject, r._NatsReceive)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to subscribe to subject '%s': %s", r.config.Subject, err.Error())
+		cclog.ComponentError(r.name, msg)
+	}
+	r.sub = sub
 }
 
 // _NatsReceive receives subscribed messages from the NATS server
@@ -116,6 +122,13 @@ func (r *NatsReceiver) _NatsReceive(m *nats.Msg) {
 // Close closes the connection to the NATS server
 func (r *NatsReceiver) Close() {
 	if r.nc != nil {
+		cclog.ComponentDebug(r.name, "DRAIN")
+		err := r.sub.Drain()
+		if err != nil {
+			msg := fmt.Sprintf("Failed to drain subscription to subject '%s': %s", r.config.Subject, err.Error())
+			cclog.ComponentError(r.name, msg)
+		}
+		r.sub.Unsubscribe()
 		cclog.ComponentDebug(r.name, "CLOSE")
 		r.nc.Close()
 	}
@@ -181,6 +194,14 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 		r.nc = nil
 		return nil, err
 	}
+
+	sub, err := r.nc.Subscribe(r.config.Subject, func(m *nats.Msg) { return })
+	if err != nil {
+		err = fmt.Errorf("Failed to test subscribe to subject '%s': %s", r.config.Subject, err.Error())
+		cclog.ComponentError(r.name, err)
+		return nil, err
+	}
+	sub.Unsubscribe()
 
 	return r, nil
 }
