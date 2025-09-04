@@ -19,6 +19,9 @@ import (
 // a pointer has a bigger overhead.
 type Float float64
 
+// Same as `[]Float`, but can be marshaled to JSON with less allocations.
+type FloatArray []Float
+
 var (
 	NaN         Float  = Float(math.NaN())
 	nullAsBytes []byte = []byte("null")
@@ -26,6 +29,14 @@ var (
 
 func (f Float) IsNaN() bool {
 	return math.IsNaN(float64(f))
+}
+
+func ConvertToFloat(input float64) Float {
+	if input == -1.0 {
+		return NaN
+	} else {
+		return Float(input)
+	}
 }
 
 // NaN will be serialized to `null`.

@@ -67,7 +67,7 @@ func SimpleResampler(data []schema.Float, old_frequency int64, new_frequency int
 
 // Inspired by one of the algorithms from https://skemman.is/bitstream/1946/15343/3/SS_MSthesis.pdf
 // Adapted from https://github.com/haoel/downsampling/blob/master/core/lttb.go
-func LargestTriangleThreeBucket(data []schema.Float, old_frequency int, new_frequency int) ([]schema.Float, int, error) {
+func LargestTriangleThreeBucket(data []schema.Float, old_frequency int64, new_frequency int64) ([]schema.Float, int64, error) {
 	if old_frequency == 0 || new_frequency == 0 || new_frequency <= old_frequency {
 		return data, old_frequency, nil
 	}
