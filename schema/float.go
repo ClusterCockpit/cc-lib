@@ -31,6 +31,10 @@ func (f Float) IsNaN() bool {
 	return math.IsNaN(float64(f))
 }
 
+func (f Float) Double() float64 {
+	return float64(f)
+}
+
 func ConvertToFloat(input float64) Float {
 	if input == -1.0 {
 		return NaN
