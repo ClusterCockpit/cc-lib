@@ -56,7 +56,8 @@ func Init(filename string) {
 func GetPackageConfig(key string) json.RawMessage {
 	if val, ok := keys[key]; ok {
 		return val
+	} else {
+		cclog.Errorf("CONFIG ERROR: Key %s not found", key)
+		return nil
 	}
-	log.Fatalf("CONFIG ERROR: Key %s not found", key)
-	return nil
 }
