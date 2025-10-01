@@ -39,11 +39,8 @@ type NodeState struct {
 	NodeState       SchedulerState  `json:"nodeState" db:"node_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`
 	HealthState     MonitoringState `json:"healthState" db:"health_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`
 	CpusAllocated   int             `json:"cpusAllocated" db:"cpus_allocated"`
-	CpusTotal       int             `json:"cpusTotal" db:"cpus_total"`
 	MemoryAllocated int             `json:"memoryAllocated" db:"memory_allocated"`
-	MemoryTotal     int             `json:"memoryTotal" db:"memory_total"`
 	GpusAllocated   int             `json:"gpusAllocated" db:"gpus_allocated"`
-	GpusTotal       int             `json:"gpusTotal" db:"gpus_total"`
 	JobsRunning     int64           `json:"jobsRunning" db:"jobs_running" example:"12"`
 	NodeID          int64           `json:"_" db:"node_id"`
 }
