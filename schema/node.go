@@ -41,6 +41,6 @@ type NodeState struct {
 	CpusAllocated   int             `json:"cpusAllocated" db:"cpus_allocated"`
 	MemoryAllocated int             `json:"memoryAllocated" db:"memory_allocated"`
 	GpusAllocated   int             `json:"gpusAllocated" db:"gpus_allocated"`
-	JobsRunning     int64           `json:"jobsRunning" db:"jobs_running" example:"12"`
+	JobsRunning     int             `json:"jobsRunning" db:"jobs_running" example:"12"`
 	NodeID          int64           `json:"_" db:"node_id"`
 }
