@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +23,10 @@ import (
 )
 
 const CCCPT_RECEIVER_PORT = "8080"
+const chiSquareDistThreshold float64 = 1.0e-12
+
+// overwritten by configuration. 4 is the minimum
+var eecpt_analysis_buffer_size = 4
 
 type EECPTReceiverConfig struct {
 	defaultReceiverConfig
@@ -41,43 +47,87 @@ type EECPTReceiverConfig struct {
 	Password     string `json:"password"`
 	useBasicAuth bool
 
-	AnalysisBufferLength int    `json:"buffer_size"`
+	AnalysisBufferLength int    `json:"analysis_buffer_size"`
 	AnalysisInterval     string `json:"analysis_interval"`
+	AnalysisMetric       string `json:"analysis_metric"`
 	analysisInterval     time.Duration
 }
 
 type EECPTReceiverTask struct {
-	numDistsFilled int
-	dists          []struct {
-		useful        float64
-		usefulPlusMpi float64
-	}
-	distsLock sync.RWMutex
-	subtasks  []*EECPTReceiverTask
+	ident      string
+	tags       map[string]string
+	buffer     []float64
+	bufferLock sync.RWMutex
+	subtasks   map[int64]*EECPTReceiverTask
 }
 
 type EECPTReceiverJob struct {
-	jobLock sync.RWMutex
-	tasks   map[int64]*EECPTReceiverTask
+	ident string
+	tags  map[string]string
+	tasks map[int64]*EECPTReceiverTask
 }
 
 type EECPTReceiver struct {
 	receiver
 	// meta   map[string]string
-	config          EECPTReceiverConfig
-	server          *http.Server
-	wg              sync.WaitGroup
-	referenceBuffer []interface{}
-	newBuffer       []interface{}
-	bufferLock      sync.Mutex
-	jobs            map[string]*EECPTReceiverJob
-	analysisTicker  *time.Ticker
-	analysisDone    chan bool
+	config         EECPTReceiverConfig
+	server         *http.Server
+	wg             sync.WaitGroup
+	jobs           map[string]*EECPTReceiverJob
+	analysisTicker *time.Ticker
+	analysisDone   chan bool
 }
 
-const chiSquareDistThreshold float64 = 1.0e-12
+func NewJob(ident string) *EECPTReceiverJob {
+	j := new(EECPTReceiverJob)
+	j.ident = ident
+	cclog.ComponentDebug("EECPTReceiver", "New job", ident)
+	j.tags = make(map[string]string)
+	j.tasks = make(map[int64]*EECPTReceiverTask)
+	return j
+}
 
-func GetChiSquareLimit(length int) float64 {
+func (job *EECPTReceiverJob) newTask(id int64) {
+	if _, ok := job.tasks[id]; !ok {
+		job.tasks[id] = new(EECPTReceiverTask)
+		job.tasks[id].ident = fmt.Sprintf("%d", id)
+		cclog.ComponentDebug("EECPTReceiver", "New task", id)
+		job.tasks[id].buffer = make([]float64, 0)
+		job.tasks[id].tags = make(map[string]string)
+		job.tasks[id].subtasks = make(map[int64]*EECPTReceiverTask)
+	}
+}
+
+// func (task *EECPTReceiverTask) newSubTask(id int64) {
+// 	if _, ok := task.subtasks[id]; !ok {
+// 		task.subtasks[id] = new(EECPTReceiverTask)
+// 		task.subtasks[id].ident = fmt.Sprintf("%d", id)
+// 		task.subtasks[id].buffer = make([]float64, 0)
+// 		task.subtasks[id].tags = make(map[string]string)
+// 	}
+// }
+
+func (job *EECPTReceiverJob) Analyse() float64 {
+	result := float64(0)
+	// cclog.ComponentDebug("EECPTReceiver", "Analyze application", job.ident, "with", len(job.tasks), "tasks")
+	for _, task := range job.tasks {
+		prev, last, err := task.Analyse()
+		if err == nil && prev > chiSquareDistThreshold {
+			// cclog.ComponentDebug("EECPTReceiver", "Task", task.ident, "Prev", prev, "Last", last)
+			result += math.Pow(last-prev, 2) / prev
+		}
+	}
+	return result
+}
+
+func (job *EECPTReceiverJob) Reset() {
+	for _, task := range job.tasks {
+		task.Reset()
+	}
+}
+
+func (job *EECPTReceiverJob) ChiSquareLimit() float64 {
+	length := len(job.tasks)
 	switch {
 	case length < 3:
 		return 3.8145
@@ -103,65 +153,48 @@ func GetChiSquareLimit(length int) float64 {
 	return 1.0985e3
 }
 
-func (task *EECPTReceiverTask) averages() (float64, float64) {
-	avgUseful := float64(0.0)
-	avgUsefulPlusMpi := float64(0.0)
-	task.distsLock.RLock()
-	for _, dist := range task.dists {
-		avgUseful += dist.useful
-		avgUsefulPlusMpi += dist.usefulPlusMpi
+func (task *EECPTReceiverTask) Analyse() (float64, float64, error) {
+	task.bufferLock.RLock()
+	defer task.bufferLock.RUnlock()
+	buflen := len(task.buffer)
+	if buflen < 3 {
+		return 0, 0, fmt.Errorf("Analysis of task %s requires at least 3 entries in buffer but have only %d", task.ident, buflen)
 	}
-	task.distsLock.RUnlock()
-	avgUseful /= float64(task.numDistsFilled)
-	avgUsefulPlusMpi /= float64(task.numDistsFilled)
-	return avgUseful, avgUsefulPlusMpi
+	prev := float64(task.buffer[buflen-2]-task.buffer[0]) / float64(buflen-2)
+	last := float64(task.buffer[buflen-1] - task.buffer[buflen-2])
+	return prev, last, nil
 }
-
-func (task *EECPTReceiverTask) reset() {
-	task.distsLock.RLock()
-	task.dists = task.dists[:0]
-	task.distsLock.RUnlock()
-}
-
-func (task *EECPTReceiverTask) add(useful, usefulPlusMpi float64) {
-	task.distsLock.Lock()
-	task.dists = append(task.dists, struct {
-		useful        float64
-		usefulPlusMpi float64
-	}{
-		useful:        useful,
-		usefulPlusMpi: usefulPlusMpi,
-	})
-	task.distsLock.Unlock()
-}
-
-func (job *EECPTReceiverJob) chiSquareAnalysis() bool {
-	result := float64(0.0)
-	for t := range job.tasks {
-		task := job.tasks[t]
-		avgUseful, avgUsefulPlusMpi := task.averages()
-
-		if avgUseful > chiSquareDistThreshold {
-			x := task.dists[task.numDistsFilled-1].useful - avgUseful
-			result += x * (x / avgUseful)
-		}
-		if avgUsefulPlusMpi > chiSquareDistThreshold {
-			x := task.dists[task.numDistsFilled-1].usefulPlusMpi - avgUsefulPlusMpi
-			result += x * (x / avgUsefulPlusMpi)
-		}
+func (task *EECPTReceiverTask) PrintBuffer() {
+	task.bufferLock.RLock()
+	buflen := len(task.buffer)
+	strbuf := make([]string, 0, buflen)
+	for _, x := range task.buffer {
+		strbuf = append(strbuf, fmt.Sprintf("%f", x))
 	}
-	return result > GetChiSquareLimit(len(job.tasks))
+	fmt.Println(strings.Join(strbuf, ","))
+	task.bufferLock.RUnlock()
 }
 
-func (job *EECPTReceiverJob) newTask(id int64) {
-	job.jobLock.Lock()
-	if _, ok := job.tasks[id]; !ok {
-		job.tasks[id] = new(EECPTReceiverTask)
-		job.tasks[id].dists = make([]struct {
-			useful        float64
-			usefulPlusMpi float64
-		}, 0)
+func (task *EECPTReceiverTask) Add(value float64) {
+	task.bufferLock.Lock()
+	// Append new value to buffer
+	task.buffer = append(task.buffer, value)
+	// If the buffer has exceeded its configured size, drop the oldest value
+	if len(task.buffer) > eecpt_analysis_buffer_size {
+		task.buffer = task.buffer[1:]
 	}
+	task.bufferLock.Unlock()
+}
+
+func (task *EECPTReceiverTask) Reset() {
+	task.bufferLock.Lock()
+	// store the last value in the buffer
+	last := task.buffer[len(task.buffer)-1]
+	// reset buffer to zero entries
+	task.buffer = task.buffer[:0]
+	// add the last value back to the buffer
+	task.buffer = append(task.buffer, last)
+	task.bufferLock.Unlock()
 }
 
 func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
@@ -172,7 +205,9 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	r.config.KeepAlivesEnabled = true
 	// should be larger than the measurement interval to keep the connection open
 	r.config.IdleTimeout = "120s"
-	r.config.AnalysisBufferLength = 128
+	r.config.AnalysisBufferLength = eecpt_analysis_buffer_size
+	r.config.AnalysisInterval = "5m"
+	r.config.AnalysisMetric = "region_metric"
 
 	// Read config
 	if len(config) > 0 {
@@ -218,7 +253,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	if r.config.AnalysisBufferLength <= 0 {
 		return fmt.Errorf("buffer length of %d not allowed", r.config.AnalysisBufferLength)
 	}
-	//SetChiSquareLimit(r.config.AnalysisBufferLength)
+	eecpt_analysis_buffer_size = r.config.AnalysisBufferLength
 
 	// Configure message processor
 	msgp, err := mp.NewMessageProcessor()
@@ -233,11 +268,6 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 		}
 	}
 	r.mp.AddAddMetaByCondition("true", "source", r.name)
-
-	r.bufferLock.Lock()
-	r.referenceBuffer = make([]interface{}, r.config.AnalysisBufferLength)
-	r.newBuffer = make([]interface{}, r.config.AnalysisBufferLength)
-	r.bufferLock.Unlock()
 
 	//r.meta = map[string]string{"source": r.name}
 	p := r.config.Path
@@ -259,6 +289,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	}
 	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
 
+	r.jobs = make(map[string]*EECPTReceiverJob)
 	return nil
 }
 
@@ -284,25 +315,99 @@ func (r *EECPTReceiver) Start() {
 				return
 			case <-r.analysisTicker.C:
 				for _, job := range r.jobs {
-					same := job.chiSquareAnalysis()
-					if same {
-						// new region
+					result := job.Analyse()
+					if result > job.ChiSquareLimit() {
+						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s changed phases", job.ident))
 						y, err := lp.NewEvent("region", map[string]string{"type": "node", "stype": "application"}, nil, "region changed", time.Now())
 						if err == nil {
+							y.AddTag("stype-id", job.ident)
 							m, err := r.mp.ProcessMessage(y)
 							if err == nil && m != nil {
 								r.sink <- m
 							}
 						}
+						job.Reset()
 					} else {
-						r.referenceBuffer = r.referenceBuffer[:0]
-						r.referenceBuffer = append(r.referenceBuffer, r.newBuffer...)
-						r.newBuffer = r.newBuffer[:0]
+						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s no change (analysis %f chiSquareLimit %f", job.ident, result, job.ChiSquareLimit()))
 					}
 				}
 			}
 		}
 	}()
+}
+
+func fieldToFloat64(input interface{}) float64 {
+	switch in := input.(type) {
+	case int:
+		return float64(in)
+	case int32:
+		return float64(in)
+	case int64:
+		return float64(in)
+	case uint:
+		return float64(in)
+	case uint32:
+		return float64(in)
+	case uint64:
+		return float64(in)
+	case float32:
+		return float64(in)
+	case float64:
+		return in
+	case string:
+		x, err := strconv.ParseFloat(in, 64)
+		if err == nil {
+			return x
+		}
+	}
+	return math.NaN()
+}
+
+func (r *EECPTReceiver) toAnalysis(msg lp.CCMessage) {
+	jobid := ""
+	if j, ok := msg.GetTag("jobid"); ok {
+		jobid = j
+	}
+	if len(jobid) == 0 && msg.HasTag("application") {
+		jobid, _ = msg.GetTag("application")
+	}
+	rank := int64(-1)
+	if t, ok := msg.GetTag("rank"); ok {
+		x, err := strconv.ParseInt(t, 10, 64)
+		if err == nil {
+			rank = x
+		}
+	} else {
+		if t, ok := msg.GetField("rank"); ok {
+			rank = int64(fieldToFloat64(t))
+		}
+	}
+	if t, ok := msg.GetTag("pid"); ok {
+		x, err := strconv.ParseInt(t, 10, 64)
+		if err == nil {
+			rank = x
+		}
+	} else {
+		if t, ok := msg.GetField("pid"); ok {
+			rank = int64(t.(int))
+		}
+	}
+	value := float64(0)
+	if v, ok := msg.GetField("value"); ok {
+		value = fieldToFloat64(v)
+	}
+	if _, ok := r.jobs[jobid]; !ok {
+		newjob := NewJob(jobid)
+		r.jobs[jobid] = newjob
+	}
+	job := r.jobs[jobid]
+
+	if _, ok := job.tasks[rank]; !ok {
+		job.newTask(rank)
+	}
+	task := job.tasks[rank]
+
+	task.Add(value)
 }
 
 func (r *EECPTReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
@@ -320,6 +425,7 @@ func (r *EECPTReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
 	if r.sink != nil {
 		d := influx.NewDecoder(req.Body)
 		for d.Next() {
@@ -382,36 +488,13 @@ func (r *EECPTReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
 				t,
 			)
 
-			if appl, ok := tags["application"]; ok {
-				if _, ok := r.jobs[appl]; !ok {
-					r.jobs[appl] = new(EECPTReceiverJob)
-				}
-				job := r.jobs[appl]
-
-				pid := int64(0)
-				if r, ok := fields["rank"]; ok {
-					switch rank := r.(type) {
-					case int, int32, int64:
-						pid = rank.(int64)
-					}
-				}
-				if _, ok := job.tasks[pid]; !ok {
-					job.newTask(pid)
-				}
-
-				task := job.tasks[pid]
-
-				job.bufferLock.Lock()
-				job.newBuffer = append(r.newBuffer, y)
-				if len(job.newBuffer) > r.config.AnalysisBufferLength {
-					job.newBuffer = job.newBuffer[1:]
-				}
-				job.bufferLock.Unlock()
-			}
 			if r.sink != nil {
 				m, err := r.mp.ProcessMessage(y)
 				if err == nil && m != nil {
 					r.sink <- m
+					if m.Name() == r.config.AnalysisMetric {
+						r.toAnalysis(m)
+					}
 				}
 			}
 		}

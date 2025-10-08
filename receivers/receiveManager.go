@@ -14,8 +14,9 @@ import (
 )
 
 var AvailableReceivers = map[string]func(name string, config json.RawMessage) (Receiver, error){
-	"http": NewHttpReceiver,
-	"nats": NewNatsReceiver,
+	"http":  NewHttpReceiver,
+	"nats":  NewNatsReceiver,
+	"eecpt": NewEECPTReceiver,
 }
 
 type receiveManager struct {
