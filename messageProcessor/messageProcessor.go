@@ -762,8 +762,6 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 	var err error = nil
 	out := lp.FromMessage(m)
 
-	name := out.Name()
-
 	if len(mp.stages) == 0 {
 		mp.SetStages(mp.DefaultStages())
 	}
@@ -787,7 +785,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 		case STAGENAME_DROP_BY_NAME:
 			if len(mp.dropMessages) > 0 {
 				// cclog.ComponentDebug("MessageProcessor", "Dropping by message name ", name)
-				if _, ok := mp.dropMessages[name]; ok {
+				if _, ok := mp.dropMessages[params["name"].(string)]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Drop")
 					return nil, nil
 				}
@@ -815,12 +813,12 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 		case STAGENAME_RENAME_BY_NAME:
 			if len(mp.renameMessages) > 0 {
 				// cclog.ComponentDebug("MessageProcessor", "Renaming by name match")
-				if newname, ok := mp.renameMessages[name]; ok {
+				if newname, ok := mp.renameMessages[params["name"].(string)]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Rename to", newname)
 					out.SetName(newname)
 					params["name"] = newname
 					// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", name)
-					out.AddMeta("oldname", name)
+					out.AddMeta("oldname", params["name"].(string))
 				}
 			}
 		case STAGENAME_RENAME_IF:
