@@ -25,15 +25,27 @@ const (
 )
 
 type Node struct {
-	ID          int64             `json:"id" db:"id"`
-	Hostname    string            `json:"hostname" db:"hostname" example:"fritz"`
-	Cluster     string            `json:"cluster" db:"cluster" example:"fritz"`
-	SubCluster  string            `json:"subCluster" db:"subcluster" example:"main"`
-	RawMetaData []byte            `json:"-" db:"meta_data"`
-	MetaData    map[string]string `json:"metaData"`
+	Hostname        string            `json:"hostname"`
+	Cluster         string            `json:"cluster"`
+	SubCluster      string            `json:"subCluster"`
+	MetaData        map[string]string `json:"metaData"`
+	NodeState       SchedulerState    `json:"nodeState"`
+	HealthState     MonitoringState   `json:"healthState"`
+	CpusAllocated   int               `json:"cpusAllocated"`
+	MemoryAllocated int               `json:"memoryAllocated"`
+	GpusAllocated   int               `json:"gpusAllocated"`
+	JobsRunning     int               `json:"jobsRunning"`
 }
 
-type NodeState struct {
+type NodeDB struct {
+	ID          int64  `json:"id" db:"id"`
+	Hostname    string `json:"hostname" db:"hostname" example:"fritz"`
+	Cluster     string `json:"cluster" db:"cluster" example:"fritz"`
+	SubCluster  string `json:"subCluster" db:"subcluster" example:"main"`
+	RawMetaData []byte `json:"-" db:"meta_data"`
+}
+
+type NodeStateDB struct {
 	ID              int64           `json:"id" db:"id"`
 	TimeStamp       int64           `json:"timeStamp" db:"time_stamp" example:"1649723812"`
 	NodeState       SchedulerState  `json:"nodeState" db:"node_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`
