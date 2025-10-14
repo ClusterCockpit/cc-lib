@@ -37,6 +37,15 @@ type Node struct {
 	JobsRunning     int               `json:"jobsRunning"`
 }
 
+type NodePayload struct {
+	Hostname        string   `json:"hostname"`
+	States          []string `json:"states"`
+	CpusAllocated   int      `json:"cpusAllocated"`
+	MemoryAllocated int      `json:"memoryAllocated"`
+	GpusAllocated   int      `json:"gpusAllocated"`
+	JobsRunning     int      `json:"jobsRunning"`
+}
+
 type NodeDB struct {
 	ID          int64  `json:"id" db:"id"`
 	Hostname    string `json:"hostname" db:"hostname" example:"fritz"`
