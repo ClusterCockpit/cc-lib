@@ -815,10 +815,12 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Renaming by name match")
 				if newname, ok := mp.renameMessages[params["name"].(string)]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Rename to", newname)
+					oldname := params["name"].(string)
 					out.SetName(newname)
 					params["name"] = newname
 					// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", name)
-					out.AddMeta("oldname", params["name"].(string))
+					out.AddMeta("oldname", oldname)
+					params["meta"].(map[string]interface{})["oldname"] = oldname
 				}
 			}
 		case STAGENAME_RENAME_IF:
