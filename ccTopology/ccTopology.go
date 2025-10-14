@@ -273,8 +273,19 @@ func (t *topology) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.root)
 }
 
+func addObject(o Object, objects *[]*Object) {
+	*objects = append(*objects, &o)
+	for _, c := range o.Children {
+		addObject(c, objects)
+	}
+}
 func (t *topology) UnmarshalJSON(in []byte) error {
-	return json.Unmarshal(in, &t.root)
+	err := json.Unmarshal(in, &t.root)
+	if err != nil {
+		return err
+	}
+	addObject(t.root, &t.objects)
+	return nil
 }
 
 func convertObject(hwloc_obj C.hwloc_obj_t) Object {
@@ -495,7 +506,8 @@ func LocalTopology() (Topology, error) {
 
 func RemoteTopology(topologyJson json.RawMessage) (Topology, error) {
 	var t topology
-	err := json.Unmarshal(topologyJson, &t)
+	t.objects = make([]*Object, 0)
+	err := t.UnmarshalJSON(topologyJson)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal topology JSON: %v", err.Error())
 	}

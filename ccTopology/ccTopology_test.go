@@ -5,6 +5,7 @@
 package ccTopology
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -158,6 +159,41 @@ func TestCpuinfo(t *testing.T) {
 	}
 
 	cpuinfo := topo.CpuInfo()
+
+	if cpuinfo.NumHWthreads == 0 {
+		t.Error("failed to detect number of hwthreads")
+	}
+	if cpuinfo.NumCores == 0 {
+		t.Error("failed to detect number of cores")
+	}
+	if cpuinfo.NumSockets == 0 {
+		t.Error("failed to detect number of sockets")
+	}
+	if cpuinfo.NumDies == 0 {
+		t.Error("failed to detect number of dies")
+	}
+	if cpuinfo.NumNumaDomains == 0 {
+		t.Error("failed to detect number of NUMA domains")
+	}
+}
+
+func TestRemoteTopology(t *testing.T) {
+	var topo Topology
+
+	topo, err := LocalTopology()
+	if err != nil {
+		t.Error("failed to initialize topology: ", err.Error())
+	}
+	topoJson, err := json.Marshal(topo)
+	if err != nil {
+		t.Error("failed to get JSON of topology: ", err.Error())
+	}
+
+	rtopo, err := RemoteTopology(topoJson)
+	if err != nil {
+		t.Error("failed to parse JSON of remote topology: ", err.Error())
+	}
+	cpuinfo := rtopo.CpuInfo()
 
 	if cpuinfo.NumHWthreads == 0 {
 		t.Error("failed to detect number of hwthreads")
