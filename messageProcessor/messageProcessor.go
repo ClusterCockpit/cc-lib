@@ -348,7 +348,7 @@ func (mp *messageProcessor) AddDropMessagesByType(typestring string) error {
 	if isValid {
 		mp.mutex.Lock()
 		if _, ok := mp.dropTypes[typestring]; !ok {
-			cclog.ComponentDebug("MessageProcessor", "Adding type", typestring, "for dropping")
+			// cclog.ComponentDebug("MessageProcessor", "Adding type", typestring, "for dropping")
 			mp.dropTypes[typestring] = struct{}{}
 		}
 		mp.mutex.Unlock()
@@ -818,6 +818,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				if newname, ok := mp.renameMessages[name]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Rename to", newname)
 					out.SetName(newname)
+					params["name"] = newname
 					// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", name)
 					out.AddMeta("oldname", name)
 				}
@@ -832,7 +833,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 			}
 		case STAGENAME_ADD_TAG:
 			if len(mp.addTagsIf) > 0 {
-				cclog.ComponentDebug("MessageProcessor", "Adding tags")
+				// cclog.ComponentDebug("MessageProcessor", "Adding tags")
 				_, err = addTagIf(out, &params, &mp.addTagsIf)
 				if err != nil {
 					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
@@ -930,7 +931,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 			if mp.normalizeUnits {
 				// cclog.ComponentDebug("MessageProcessor", "Normalize units")
 				if out.IsMetric() {
-					_, err := normalizeUnits(out)
+					_, err := normalizeUnits(out, &params)
 					if err != nil {
 						return out, fmt.Errorf("failed to evaluate: %v", err.Error())
 					}
