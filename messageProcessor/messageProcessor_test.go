@@ -356,6 +356,70 @@ func TestConfigList(t *testing.T) {
 	}
 }
 
+func TestRenameDropOrder(t *testing.T) {
+	msglist := make([]lp.CCMessage, 0)
+	outlist := make([]lp.CCMessage, 0)
+	m, err := lp.NewMetric("net_bytes_in",
+		map[string]string{"type": "node", "type-id": "0"},
+		map[string]string{"unit": "Byte"}, float64(1024.0), time.Now())
+	if err == nil {
+		msglist = append(msglist, m)
+	}
+	m, err = lp.NewMetric("net_bytes_out",
+		map[string]string{"type": "node", "type-id": "0"},
+		map[string]string{"unit": "Byte"}, float64(1024.0), time.Now())
+	if err == nil {
+		msglist = append(msglist, m)
+	}
+
+	mp, err := NewMessageProcessor()
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	config := `
+	{
+		"stage_order" : ["rename", "drop_if", "drop_by_name"],
+		"rename_messages" : {
+			"net_bytes_in" : "net_bytes_in_renamed",
+			"net_bytes_out" : "net_bytes_out_renamed"
+		},
+		"drop_messages_if" : [
+			"name == 'net_bytes_out'"
+		],
+		"drop_messages" : [
+			"net_bytes_in"
+		]
+	}
+	`
+	err = mp.FromConfigJSON(json.RawMessage(config))
+
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	for _, m := range msglist {
+		out, err := mp.ProcessMessage(m)
+		if err == nil && out != nil {
+			outlist = append(outlist, out)
+		} else if err != nil {
+			t.Errorf("failed to process message: %s", m)
+		}
+	}
+
+	if len(msglist) != len(outlist) {
+		t.Errorf("messages got dropped although they should get passed")
+		for _, m := range msglist {
+			t.Errorf("Input: %s", m.ToLineProtocol(nil))
+		}
+		for _, m := range outlist {
+			t.Errorf("Output: %s", m.ToLineProtocol(nil))
+		}
+	}
+}
+
 func BenchmarkProcessing(b *testing.B) {
 	mlist, err := generate_message_lists(b.N, 1000)
 	if err != nil {
