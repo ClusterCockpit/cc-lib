@@ -24,6 +24,7 @@ const (
 	MonitoringStateFailed  MonitoringState = "failed"
 )
 
+// The Node type is used as result type in GraphQL queries
 type Node struct {
 	Hostname        string            `json:"hostname"`
 	Cluster         string            `json:"cluster"`
@@ -37,6 +38,7 @@ type Node struct {
 	JobsRunning     int               `json:"jobsRunning"`
 }
 
+// The NodePayload type is used as part of the request in the node REST API
 type NodePayload struct {
 	Hostname        string   `json:"hostname"`
 	States          []string `json:"states"`
@@ -46,6 +48,7 @@ type NodePayload struct {
 	JobsRunning     int      `json:"jobsRunning"`
 }
 
+// The NodeDB type is used as database model for the node table
 type NodeDB struct {
 	ID          int64  `json:"id" db:"id"`
 	Hostname    string `json:"hostname" db:"hostname" example:"fritz"`
@@ -54,6 +57,7 @@ type NodeDB struct {
 	RawMetaData []byte `json:"-" db:"meta_data"`
 }
 
+// The NodeStateDB type is used as database model for the node_state table
 type NodeStateDB struct {
 	ID              int64           `json:"id" db:"id"`
 	TimeStamp       int64           `json:"timeStamp" db:"time_stamp" example:"1649723812"`
