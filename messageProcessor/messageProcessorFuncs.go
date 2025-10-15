@@ -52,23 +52,33 @@ func moveInMessage(message lp2.CCMessage, params *map[string]interface{}, checks
 				case MESSAGE_LOCATION_TAGS:
 					// cclog.ComponentDebug("MessageProcessor", "Removing tag key", data.Key)
 					message.RemoveTag(data.Key)
+					delete((*params)["tag"].(map[string]interface{}), data.Key)
+					delete((*params)["tags"].(map[string]interface{}), data.Key)
 				case MESSAGE_LOCATION_META:
 					// cclog.ComponentDebug("MessageProcessor", "Removing meta key", data.Key)
 					message.RemoveMeta(data.Key)
+					delete((*params)["meta"].(map[string]interface{}), data.Key)
 				case MESSAGE_LOCATION_FIELDS:
 					// cclog.ComponentDebug("MessageProcessor", "Removing field key", data.Key)
 					message.RemoveField(data.Key)
+					delete((*params)["field"].(map[string]interface{}), data.Key)
+					delete((*params)["fields"].(map[string]interface{}), data.Key)
 				}
 				switch to {
 				case MESSAGE_LOCATION_TAGS:
 					// cclog.ComponentDebug("MessageProcessor", "Adding tag", data.Value, "->", v)
 					message.AddTag(data.Value, v)
+					(*params)["tag"].(map[string]interface{})[data.Value] = v
+					(*params)["tags"].(map[string]interface{})[data.Value] = v
 				case MESSAGE_LOCATION_META:
 					// cclog.ComponentDebug("MessageProcessor", "Adding meta", data.Value, "->", v)
 					message.AddMeta(data.Value, v)
+					(*params)["meta"].(map[string]interface{})[data.Value] = v
 				case MESSAGE_LOCATION_FIELDS:
 					// cclog.ComponentDebug("MessageProcessor", "Adding field", data.Value, "->", v)
 					message.AddField(data.Value, v)
+					(*params)["field"].(map[string]interface{})[data.Value] = v
+					(*params)["fields"].(map[string]interface{})[data.Value] = v
 				}
 			}
 		}
@@ -91,13 +101,18 @@ func deleteIf(message lp2.CCMessage, params *map[string]interface{}, checks *map
 				default:
 					// cclog.ComponentDebug("MessageProcessor", "Removing field for", data.Key)
 					message.RemoveField(data.Key)
+					delete((*params)["field"].(map[string]interface{}), data.Key)
+					delete((*params)["fields"].(map[string]interface{}), data.Key)
 				}
 			case MESSAGE_LOCATION_TAGS:
 				// cclog.ComponentDebug("MessageProcessor", "Removing tag for", data.Key)
 				message.RemoveTag(data.Key)
+				delete((*params)["tag"].(map[string]interface{}), data.Key)
+				delete((*params)["tags"].(map[string]interface{}), data.Key)
 			case MESSAGE_LOCATION_META:
 				// cclog.ComponentDebug("MessageProcessor", "Removing meta for", data.Key)
 				message.RemoveMeta(data.Key)
+				delete((*params)["meta"].(map[string]interface{}), data.Key)
 			}
 		}
 	}
@@ -115,12 +130,17 @@ func addIf(message lp2.CCMessage, params *map[string]interface{}, checks *map[*v
 			case MESSAGE_LOCATION_FIELDS:
 				// cclog.ComponentDebug("MessageProcessor", "Adding field", data.Value, "->", data.Value)
 				message.AddField(data.Key, data.Value)
+				(*params)["field"].(map[string]interface{})[data.Key] = data.Value
+				(*params)["fields"].(map[string]interface{})[data.Key] = data.Value
 			case MESSAGE_LOCATION_TAGS:
 				// cclog.ComponentDebug("MessageProcessor", "Adding tag", data.Value, "->", data.Value)
 				message.AddTag(data.Key, data.Value)
+				(*params)["tag"].(map[string]interface{})[data.Key] = data.Value
+				(*params)["tags"].(map[string]interface{})[data.Key] = data.Value
 			case MESSAGE_LOCATION_META:
 				// cclog.ComponentDebug("MessageProcessor", "Adding meta", data.Value, "->", data.Value)
 				message.AddMeta(data.Key, data.Value)
+				(*params)["meta"].(map[string]interface{})[data.Key] = data.Value
 			}
 		}
 	}
@@ -188,18 +208,20 @@ func dropMessagesIf(params *map[string]interface{}, checks *map[*vm.Program]stru
 	return false, nil
 }
 
-func normalizeUnits(message lp2.CCMessage) (bool, error) {
+func normalizeUnits(message lp2.CCMessage, params *map[string]interface{}) (bool, error) {
 	if in_unit, ok := message.GetMeta("unit"); ok {
 		u := units.NewUnit(in_unit)
 		if u.Valid() {
 			// cclog.ComponentDebug("MessageProcessor", "Update unit with", u.Short())
 			message.AddMeta("unit", u.Short())
+			(*params)["meta"].(map[string]interface{})["unit"] = u.Short()
 		}
 	} else if in_unit, ok := message.GetTag("unit"); ok {
 		u := units.NewUnit(in_unit)
 		if u.Valid() {
 			// cclog.ComponentDebug("MessageProcessor", "Update unit with", u.Short())
 			message.AddTag("unit", u.Short())
+			(*params)["meta"].(map[string]interface{})["unit"] = u.Short()
 		}
 	}
 	return false, nil
@@ -222,8 +244,12 @@ func changeUnitPrefix(message lp2.CCMessage, params *map[string]interface{}, che
 					if conv != nil && out_unit.Valid() {
 						if val, ok := message.GetField("value"); ok {
 							// cclog.ComponentDebug("MessageProcessor", "Update unit with", out_unit.Short())
-							message.AddField("value", conv(val))
+							newv := conv(val)
+							message.AddField("value", newv)
+							(*params)["field"].(map[string]interface{})["value"] = newv
+							(*params)["fields"].(map[string]interface{})["value"] = newv
 							message.AddMeta("unit", out_unit.Short())
+							(*params)["meta"].(map[string]interface{})["unit"] = u.Short()
 						}
 					}
 				}
@@ -236,8 +262,13 @@ func changeUnitPrefix(message lp2.CCMessage, params *map[string]interface{}, che
 					if conv != nil && out_unit.Valid() {
 						if val, ok := message.GetField("value"); ok {
 							// cclog.ComponentDebug("MessageProcessor", "Update unit with", out_unit.Short())
-							message.AddField("value", conv(val))
+							newv := conv(val)
+							message.AddField("value", newv)
+							(*params)["field"].(map[string]interface{})["value"] = newv
+							(*params)["fields"].(map[string]interface{})["value"] = newv
+
 							message.AddTag("unit", out_unit.Short())
+							(*params)["meta"].(map[string]interface{})["unit"] = u.Short()
 						}
 					}
 				}
@@ -258,8 +289,10 @@ func renameMessagesIf(message lp2.CCMessage, params *map[string]interface{}, che
 			old := message.Name()
 			// cclog.ComponentDebug("MessageProcessor", "Rename to", n)
 			message.SetName(n)
+			(*params)["name"] = n
 			// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", old)
 			message.AddMeta("oldname", old)
+			(*params)["meta"].(map[string]interface{})["oldname"] = old
 		}
 	}
 	return false, nil
