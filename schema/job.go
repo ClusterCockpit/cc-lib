@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package schema
 
 import (
@@ -18,7 +19,7 @@ import (
 // @Description Information of a HPC job.
 
 type Job struct {
-	Cluster            string                   `json:"cluster" db:"hpc_cluster" example:"fritz"`
+	Cluster            string                   `json:"cluster" db:"cluster" example:"fritz"`
 	SubCluster         string                   `json:"subCluster" db:"subcluster" example:"main"`
 	Partition          string                   `json:"partition,omitempty" db:"cluster_partition" example:"main"`
 	Project            string                   `json:"project" db:"project" example:"abcd200"`
@@ -36,7 +37,7 @@ type Job struct {
 	MetaData           map[string]string        `json:"metaData"`
 	ConcurrentJobs     JobLinkResultList        `json:"concurrentJobs"`
 	Energy             float64                  `json:"energy" db:"energy"`
-	ArrayJobId         int64                    `json:"arrayJobId,omitempty" db:"array_job_id" example:"123000"`
+	ArrayJobID         int64                    `json:"arrayJobId,omitempty" db:"array_job_id" example:"123000"`
 	Walltime           int64                    `json:"walltime,omitempty" db:"walltime" example:"86400" minimum:"1"`
 	RequestedMemory    int64                    `json:"requestedMemory,omitempty" db:"requested_memory" example:"128000" minimum:"1"` // in MB
 	JobID              int64                    `json:"jobId" db:"job_id" example:"123000"`
