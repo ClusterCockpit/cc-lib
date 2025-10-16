@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package ccconfig
 
 import (
@@ -57,7 +58,7 @@ func GetPackageConfig(key string) json.RawMessage {
 	if val, ok := keys[key]; ok {
 		return val
 	} else {
-		cclog.Errorf("CONFIG ERROR: Key %s not found", key)
+		cclog.Infof("CONFIG INFO: Key %s not found", key)
 		return nil
 	}
 }
