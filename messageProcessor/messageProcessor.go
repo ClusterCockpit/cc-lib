@@ -7,6 +7,8 @@ package messageprocessor
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
 	"strings"
 	"sync"
 
@@ -46,6 +48,7 @@ type messageProcessorConfig struct {
 	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if"`
 	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if"`
 	AddBaseEnv       map[string]interface{}      `json:"add_base_env"`
+	HostnameTag      string                      `json:"hostname_tag"`
 }
 
 type messageProcessor struct {
@@ -77,6 +80,8 @@ type messageProcessor struct {
 	moveMetaToField  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveMetaToField
 	moveFieldToTag   map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToTag
 	moveFieldToMeta  map[*vm.Program]messageProcessorTagConfig // pre-processed MoveFieldToMeta
+	hostname_tag     string
+	baseenv          map[string]interface{}
 }
 
 type MessageProcessor interface {
@@ -124,6 +129,7 @@ type MessageProcessor interface {
 	// EvalToBool(condition string, parameters map[string]interface{}) (bool, error)
 	// EvalToFloat64(condition string, parameters map[string]interface{}) (float64, error)
 	// EvalToString(condition string, parameters map[string]interface{}) (string, error)
+	SetHostnameTag(tagkey string)
 }
 
 const (
@@ -176,11 +182,15 @@ var paramMapPool = sync.Pool{
 	},
 }
 
+var myhostname string = ""
+
+const defaultHostnameTag string = "hostname"
+
 func sanitizeExprString(key string) string {
 	return strings.ReplaceAll(key, "type-id", "typeid")
 }
 
-func getParamMap(point lp.CCMessage) map[string]interface{} {
+func (mp *messageProcessor) getParamMap(point lp.CCMessage) map[string]interface{} {
 	params := paramMapPool.Get().(map[string]interface{})
 	params["message"] = point
 	params["msg"] = point
@@ -215,6 +225,9 @@ func getParamMap(point lp.CCMessage) map[string]interface{} {
 	tags := paramMapPool.Get().(map[string]interface{})
 	for key, value := range point.Tags() {
 		tags[sanitizeExprString(key)] = value
+	}
+	if _, ok := tags[mp.hostname_tag]; !ok {
+		tags[mp.hostname_tag] = myhostname
 	}
 	params["tags"] = tags
 	params["tag"] = tags
@@ -267,15 +280,15 @@ var baseenv = map[string]interface{}{
 	"message":   lp.EmptyMessage(),
 }
 
-func addBaseEnvWalker(values map[string]interface{}) map[string]interface{} {
+func addBaseEnvWalker(base, values map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{})
 	for k, v := range values {
 		switch value := v.(type) {
 		case int, int32, int64, uint, uint32, uint64, string, float32, float64:
 			out[k] = value
 		case map[string]interface{}:
-			if _, ok := baseenv[k]; !ok {
-				out[k] = addBaseEnvWalker(value)
+			if _, ok := base[k]; !ok {
+				out[k] = addBaseEnvWalker(base, value)
 			}
 		}
 	}
@@ -286,10 +299,10 @@ func (mp *messageProcessor) AddBaseEnv(env map[string]interface{}) error {
 	for k, v := range env {
 		switch value := v.(type) {
 		case int, int32, int64, uint, uint32, uint64, string, float32, float64:
-			baseenv[k] = value
+			mp.baseenv[k] = value
 		case map[string]interface{}:
 			if _, ok := baseenv[k]; !ok {
-				baseenv[k] = addBaseEnvWalker(value)
+				mp.baseenv[k] = addBaseEnvWalker(mp.baseenv, value)
 			}
 		}
 	}
@@ -318,6 +331,18 @@ func (mp *messageProcessor) init() error {
 	mp.moveTagToField = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.moveTagToMeta = make(map[*vm.Program]messageProcessorTagConfig)
 	mp.normalizeUnits = false
+	mp.hostname_tag = defaultHostnameTag
+	if len(myhostname) == 0 {
+		h, err := os.Hostname()
+		if err == nil {
+			myhostname = h
+		} else {
+			return fmt.Errorf("failed to get hostname during initialization")
+		}
+	}
+	mp.baseenv = maps.Clone(baseenv)
+	mp.baseenv["tag"].(map[string]interface{})[mp.hostname_tag] = myhostname
+	mp.baseenv["tags"].(map[string]interface{})[mp.hostname_tag] = myhostname
 	return nil
 }
 
@@ -366,7 +391,7 @@ func (mp *messageProcessor) RemoveDropMessagesByType(typestring string) {
 
 func (mp *messageProcessor) addTagConfig(condition, key, value string, config *map[*vm.Program]messageProcessorTagConfig) error {
 	var err error
-	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
+	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(mp.baseenv), expr.AsBool())
 	if err != nil {
 		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
 	}
@@ -442,7 +467,7 @@ func (mp *messageProcessor) RemoveDeleteFieldByCondition(condition string) {
 
 func (mp *messageProcessor) AddDropMessagesByCondition(condition string) error {
 	var err error
-	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
+	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(mp.baseenv), expr.AsBool())
 	if err != nil {
 		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
 	}
@@ -466,7 +491,7 @@ func (mp *messageProcessor) RemoveDropMessagesByCondition(condition string) {
 
 func (mp *messageProcessor) AddRenameMetricByCondition(condition string, name string) error {
 	var err error
-	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
+	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(mp.baseenv), expr.AsBool())
 	if err != nil {
 		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
 	}
@@ -496,7 +521,7 @@ func (mp *messageProcessor) SetNormalizeUnits(setting bool) {
 
 func (mp *messageProcessor) AddChangeUnitPrefix(condition string, prefix string) error {
 	var err error
-	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
+	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(mp.baseenv), expr.AsBool())
 	if err != nil {
 		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
 	}
@@ -614,8 +639,13 @@ func (mp *messageProcessor) DefaultStages() []string {
 	return StageNames
 }
 
+func (mp *messageProcessor) SetHostnameTag(tagkey string) {
+	mp.hostname_tag = tagkey
+}
+
 func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 	var c messageProcessorConfig
+	c.HostnameTag = defaultHostnameTag
 
 	err := json.Unmarshal(config, &c)
 	if err != nil {
@@ -755,6 +785,9 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 		}
 	}
 	mp.SetNormalizeUnits(c.NormalizeUnits)
+	if len(c.HostnameTag) > 0 {
+		mp.SetHostnameTag(c.HostnameTag)
+	}
 	return nil
 }
 
@@ -769,7 +802,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 	mp.mutex.RLock()
 	defer mp.mutex.RUnlock()
 
-	params := getParamMap(out)
+	params := mp.getParamMap(out)
 
 	defer func() {
 		params["field"] = nil

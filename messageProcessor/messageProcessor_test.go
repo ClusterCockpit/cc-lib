@@ -419,34 +419,3 @@ func TestRenameDropOrder(t *testing.T) {
 		}
 	}
 }
-
-func BenchmarkProcessing(b *testing.B) {
-	mlist, err := generate_message_lists(b.N, 1000)
-	if err != nil {
-		b.Error(err.Error())
-		return
-	}
-
-	mp, err := NewMessageProcessor()
-	if err != nil {
-		b.Error(err.Error())
-		return
-	}
-	err = mp.FromConfigJSON(json.RawMessage(`{"move_meta_to_tag_if": [{"if" : "name == 'mymetric'", "key":"unit", "value":"unit"}]}`))
-	if err != nil {
-		b.Error(err.Error())
-		return
-	}
-
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		for _, m := range mlist[i] {
-			if _, err := mp.ProcessMessage(m); err != nil {
-				b.Errorf("failed processing message '%s': %v", m.ToLineProtocol(nil), err.Error())
-				return
-			}
-		}
-	}
-	b.StopTimer()
-	b.ReportMetric(float64(b.Elapsed())/float64(len(mlist)*b.N), "ns/message")
-}
