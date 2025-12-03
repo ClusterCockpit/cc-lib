@@ -64,6 +64,8 @@ const (
 	MetricScopeCore         MetricScope = "core"
 	MetricScopeHWThread     MetricScope = "hwthread"
 
+	// TODO: Add Job and Application scopes
+
 	MetricScopeAccelerator MetricScope = "accelerator"
 )
 
