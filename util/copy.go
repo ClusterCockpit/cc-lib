@@ -92,7 +92,7 @@ func CopyDir(src string, dst string) (err error) {
 		} else {
 			// Skip symlinks.
 			// FIXME: Add error handling
-			info, _ := os.Lstat(entry.Name())
+			info, _ := os.Lstat(srcPath)
 
 			if info.Mode()&os.ModeSymlink != 0 {
 				continue
