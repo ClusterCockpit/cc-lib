@@ -12,8 +12,6 @@ import (
 	"github.com/ClusterCockpit/cc-lib/schema"
 )
 
-var GLOBALFLAG = false
-
 func calculateTriangleArea(paX, paY, pbX, pbY, pcX, pcY schema.Float) float64 {
 	area := ((paX-pcX)*(pbY-paY) - (paX-pbX)*(pcY-paY)) * 0.5
 	return math.Abs(float64(area))
