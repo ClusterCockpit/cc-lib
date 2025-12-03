@@ -24,16 +24,41 @@ const (
 	MonitoringStateFailed  MonitoringState = "failed"
 )
 
+// The Node type is used as result type in GraphQL queries
 type Node struct {
-	ID          int64             `json:"id" db:"id"`
-	Hostname    string            `json:"hostname" db:"hostname" example:"fritz"`
-	Cluster     string            `json:"cluster" db:"cluster" example:"fritz"`
-	SubCluster  string            `json:"subCluster" db:"subcluster" example:"main"`
-	RawMetaData []byte            `json:"-" db:"meta_data"`
-	MetaData    map[string]string `json:"metaData"`
+	Hostname        string            `json:"hostname"`
+	Cluster         string            `json:"cluster"`
+	SubCluster      string            `json:"subCluster"`
+	MetaData        map[string]string `json:"metaData"`
+	NodeState       SchedulerState    `json:"nodeState"`
+	HealthState     MonitoringState   `json:"healthState"`
+	CpusAllocated   int               `json:"cpusAllocated"`
+	MemoryAllocated int               `json:"memoryAllocated"`
+	GpusAllocated   int               `json:"gpusAllocated"`
+	JobsRunning     int               `json:"jobsRunning"`
 }
 
-type NodeState struct {
+// The NodePayload type is used as part of the request in the node REST API
+type NodePayload struct {
+	Hostname        string   `json:"hostname"`
+	States          []string `json:"states"`
+	CpusAllocated   int      `json:"cpusAllocated"`
+	MemoryAllocated int      `json:"memoryAllocated"`
+	GpusAllocated   int      `json:"gpusAllocated"`
+	JobsRunning     int      `json:"jobsRunning"`
+}
+
+// The NodeDB type is used as database model for the node table
+type NodeDB struct {
+	ID          int64  `json:"id" db:"id"`
+	Hostname    string `json:"hostname" db:"hostname" example:"fritz"`
+	Cluster     string `json:"cluster" db:"cluster" example:"fritz"`
+	SubCluster  string `json:"subCluster" db:"subcluster" example:"main"`
+	RawMetaData []byte `json:"-" db:"meta_data"`
+}
+
+// The NodeStateDB type is used as database model for the node_state table
+type NodeStateDB struct {
 	ID              int64           `json:"id" db:"id"`
 	TimeStamp       int64           `json:"timeStamp" db:"time_stamp" example:"1649723812"`
 	NodeState       SchedulerState  `json:"nodeState" db:"node_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`
@@ -41,6 +66,6 @@ type NodeState struct {
 	CpusAllocated   int             `json:"cpusAllocated" db:"cpus_allocated"`
 	MemoryAllocated int             `json:"memoryAllocated" db:"memory_allocated"`
 	GpusAllocated   int             `json:"gpusAllocated" db:"gpus_allocated"`
-	JobsRunning     int64           `json:"jobsRunning" db:"jobs_running" example:"12"`
+	JobsRunning     int             `json:"jobsRunning" db:"jobs_running" example:"12"`
 	NodeID          int64           `json:"_" db:"node_id"`
 }
