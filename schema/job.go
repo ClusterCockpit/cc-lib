@@ -179,7 +179,9 @@ func (e JobState) Valid() bool {
 		e == JobStateCompleted ||
 		e == JobStateDeadline ||
 		e == JobStateFailed ||
+		e == JobStateCancelled ||
 		e == JobStateNodeFail ||
+		e == JobStateBootFail ||
 		e == JobStatePending ||
 		e == JobStateSuspended ||
 		e == JobStateTimeout ||
