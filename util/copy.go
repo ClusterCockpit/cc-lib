@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package util
 
 import (
@@ -11,6 +12,10 @@ import (
 	"path/filepath"
 )
 
+// CopyFile copies a file from src to dst, preserving the file mode.
+// It creates the destination file, copies the content, syncs to disk,
+// and sets the same permissions as the source file.
+// Returns an error if any operation fails.
 func CopyFile(src, dst string) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
@@ -50,6 +55,12 @@ func CopyFile(src, dst string) (err error) {
 	return
 }
 
+// CopyDir recursively copies a directory from src to dst, preserving file modes.
+// It creates the destination directory with the same permissions as the source,
+// and recursively copies all files and subdirectories.
+// Symbolic links are skipped during the copy operation.
+// Returns an error if the source is not a directory, if the destination already exists,
+// or if any file operation fails.
 func CopyDir(src string, dst string) (err error) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
@@ -91,8 +102,11 @@ func CopyDir(src string, dst string) (err error) {
 			}
 		} else {
 			// Skip symlinks.
-			// FIXME: Add error handling
-			info, _ := os.Lstat(srcPath)
+			var info os.FileInfo
+			info, err = os.Lstat(srcPath)
+			if err != nil {
+				return
+			}
 
 			if info.Mode()&os.ModeSymlink != 0 {
 				continue
