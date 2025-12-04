@@ -9,87 +9,115 @@ import (
 	"strconv"
 )
 
+// Accelerator represents a hardware accelerator (e.g., GPU, FPGA) attached to a compute node.
+// Each accelerator has a unique identifier and type/model information.
 type Accelerator struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	Model string `json:"model"`
+	ID    string `json:"id"`    // Unique identifier for the accelerator (e.g., "0", "1", "GPU-0")
+	Type  string `json:"type"`  // Type of accelerator (e.g., "Nvidia GPU", "AMD GPU")
+	Model string `json:"model"` // Specific model name (e.g., "A100", "MI100")
 }
 
+// Topology defines the hardware topology of a compute node, mapping the hierarchical
+// relationships between hardware threads, cores, sockets, memory domains, and accelerators.
+//
+// The topology is represented as nested arrays where indices represent hardware IDs:
+//   - Node: Flat list of all hardware thread IDs on the node
+//   - Socket: Hardware threads grouped by physical CPU socket
+//   - Core: Hardware threads grouped by physical core
+//   - MemoryDomain: Hardware threads grouped by NUMA domain
+//   - Die: Optional grouping by CPU die within sockets
+//   - Accelerators: List of attached hardware accelerators
 type Topology struct {
-	Node         []int          `json:"node"`
-	Socket       [][]int        `json:"socket"`
-	MemoryDomain [][]int        `json:"memoryDomain"`
-	Die          [][]*int       `json:"die,omitempty"`
-	Core         [][]int        `json:"core"`
-	Accelerators []*Accelerator `json:"accelerators,omitempty"`
+	Node         []int          `json:"node"`                   // All hardware thread IDs on this node
+	Socket       [][]int        `json:"socket"`                 // Hardware threads grouped by socket
+	MemoryDomain [][]int        `json:"memoryDomain"`           // Hardware threads grouped by NUMA domain
+	Die          [][]*int       `json:"die,omitempty"`          // Hardware threads grouped by die (optional)
+	Core         [][]int        `json:"core"`                   // Hardware threads grouped by core
+	Accelerators []*Accelerator `json:"accelerators,omitempty"` // Attached accelerators (GPUs, etc.)
 }
 
+// MetricValue represents a single metric measurement with its associated unit.
+// Used for hardware performance characteristics like FLOP rates and memory bandwidth.
 type MetricValue struct {
-	Unit  Unit    `json:"unit"`
-	Value float64 `json:"value"`
+	Unit  Unit    `json:"unit"`  // Unit of measurement (e.g., FLOP/s, GB/s)
+	Value float64 `json:"value"` // Numeric value of the measurement
 }
 
+// SubCluster represents a homogeneous partition of a cluster with identical hardware.
+// A cluster may contain multiple subclusters with different processor types or configurations.
 type SubCluster struct {
-	Name            string         `json:"name"`
-	Nodes           string         `json:"nodes"`
-	ProcessorType   string         `json:"processorType"`
-	Topology        Topology       `json:"topology"`
-	FlopRateScalar  MetricValue    `json:"flopRateScalar"`
-	FlopRateSimd    MetricValue    `json:"flopRateSimd"`
-	MemoryBandwidth MetricValue    `json:"memoryBandwidth"`
-	MetricConfig    []MetricConfig `json:"metricConfig,omitempty"`
-	Footprint       []string       `json:"footprint,omitempty"`
-	EnergyFootprint []string       `json:"energyFootprint,omitempty"`
-	SocketsPerNode  int            `json:"socketsPerNode"`
-	CoresPerSocket  int            `json:"coresPerSocket"`
-	ThreadsPerCore  int            `json:"threadsPerCore"`
+	Name            string         `json:"name"`                      // Name of the subcluster (e.g., "main", "gpu", "bigmem")
+	Nodes           string         `json:"nodes"`                     // Node list in condensed format (e.g., "node[001-100]")
+	ProcessorType   string         `json:"processorType"`             // CPU model (e.g., "Intel Xeon Gold 6148")
+	Topology        Topology       `json:"topology"`                  // Hardware topology of nodes in this subcluster
+	FlopRateScalar  MetricValue    `json:"flopRateScalar"`            // Theoretical scalar FLOP rate per node
+	FlopRateSimd    MetricValue    `json:"flopRateSimd"`              // Theoretical SIMD FLOP rate per node
+	MemoryBandwidth MetricValue    `json:"memoryBandwidth"`           // Theoretical memory bandwidth per node
+	MetricConfig    []MetricConfig `json:"metricConfig,omitempty"`    // Subcluster-specific metric configurations
+	Footprint       []string       `json:"footprint,omitempty"`       // Default footprint metrics for jobs
+	EnergyFootprint []string       `json:"energyFootprint,omitempty"` // Energy-related footprint metrics
+	SocketsPerNode  int            `json:"socketsPerNode"`            // Number of CPU sockets per node
+	CoresPerSocket  int            `json:"coresPerSocket"`            // Number of cores per CPU socket
+	ThreadsPerCore  int            `json:"threadsPerCore"`            // Number of hardware threads per core (SMT level)
 }
 
+// Metric defines thresholds for a performance metric used in job classification and alerts.
+// Thresholds help categorize job performance: peak (excellent), normal (good), caution (concerning), alert (problem).
 type Metric struct {
-	Name    string  `json:"name"`
-	Unit    Unit    `json:"unit"`
-	Peak    float64 `json:"peak"`
-	Normal  float64 `json:"normal"`
-	Caution float64 `json:"caution"`
-	Alert   float64 `json:"alert"`
+	Name    string  `json:"name"`    // Metric name (e.g., "cpu_load", "mem_used")
+	Unit    Unit    `json:"unit"`    // Unit of measurement
+	Peak    float64 `json:"peak"`    // Peak/maximum expected value (best performance)
+	Normal  float64 `json:"normal"`  // Normal/typical value (good performance)
+	Caution float64 `json:"caution"` // Caution threshold (concerning but not critical)
+	Alert   float64 `json:"alert"`   // Alert threshold (requires attention)
 }
 
+// SubClusterConfig extends Metric with subcluster-specific metric configuration.
+// Allows overriding metric settings for specific subclusters within a cluster.
 type SubClusterConfig struct {
-	Metric
-	Footprint     string `json:"footprint,omitempty"`
-	Energy        string `json:"energy"`
-	Remove        bool   `json:"remove"`
-	LowerIsBetter bool   `json:"lowerIsBetter"`
+	Metric               // Embedded metric thresholds
+	Footprint     string `json:"footprint,omitempty"` // Footprint category for this metric
+	Energy        string `json:"energy"`              // Energy measurement configuration
+	Remove        bool   `json:"remove"`              // Whether to exclude this metric for this subcluster
+	LowerIsBetter bool   `json:"lowerIsBetter"`       // Whether lower values indicate better performance
 }
 
+// MetricConfig defines the configuration for a performance metric at the cluster level.
+// Specifies how the metric is collected, aggregated, and evaluated across the cluster.
 type MetricConfig struct {
-	Metric
-	Energy        string              `json:"energy"`
-	Scope         MetricScope         `json:"scope"`
-	Aggregation   string              `json:"aggregation"`
-	Footprint     string              `json:"footprint,omitempty"`
-	SubClusters   []*SubClusterConfig `json:"subClusters,omitempty"`
-	Timestep      int                 `json:"timestep"`
-	LowerIsBetter bool                `json:"lowerIsBetter"`
+	Metric                            // Embedded metric thresholds
+	Energy        string              `json:"energy"`                // Energy measurement method
+	Scope         MetricScope         `json:"scope"`                 // Metric scope (node, socket, core, etc.)
+	Aggregation   string              `json:"aggregation"`           // Aggregation function (avg, sum, min, max)
+	Footprint     string              `json:"footprint,omitempty"`   // Footprint category
+	SubClusters   []*SubClusterConfig `json:"subClusters,omitempty"` // Subcluster-specific overrides
+	Timestep      int                 `json:"timestep"`              // Measurement interval in seconds
+	LowerIsBetter bool                `json:"lowerIsBetter"`         // Whether lower values are better
 }
 
+// Cluster represents a complete HPC cluster configuration.
+// A cluster consists of one or more subclusters and defines metric collection/evaluation settings.
 type Cluster struct {
-	Name         string          `json:"name"`
-	MetricConfig []*MetricConfig `json:"metricConfig"`
-	SubClusters  []*SubCluster   `json:"subClusters"`
+	Name         string          `json:"name"`         // Unique cluster name (e.g., "fritz", "alex")
+	MetricConfig []*MetricConfig `json:"metricConfig"` // Cluster-wide metric configurations
+	SubClusters  []*SubCluster   `json:"subClusters"`  // Homogeneous partitions within the cluster
 }
 
+// ClusterSupport indicates which subclusters within a cluster support a particular metric.
+// Used to track metric availability across heterogeneous clusters.
 type ClusterSupport struct {
-	Cluster     string   `json:"cluster"`
-	SubClusters []string `json:"subclusters"`
+	Cluster     string   `json:"cluster"`     // Cluster name
+	SubClusters []string `json:"subclusters"` // List of subcluster names supporting this metric
 }
 
+// GlobalMetricListItem represents a metric in the global metric catalog.
+// Tracks which clusters and subclusters support this metric across the entire system.
 type GlobalMetricListItem struct {
-	Name         string           `json:"name"`
-	Unit         Unit             `json:"unit"`
-	Scope        MetricScope      `json:"scope"`
-	Footprint    string           `json:"footprint,omitempty"`
-	Availability []ClusterSupport `json:"availability"`
+	Name         string           `json:"name"`                // Metric name
+	Unit         Unit             `json:"unit"`                // Unit of measurement
+	Scope        MetricScope      `json:"scope"`               // Metric scope level
+	Footprint    string           `json:"footprint,omitempty"` // Footprint category
+	Availability []ClusterSupport `json:"availability"`        // Where this metric is available
 }
 
 // Return a list of socket IDs given a list of hwthread IDs.  Even if just one
@@ -214,34 +242,36 @@ func (topo *Topology) GetMemoryDomainsFromHWThreads(
 	return memDoms, exclusive
 }
 
-// Temporary fix to convert back from int id to string id for accelerators
+// GetAcceleratorID converts an integer accelerator index to its string ID.
+// Returns an error if the index is out of range.
 func (topo *Topology) GetAcceleratorID(id int) (string, error) {
 	if id < 0 {
-		fmt.Printf("ID smaller than 0!\n")
-		return topo.Accelerators[0].ID, nil
-	} else if id < len(topo.Accelerators) {
-		return topo.Accelerators[id].ID, nil
-	} else {
-		return "", fmt.Errorf("index %d out of range", id)
+		return "", fmt.Errorf("accelerator index %d is negative", id)
 	}
+	if id >= len(topo.Accelerators) {
+		return "", fmt.Errorf("accelerator index %d out of range (have %d accelerators)", id, len(topo.Accelerators))
+	}
+	return topo.Accelerators[id].ID, nil
 }
 
-// Return list of hardware (string) accelerator IDs
+// GetAcceleratorIDs returns a list of all accelerator IDs as strings.
 func (topo *Topology) GetAcceleratorIDs() []string {
-	accels := make([]string, 0)
+	accels := make([]string, 0, len(topo.Accelerators))
 	for _, accel := range topo.Accelerators {
 		accels = append(accels, accel.ID)
 	}
 	return accels
 }
 
-// Outdated? Or: Return indices of accelerators in parent array?
+// GetAcceleratorIDsAsInt attempts to convert all accelerator IDs to integers.
+// Returns an error if any accelerator ID is not a valid integer.
+// This method assumes accelerator IDs are numeric strings.
 func (topo *Topology) GetAcceleratorIDsAsInt() ([]int, error) {
-	accels := make([]int, 0)
+	accels := make([]int, 0, len(topo.Accelerators))
 	for _, accel := range topo.Accelerators {
 		id, err := strconv.Atoi(accel.ID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("accelerator ID %q is not a valid integer: %w", accel.ID, err)
 		}
 		accels = append(accels, id)
 	}

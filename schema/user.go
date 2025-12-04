@@ -10,44 +10,52 @@ import (
 	"strings"
 )
 
+// Role defines the authorization level for a user in ClusterCockpit.
+// Roles form a hierarchy with increasing privileges: Anonymous < Api < User < Manager < Support < Admin.
 type Role int
 
 const (
-	RoleAnonymous Role = iota
-	RoleApi
-	RoleUser
-	RoleManager
-	RoleSupport
-	RoleAdmin
-	RoleError
+	RoleAnonymous Role = iota // Unauthenticated or guest access
+	RoleApi                   // API access (programmatic/service accounts)
+	RoleUser                  // Regular user (can view own jobs)
+	RoleManager               // Project manager (can view project jobs)
+	RoleSupport               // Support staff (can view all jobs, limited admin)
+	RoleAdmin                 // Full administrator access
+	RoleError                 // Invalid/error role
 )
 
+// AuthSource identifies the authentication backend that validated a user.
 type AuthSource int
 
 const (
-	AuthViaLocalPassword AuthSource = iota
-	AuthViaLDAP
-	AuthViaToken
-	AuthViaOIDC
-	AuthViaAll
+	AuthViaLocalPassword AuthSource = iota // Local database password authentication
+	AuthViaLDAP                            // LDAP directory authentication
+	AuthViaToken                           // JWT or API token authentication
+	AuthViaOIDC                            // OpenID Connect authentication
+	AuthViaAll                             // Accepts any auth source (special case)
 )
 
+// AuthType distinguishes between different authentication contexts.
 type AuthType int
 
 const (
-	AuthToken AuthType = iota
-	AuthSession
+	AuthToken   AuthType = iota // API token-based authentication
+	AuthSession                 // Session cookie-based authentication
 )
 
+// User represents a ClusterCockpit user account with authentication and authorization information.
+//
+// Users are authenticated via various sources (local, LDAP, OIDC) and assigned roles that
+// determine access levels. Projects lists the HPC projects/accounts the user has access to.
 type User struct {
-	Username   string     `json:"username"`
-	Password   string     `json:"-"`
-	Name       string     `json:"name"`
-	Email      string     `json:"email"`
-	Roles      []string   `json:"roles"`
-	Projects   []string   `json:"projects"`
-	AuthType   AuthType   `json:"authType"`
-	AuthSource AuthSource `json:"authSource"`
+	Username   string     `json:"username"`   // Unique username
+	Password   string     `json:"-"`          // Password hash (never serialized to JSON)
+	Name       string     `json:"name"`       // Full display name
+	Email      string     `json:"email"`      // Email address
+	Roles      []string   `json:"roles"`      // Assigned role names
+	Projects   []string   `json:"projects"`   // Authorized project/account names
+	AuthType   AuthType   `json:"authType"`   // How the user authenticated
+	AuthSource AuthSource `json:"authSource"` // Which system authenticated the user
 }
 
 func (u *User) HasProject(project string) bool {

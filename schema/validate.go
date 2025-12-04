@@ -16,17 +16,32 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
+// Kind identifies which JSON schema to use for validation.
+// Each kind corresponds to a different embedded schema file.
 type Kind int
 
 const (
-	Meta Kind = iota + 1
-	Data
-	ClusterCfg
+	Meta       Kind = iota + 1 // Job metadata schema (job-meta.schema.json)
+	Data                       // Job metric data schema (job-data.schema.json)
+	ClusterCfg                 // Cluster configuration schema (cluster.schema.json)
 )
 
 //go:embed schemas/*
 var schemaFiles embed.FS
 
+// Validate validates JSON data against an embedded JSON schema.
+//
+// The kind parameter determines which schema is used:
+//   - Meta: Validates job metadata structure
+//   - Data: Validates job performance metric data
+//   - ClusterCfg: Validates cluster configuration
+//
+// The reader should contain JSON-encoded data to validate.
+// Returns nil if validation succeeds, or an error describing validation failures.
+//
+// Example:
+//
+//	err := schema.Validate(schema.ClusterCfg, bytes.NewReader(clusterJSON))
 func Validate(k Kind, r io.Reader) error {
 	jsonschema.Loaders["embedfs"] = func(s string) (io.ReadCloser, error) {
 		f := filepath.Join("schemas", strings.Split(s, "//")[1])

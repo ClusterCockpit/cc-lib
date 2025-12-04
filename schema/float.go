@@ -13,13 +13,25 @@ import (
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
-// A custom float type is used so that (Un)MarshalJSON and
-// (Un)MarshalGQL can be overloaded and NaN/null can be used.
-// The default behaviour of putting every nullable value behind
-// a pointer has a bigger overhead.
+// Float is a custom float64 type with special handling for NaN values in JSON and GraphQL serialization.
+//
+// Standard Go encoding/json treats NaN as an error, but in metric data it's common to have missing
+// or invalid measurements that should be represented as null in JSON. This type allows NaN values
+// to be serialized as JSON null and vice versa, while avoiding the memory overhead of using
+// *float64 pointers for every nullable metric value.
+//
+// Key behaviors:
+//   - NaN values marshal to JSON null
+//   - JSON null unmarshals to NaN
+//   - Regular float values marshal/unmarshal normally
+//   - GraphQL marshaling follows the same null handling
+//
+// This is particularly important for time series metric data where missing data points are
+// common and need efficient representation.
 type Float float64
 
-// Same as `[]Float`, but can be marshaled to JSON with less allocations.
+// FloatArray is an alias for []Float that can be marshaled to JSON more efficiently.
+// This type exists to provide optimized JSON marshaling for arrays of Float values.
 type FloatArray []Float
 
 var (
@@ -35,6 +47,8 @@ func (f Float) Double() float64 {
 	return float64(f)
 }
 
+// ConvertToFloat converts a regular float64 to a Float, treating -1.0 as a sentinel for NaN.
+// This is useful when reading from systems that use -1.0 to indicate missing data.
 func ConvertToFloat(input float64) Float {
 	if input == -1.0 {
 		return NaN
@@ -127,6 +141,8 @@ func (s *Series) MarshalJSON() ([]byte, error) {
 	return buf, nil
 }
 
+// ConvertFloatToFloat64 converts a slice of Float values to a slice of float64 values.
+// NaN values in the Float slice will remain as NaN in the float64 slice.
 func ConvertFloatToFloat64(s []Float) []float64 {
 	fp := make([]float64, len(s))
 
@@ -137,6 +153,8 @@ func ConvertFloatToFloat64(s []Float) []float64 {
 	return fp
 }
 
+// GetFloat64ToFloat converts a slice of float64 values to a slice of Float values.
+// This is the inverse operation of ConvertFloatToFloat64.
 func GetFloat64ToFloat(s []float64) []Float {
 	fp := make([]Float, len(s))
 
