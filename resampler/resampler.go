@@ -125,13 +125,14 @@ func LargestTriangleThreeBucket(data []schema.Float, old_frequency int64, new_fr
 		for ; currBucketStart < currBucketEnd; currBucketStart++ {
 
 			area := calculateTriangleArea(schema.Float(pointX), pointY, avgPointX, avgPointY, schema.Float(currBucketStart), data[currBucketStart])
-			if area > maxArea {
+
+			if area > maxArea || math.IsNaN(area) {
 				maxArea = area
 				maxAreaPoint = currBucketStart
 			}
-			if math.IsNaN(float64(avgPointY)) {
-				flag_ = 1
-			}
+			// if math.IsNaN(float64(avgPointY)) {
+			// 	flag_ = 1
+			// }
 		}
 
 		if flag_ == 1 {
