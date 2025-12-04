@@ -2,12 +2,16 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
+// Package ccmessage provides a message format and interface for ClusterCockpit.
+// It extends the InfluxDB line protocol with additional meta information.
 package ccmessage
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	maps0 "maps"
 	"sort"
 	"time"
 
@@ -16,15 +20,18 @@ import (
 	lp1 "github.com/influxdata/line-protocol" // MIT license
 	lp2 "github.com/influxdata/line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/maps"
+
+	"github.com/ClusterCockpit/cc-lib/schema"
 )
 
+// CCMessageType defines the type of a CCMessage
 type CCMessageType int
 
 const (
-	CCMSG_TYPE_METRIC = iota
-	CCMSG_TYPE_EVENT
-	CCMSG_TYPE_LOG
-	CCMSG_TYPE_CONTROL
+	CCMSG_TYPE_METRIC  CCMessageType = iota // Metric message type
+	CCMSG_TYPE_EVENT                        // Event message type
+	CCMSG_TYPE_LOG                          // Log message type
+	CCMSG_TYPE_CONTROL                      // Control message type
 )
 
 const (
@@ -33,6 +40,7 @@ const (
 	CCMSG_TYPE_INVALID = MAX_CCMSG_TYPE + 1
 )
 
+// String returns the string representation of the CCMessageType
 func (t CCMessageType) String() string {
 	switch t {
 	case CCMSG_TYPE_EVENT:
@@ -47,6 +55,7 @@ func (t CCMessageType) String() string {
 	return "invalid"
 }
 
+// FieldKey returns the key used for the value field in the message
 func (t CCMessageType) FieldKey() string {
 	switch t {
 	case CCMSG_TYPE_EVENT:
@@ -67,26 +76,28 @@ func (t CCMessageType) FieldKey() string {
 //
 // See: https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/
 type ccMessage struct {
-	name   string                 // Measurement name
-	meta   map[string]string      // map of meta data tags
-	tags   map[string]string      // map of of tags
-	fields map[string]interface{} // map of of fields
-	tm     time.Time              // timestamp
+	name   string            // Measurement name
+	meta   map[string]string // map of meta data tags
+	tags   map[string]string // map of of tags
+	fields map[string]any    // map of of fields
+	tm     time.Time         // timestamp
 }
 
 type ccMessageJSON struct {
 	Name string `json:"name"` // Measurement name
 	// Meta   map[string]string      `json:"meta,omitempty"` // map of meta data tags
-	Tags   map[string]string      `json:"tags"`      // map of of tags
-	Fields map[string]interface{} `json:"fields"`    // map of of fields
-	Tm     time.Time              `json:"timestamp"` // timestamp
+	Tags   map[string]string `json:"tags"`      // map of of tags
+	Fields map[string]any    `json:"fields"`    // map of of fields
+	Tm     time.Time         `json:"timestamp"` // timestamp
 }
 
-// ccMessage access functions
+// CCMessage is the interface for accessing and manipulating ClusterCockpit messages.
+// It provides methods for converting to other formats (InfluxDB point, Line Protocol, JSON),
+// accessing metadata (Name, Time, Tags, Meta, Fields), and checking message type.
 type CCMessage interface {
-	ToPoint(metaAsTags map[string]bool) *write.Point  // Generate influxDB point for data type ccMessage
-	ToLineProtocol(metaAsTags map[string]bool) string // Generate influxDB line protocol for data type ccMessage
-	ToJSON(metaAsTags map[string]bool) (json.RawMessage, error)
+	ToPoint(metaAsTags map[string]bool) *write.Point            // Generate influxDB point for data type ccMessage
+	ToLineProtocol(metaAsTags map[string]bool) string           // Generate influxDB line protocol for data type ccMessage
+	ToJSON(metaAsTags map[string]bool) (json.RawMessage, error) // Generate JSON representation
 
 	Name() string        // Get metric name
 	SetName(name string) // Set metric name
@@ -106,23 +117,27 @@ type CCMessage interface {
 	HasMeta(key string) (ok bool)               // Check if a meta data key is present
 	RemoveMeta(key string)                      // Remove a meta data tag by its key
 
-	Fields() map[string]interface{}                   // Map of fields
-	AddField(key string, value interface{})           // Add a field
-	GetField(key string) (value interface{}, ok bool) // Get a field addressed by its key
-	HasField(key string) (ok bool)                    // Check if a field key is present
-	RemoveField(key string)                           // Remove a field addressed by its key
-	String() string                                   // Return line-protocol like string
+	Fields() map[string]any                   // Map of fields
+	AddField(key string, value any)           // Add a field
+	GetField(key string) (value any, ok bool) // Get a field addressed by its key
+	HasField(key string) (ok bool)            // Check if a field key is present
+	RemoveField(key string)                   // Remove a field addressed by its key
+	String() string                           // Return line-protocol like string
 
 	MessageType() CCMessageType // Return message type
-	IsMetric() bool
-	GetMetricValue() interface{}
-	IsLog() bool
+	IsMetric() bool             // Check if message is a metric
+	GetMetricValue() any
+	IsLog() bool // Check if message is a log
 	GetLogValue() string
-	IsEvent() bool
+	IsEvent() bool // Check if message is an event
 	GetEventValue() string
-	IsControl() bool
+	IsControl() bool // Check if message is a control message
 	GetControlValue() string
 	GetControlMethod() string
+	IsQuery() bool // Check if message is a query
+	GetQueryValue() string
+	IsJobEvent() (string, bool) // Check if message is a job event (returns event name and bool)
+	GetJob() (*schema.Job, error)
 }
 
 // String implements the stringer interface for data type ccMessage
@@ -136,8 +151,8 @@ func (m *ccMessage) String() string {
 // ToLineProtocol generates influxDB line protocol for data type ccMessage
 func (m *ccMessage) ToPoint(metaAsTags map[string]bool) (p *write.Point) {
 	p = influxdb2.NewPoint(m.name, m.tags, m.fields, m.tm)
-	for key, use_as_tag := range metaAsTags {
-		if use_as_tag {
+	for key, useAsTag := range metaAsTags {
+		if useAsTag {
 			if value, ok := m.GetMeta(key); ok {
 				p.AddTag(key, value)
 			}
@@ -155,15 +170,10 @@ func (m *ccMessage) ToLineProtocol(metaAsTags map[string]bool) string {
 }
 
 func (m *ccMessage) ToJSON(metaAsTags map[string]bool) (json.RawMessage, error) {
-	metalen := len(m.meta) - len(metaAsTags)
-	if metalen < 0 {
-		metalen = 0
-	}
 	mc := ccMessageJSON{
-		Name: m.name,
-		Tm:   m.tm,
-		Tags: maps.Clone(m.tags),
-		// Meta:   make(map[string]string, metalen),
+		Name:   m.name,
+		Tm:     m.tm,
+		Tags:   maps.Clone(m.tags),
 		Fields: maps.Clone(m.fields),
 	}
 	for k := range metaAsTags {
@@ -250,17 +260,17 @@ func (m *ccMessage) RemoveMeta(key string) {
 }
 
 // Fields returns the list of fields as key-value-mapping
-func (m *ccMessage) Fields() map[string]interface{} {
+func (m *ccMessage) Fields() map[string]any {
 	return m.fields
 }
 
 // AddField adds a field (consisting of key and value) to the map of fields
-func (m *ccMessage) AddField(key string, value interface{}) {
+func (m *ccMessage) AddField(key string, value any) {
 	m.fields[key] = value
 }
 
 // GetField returns the field with field's key equal to <key>
-func (m *ccMessage) GetField(key string) (interface{}, bool) {
+func (m *ccMessage) GetField(key string) (any, bool) {
 	v, ok := m.fields[key]
 	return v, ok
 }
@@ -277,19 +287,19 @@ func (m *ccMessage) RemoveField(key string) {
 	delete(m.fields, key)
 }
 
-// New creates a new measurement point
+// NewMessage creates a new CCMessage with the given name, tags, meta, fields, and timestamp.
 func NewMessage(
 	name string,
 	tags map[string]string,
 	meta map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tm time.Time,
 ) (CCMessage, error) {
 	m := &ccMessage{
 		name:   name,
 		tags:   maps.Clone(tags),
 		meta:   maps.Clone(meta),
-		fields: make(map[string]interface{}, len(fields)),
+		fields: make(map[string]any, len(fields)),
 		tm:     tm,
 	}
 	if m.tags == nil {
@@ -311,7 +321,7 @@ func NewMessage(
 	return m, nil
 }
 
-// FromMetric copies the metric <other>
+// FromMessage creates a deep copy of the given CCMessage.
 func FromMessage(other CCMessage) CCMessage {
 	return &ccMessage{
 		name:   other.Name(),
@@ -322,23 +332,24 @@ func FromMessage(other CCMessage) CCMessage {
 	}
 }
 
+// EmptyMessage creates a new empty CCMessage.
 func EmptyMessage() CCMessage {
 	return &ccMessage{
 		name:   "",
 		tags:   make(map[string]string),
 		meta:   make(map[string]string),
-		fields: make(map[string]interface{}),
+		fields: make(map[string]any),
 		tm:     time.Time{},
 	}
 }
 
-// FromInfluxMetric copies the influxDB line protocol metric <other>
+// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol metric.
 func FromInfluxMetric(other lp1.Metric) CCMessage {
 	m := &ccMessage{
 		name:   other.Name(),
 		tags:   make(map[string]string),
 		meta:   make(map[string]string),
-		fields: make(map[string]interface{}),
+		fields: make(map[string]any),
 		tm:     other.Time(),
 	}
 
@@ -352,6 +363,7 @@ func FromInfluxMetric(other lp1.Metric) CCMessage {
 	return m
 }
 
+// FromJSON creates a CCMessage from a JSON representation.
 func FromJSON(input json.RawMessage) (CCMessage, error) {
 	var j ccMessageJSON
 	err := json.Unmarshal(input, &j)
@@ -376,16 +388,13 @@ func (m *ccMessage) UnmarshalJSON(data []byte) error {
 	m.tm = j.Tm
 	m.meta = make(map[string]string)
 	m.tags = make(map[string]string)
-	for k, v := range j.Tags {
-		m.tags[k] = v
-	}
-	m.fields = make(map[string]interface{})
-	for k, v := range j.Fields {
-		m.fields[k] = v
-	}
+	maps0.Copy(m.tags, j.Tags)
+	m.fields = make(map[string]any)
+	maps0.Copy(m.fields, j.Fields)
 	return nil
 }
 
+// FromBytes creates a list of CCMessages from a byte slice containing InfluxDB line protocol data.
 func FromBytes(data []byte) ([]CCMessage, error) {
 	out := make([]CCMessage, 0)
 	decoder := lp2.NewDecoderWithBytes(data)
@@ -412,7 +421,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 		}
 
 		// Decode fields
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for {
 			key, value, err := decoder.NextField()
 			if err != nil {
@@ -504,7 +513,7 @@ func (m *ccMessage) MessageType() CCMessageType {
 // *uint, *uint8, *uint16,  *uint32,  *uint64, uint, uint8, uint16,  uint32,  uint64 ->  uint64
 // *[]byte, *string,                           []byte, string                        -> string
 // *bool,                                      bool                                  -> bool
-func convertField(v interface{}) interface{} {
+func convertField(v any) any {
 	switch v := v.(type) {
 	case float64:
 		return v

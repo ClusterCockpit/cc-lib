@@ -432,51 +432,51 @@
         ]
       },
       "minItems": 1
+    },
+    "ic_rcv_packets": {
+      "description": "Network interconnect read packets",
+      "properties": {
+        "node": {
+          "$ref": "embedfs://job-metric-data.schema.json"
+        }
+      },
+      "required": [
+        "node"
+      ]
+    },
+    "ic_send_packets": {
+      "description": "Network interconnect send packet",
+      "properties": {
+        "node": {
+          "$ref": "embedfs://job-metric-data.schema.json"
+        }
+      },
+      "required": [
+        "node"
+      ]
+    },
+    "ic_read_bw": {
+      "description": "Network interconnect read bandwidth",
+      "properties": {
+        "node": {
+          "$ref": "embedfs://job-metric-data.schema.json"
+        }
+      },
+      "required": [
+        "node"
+      ]
+    },
+    "ic_write_bw": {
+      "description": "Network interconnect write bandwidth",
+      "properties": {
+        "node": {
+          "$ref": "embedfs://job-metric-data.schema.json"
+        }
+      },
+      "required": [
+        "node"
+      ]
     }
-  },
-  "ic_rcv_packets": {
-    "description": "Network interconnect read packets",
-    "properties": {
-      "node": {
-        "$ref": "embedfs://job-metric-data.schema.json"
-      }
-    },
-    "required": [
-      "node"
-    ]
-  },
-  "ic_send_packets": {
-    "description": "Network interconnect send packet",
-    "properties": {
-      "node": {
-        "$ref": "embedfs://job-metric-data.schema.json"
-      }
-    },
-    "required": [
-      "node"
-    ]
-  },
-  "ic_read_bw": {
-    "description": "Network interconnect read bandwidth",
-    "properties": {
-      "node": {
-        "$ref": "embedfs://job-metric-data.schema.json"
-      }
-    },
-    "required": [
-      "node"
-    ]
-  },
-  "ic_write_bw": {
-    "description": "Network interconnect write bandwidth",
-    "properties": {
-      "node": {
-        "$ref": "embedfs://job-metric-data.schema.json"
-      }
-    },
-    "required": [
-      "node"
-    ]
   },
   "required": [
     "cpu_user",

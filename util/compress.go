@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package util
 
 import (
@@ -12,6 +13,10 @@ import (
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 )
 
+// CompressFile compresses a file using gzip compression.
+// It reads the input file (fileIn), creates a gzip-compressed output file (fileOut),
+// and removes the original file upon successful compression.
+// Returns an error if any operation fails.
 func CompressFile(fileIn string, fileOut string) error {
 	originalFile, err := os.Open(fileIn)
 	if err != nil {
@@ -44,6 +49,10 @@ func CompressFile(fileIn string, fileOut string) error {
 	return nil
 }
 
+// UncompressFile decompresses a gzip-compressed file.
+// It reads the gzip-compressed input file (fileIn), creates an uncompressed output file (fileOut),
+// and removes the compressed file upon successful decompression.
+// Returns an error if any operation fails.
 func UncompressFile(fileIn string, fileOut string) error {
 	gzippedFile, err := os.Open(fileIn)
 	if err != nil {
@@ -52,7 +61,11 @@ func UncompressFile(fileIn string, fileOut string) error {
 	}
 	defer gzippedFile.Close()
 
-	gzipReader, _ := gzip.NewReader(gzippedFile)
+	gzipReader, err := gzip.NewReader(gzippedFile)
+	if err != nil {
+		cclog.Errorf("UncompressFile() error creating gzip reader: %v", err)
+		return err
+	}
 	defer gzipReader.Close()
 
 	uncompressedFile, err := os.Create(fileOut)

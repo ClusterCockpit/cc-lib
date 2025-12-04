@@ -1,0 +1,4 @@
+{
+    "receivers-file": "./testdata/receivers.json",
+    "sinks-file": "./testdata/sinks.json"
+}

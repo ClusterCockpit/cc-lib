@@ -11,13 +11,22 @@ import (
 	"io"
 )
 
-// Job struct type
+// Job represents complete metadata for an HPC job in ClusterCockpit.
 //
-// This type contains all metadata of a HPC job.
+// This is the central data structure containing all information about a job including:
+// - Identification: cluster, job ID, user, project
+// - Resources: nodes, cores, accelerators, memory
+// - Timing: submission, start time, duration
+// - State: current job state and monitoring status
+// - Metrics: performance statistics and time series data
+// - Metadata: tags, energy footprint, custom metadata
+//
+// The RawX fields are used for database  serialization of complex nested structures
+// that are stored as JSON blobs in the database and decoded into their respective
+// typed fields (Resources, EnergyFootprint, Footprint, MetaData) when loaded.
 //
 // Job model
 // @Description Information of a HPC job.
-
 type Job struct {
 	Cluster            string                   `json:"cluster" db:"cluster" example:"fritz"`
 	SubCluster         string                   `json:"subCluster" db:"subcluster" example:"main"`
@@ -53,14 +62,18 @@ type Job struct {
 	StartTime          int64                    `json:"startTime" db:"start_time" example:"1649723812"`
 }
 
+// JobLink represents a lightweight reference to a job, typically used for linking related jobs.
+// Used to track concurrent jobs or job relationships without including full job metadata.
 type JobLink struct {
-	ID    int64 `json:"id"`
-	JobID int64 `json:"jobId"`
+	ID    int64 `json:"id"`    // Internal database ID
+	JobID int64 `json:"jobId"` // The job's external job ID
 }
 
+// JobLinkResultList holds a paginated list of job links with a total count.
+// Typically used for API responses that return lists of related jobs.
 type JobLinkResultList struct {
-	Items []*JobLink `json:"items"`
-	Count int        `json:"count"`
+	Items []*JobLink `json:"items"` // List of job links
+	Count int        `json:"count"` // Total count of available items
 }
 
 const (
@@ -75,9 +88,15 @@ const (
 // 	MonitoringStatus: MonitoringStatusRunningOrArchiving,
 // }
 
+// Unit represents a unit of measurement with optional SI prefix.
+//
+// Examples:
+//   - {Base: "B/s", Prefix: "G"} = GB/s (gigabytes per second)
+//   - {Base: "F/s", Prefix: "T"} = TF/s (teraflops per second)
+//   - {Base: "", Prefix: ""}     = dimensionless (e.g., CPU load)
 type Unit struct {
-	Base   string `json:"base"`
-	Prefix string `json:"prefix,omitempty"`
+	Base   string `json:"base"`             // Base unit (e.g., "B/s", "F/s", "W")
+	Prefix string `json:"prefix,omitempty"` // SI prefix (e.g., "G", "M", "K", "T")
 }
 
 // JobStatistics model
@@ -98,15 +117,23 @@ type Tag struct {
 	ID    int64  `json:"id" db:"id"`
 }
 
+// Resource represents the hardware resources assigned to a job on a single compute node.
+//
+// A job typically uses multiple Resource entries, one for each allocated node.
+// HWThreads lists the specific hardware thread IDs allocated, allowing for precise
+// CPU pinning analysis. Accelerators lists assigned GPU/accelerator IDs.
+//
 // Resource model
 // @Description A resource used by a job
 type Resource struct {
-	Hostname      string   `json:"hostname"`
-	Configuration string   `json:"configuration,omitempty"`
-	HWThreads     []int    `json:"hwthreads,omitempty"`
-	Accelerators  []string `json:"accelerators,omitempty"`
+	Hostname      string   `json:"hostname"`                // Node hostname
+	Configuration string   `json:"configuration,omitempty"` // Optional configuration identifier
+	HWThreads     []int    `json:"hwthreads,omitempty"`     // Allocated hardware thread IDs
+	Accelerators  []string `json:"accelerators,omitempty"`  // Allocated accelerator IDs (e.g., GPU IDs)
 }
 
+// JobState represents the execution state of an HPC job.
+// Valid states match common HPC scheduler states (SLURM, PBS, etc.).
 type JobState string
 
 const (
@@ -152,7 +179,9 @@ func (e JobState) Valid() bool {
 		e == JobStateCompleted ||
 		e == JobStateDeadline ||
 		e == JobStateFailed ||
+		e == JobStateCancelled ||
 		e == JobStateNodeFail ||
+		e == JobStateBootFail ||
 		e == JobStatePending ||
 		e == JobStateSuspended ||
 		e == JobStateTimeout ||

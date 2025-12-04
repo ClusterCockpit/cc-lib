@@ -1,0 +1,6 @@
+{
+    "main": {
+        "interval": "10s"
+    },
+    "missing-file": "./testdata/nonexistent.json"
+}
