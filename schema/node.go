@@ -74,7 +74,7 @@ type NodeStateDB struct {
 	NodeState       SchedulerState  `json:"nodeState" db:"node_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`     // Scheduler state
 	HealthState     MonitoringState `json:"healthState" db:"health_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"` // Monitoring health
 	CpusAllocated   int             `json:"cpusAllocated" db:"cpus_allocated"`                                                                                  // Allocated CPUs
-	MemoryAllocated int             `json:"memoryAllocated" db:"memory_allocated"`                                                                              // Allocated memory (MB)
+	MemoryAllocated int64           `json:"memoryAllocated" db:"memory_allocated"`                                                                              // Allocated memory (MB)
 	GpusAllocated   int             `json:"gpusAllocated" db:"gpus_allocated"`                                                                                  // Allocated GPUs
 	JobsRunning     int             `json:"jobsRunning" db:"jobs_running" example:"12"`                                                                         // Running jobs
 	NodeID          int64           `json:"_" db:"node_id"`                                                                                                     // Foreign key to NodeDB
