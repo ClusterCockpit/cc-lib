@@ -51,7 +51,7 @@ type NodePayload struct {
 	Hostname        string   `json:"hostname"`        // Node hostname
 	States          []string `json:"states"`          // State strings (flexible format)
 	CpusAllocated   int      `json:"cpusAllocated"`   // Number of allocated CPUs
-	MemoryAllocated int      `json:"memoryAllocated"` // Allocated memory in MB
+	MemoryAllocated int64    `json:"memoryAllocated"` // Allocated memory in MB
 	GpusAllocated   int      `json:"gpusAllocated"`   // Number of allocated GPUs
 	JobsRunning     int      `json:"jobsRunning"`     // Number of running jobs
 }

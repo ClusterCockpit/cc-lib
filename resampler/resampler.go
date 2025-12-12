@@ -107,21 +107,9 @@ func calculateAverageDataPoint(points []schema.Float, xStart int64) (avgX schema
 //	downsampled, freq, err := SimpleResampler(data, 1, 2)
 //	// Returns: [1.0, 3.0, 5.0], 2, nil
 func SimpleResampler(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error) {
-	// Validate inputs and check if downsampling is needed
-	if oldFrequency == 0 || newFrequency == 0 || newFrequency <= oldFrequency {
-		return data, oldFrequency, nil
-	}
-
-	// Ensure new frequency is a multiple of old frequency
-	if newFrequency%oldFrequency != 0 {
-		return nil, 0, fmt.Errorf("new sampling frequency (%d) must be a multiple of old frequency (%d)", newFrequency, oldFrequency)
-	}
-
-	step := int(newFrequency / oldFrequency)
-	newDataLength := len(data) / step
-
-	// Don't downsample if result would be trivial or counterproductive
-	if newDataLength == 0 || len(data) < MinimumRequiredPoints || newDataLength >= len(data) {
+	// checks if the frequencies are valid or not.
+	newDataLength, step := validateFrequency(len(data), oldFrequency, newFrequency)
+	if newDataLength == -1 {
 		return data, oldFrequency, nil
 	}
 
@@ -131,6 +119,29 @@ func SimpleResampler(data []schema.Float, oldFrequency int64, newFrequency int64
 	}
 
 	return newData, newFrequency, nil
+}
+
+func validateFrequency(lenData int, oldFrequency, newFrequency int64) (int, int) {
+	// Validate inputs and check if downsampling is needed
+	if oldFrequency == 0 || newFrequency == 0 || newFrequency <= oldFrequency {
+		return -1, 0
+	}
+
+	// Ensure new frequency is a multiple of old frequency
+	if newFrequency%oldFrequency != 0 {
+		fmt.Printf("new sampling frequency (%d) must be a multiple of old frequency (%d)", newFrequency, oldFrequency)
+		return -1, 0
+	}
+
+	step := int(newFrequency / oldFrequency)
+	newDataLength := lenData / step
+
+	// Don't downsample if result would be trivial or counterproductive
+	if (newDataLength == 0) || (lenData < MinimumRequiredPoints) || (newDataLength >= lenData) {
+		return -1, 0
+	}
+
+	return newDataLength, step
 }
 
 // LargestTriangleThreeBucket (LTTB) performs perceptually-aware downsampling.
@@ -180,21 +191,9 @@ func SimpleResampler(data []schema.Float, oldFrequency int64, newFrequency int64
 //   - Original paper: https://skemman.is/bitstream/1946/15343/3/SS_MSthesis.pdf
 //   - Adapted from: https://github.com/haoel/downsampling/blob/master/core/lttb.go
 func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error) {
-	// Validate inputs and check if downsampling is needed
-	if oldFrequency == 0 || newFrequency == 0 || newFrequency <= oldFrequency {
-		return data, oldFrequency, nil
-	}
-
-	// Ensure new frequency is a multiple of old frequency
-	if newFrequency%oldFrequency != 0 {
-		return nil, 0, fmt.Errorf("new sampling frequency (%d) must be a multiple of old frequency (%d)", newFrequency, oldFrequency)
-	}
-
-	step := int(newFrequency / oldFrequency)
-	newDataLength := len(data) / step
-
-	// Don't downsample if result would be trivial or counterproductive
-	if newDataLength == 0 || len(data) < MinimumRequiredPoints || newDataLength >= len(data) {
+	// checks if the frequencies are valid or not.
+	newDataLength, _ := validateFrequency(len(data), oldFrequency, newFrequency)
+	if newDataLength == -1 {
 		return data, oldFrequency, nil
 	}
 
