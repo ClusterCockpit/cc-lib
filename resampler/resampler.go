@@ -29,6 +29,10 @@ import (
 	"github.com/ClusterCockpit/cc-lib/schema"
 )
 
+// Default number of points required to trigger resampling.
+// Otherwise, time series of original timestep will be returned without resampling
+var MinimumRequiredPoints int = 1000
+
 // calculateTriangleArea computes the area of a triangle defined by three points.
 //
 // The area is calculated using the cross product formula:
@@ -117,7 +121,7 @@ func SimpleResampler(data []schema.Float, oldFrequency int64, newFrequency int64
 	newDataLength := len(data) / step
 
 	// Don't downsample if result would be trivial or counterproductive
-	if newDataLength == 0 || len(data) < 100 || newDataLength >= len(data) {
+	if newDataLength == 0 || len(data) < MinimumRequiredPoints || newDataLength >= len(data) {
 		return data, oldFrequency, nil
 	}
 
@@ -190,7 +194,7 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 	newDataLength := len(data) / step
 
 	// Don't downsample if result would be trivial or counterproductive
-	if newDataLength == 0 || len(data) < 100 || newDataLength >= len(data) {
+	if newDataLength == 0 || len(data) < MinimumRequiredPoints || newDataLength >= len(data) {
 		return data, oldFrequency, nil
 	}
 
@@ -231,6 +235,7 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 
 		maxArea := -1.0
 		var maxAreaPoint int
+		flag_ := 0
 
 		// Find the point in current bucket that forms the largest triangle
 		for ; currBucketStart < currBucketEnd; currBucketStart++ {
@@ -244,10 +249,18 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 				maxArea = area
 				maxAreaPoint = currBucketStart
 			}
+			// if math.IsNaN(float64(avgPointY)) {
+			// 	flag_ = 1
+			// }
 		}
 
 		// Add the point with maximum area from this bucket
-		newData = append(newData, data[maxAreaPoint])
+		if flag_ == 1 {
+			newData = append(newData, schema.NaN) // Pick this point from the bucket
+		} else {
+			newData = append(newData, data[maxAreaPoint]) // Pick this point from the bucket
+		}
+
 		prevMaxAreaPoint = maxAreaPoint
 
 		// Move to the next bucket
@@ -259,4 +272,8 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 	newData = append(newData, data[len(data)-1])
 
 	return newData, newFrequency, nil
+}
+
+func SetMinimumRequiredPoints(setVal int) {
+	MinimumRequiredPoints = setVal
 }
