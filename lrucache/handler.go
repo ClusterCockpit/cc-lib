@@ -11,34 +11,46 @@ import (
 	"time"
 )
 
-// HttpHandler is can be used as HTTP Middleware in order to cache requests,
-// for example static assets. By default, the request's raw URI is used as key and nothing else.
-// Results with a status code other than 200 are cached with a TTL of zero seconds,
-// so basically re-fetched as soon as the current fetch is done and a new request
-// for that URI is done.
+// HttpHandler is an HTTP middleware that caches HTTP responses using an LRU cache.
+//
+// It can be used to cache static assets, API responses, or any GET requests.
+// By default, the request's RequestURI is used as the cache key.
+//
+// Caching behavior:
+//   - Only GET requests are cached (other methods pass through)
+//   - Responses with status code 200 are cached with the configured TTL
+//   - Responses with other status codes are cached with TTL=0 (immediate re-fetch)
+//   - If the response sets an "Expires" header, it overrides the default TTL
+//   - The "Age" header is automatically set to indicate cache age
+//
+// The CacheKey function can be customized to change how cache keys are generated
+// from requests (e.g., to include query parameters or headers).
 type HttpHandler struct {
-	cache      *Cache
-	fetcher    http.Handler
-	defaultTTL time.Duration
+	cache      *Cache        // LRU cache instance
+	fetcher    http.Handler  // Next handler in the chain
+	defaultTTL time.Duration // Default time-to-live for cached responses
 
-	// Allows overriding the way the cache key is extracted
-	// from the http request. The defailt is to use the RequestURI.
+	// CacheKey allows overriding the way the cache key is extracted
+	// from the http request. The default is to use the RequestURI.
 	CacheKey func(*http.Request) string
 }
 
 var _ http.Handler = (*HttpHandler)(nil)
 
+// cachedResponseWriter wraps an http.ResponseWriter to capture the response
+// for caching. It buffers the response body and status code.
 type cachedResponseWriter struct {
-	w          http.ResponseWriter
-	statusCode int
-	buf        bytes.Buffer
+	w          http.ResponseWriter // Original response writer
+	statusCode int                 // HTTP status code
+	buf        bytes.Buffer        // Buffered response body
 }
 
+// cachedResponse represents a cached HTTP response.
 type cachedResponse struct {
-	headers    http.Header
-	statusCode int
-	data       []byte
-	fetched    time.Time
+	headers    http.Header // Response headers
+	statusCode int         // HTTP status code
+	data       []byte      // Response body
+	fetched    time.Time   // When this response was fetched
 }
 
 var _ http.ResponseWriter = (*cachedResponseWriter)(nil)
@@ -55,10 +67,26 @@ func (crw *cachedResponseWriter) WriteHeader(statusCode int) {
 	crw.statusCode = statusCode
 }
 
-// Returns a new caching HttpHandler. If no entry in the cache is found or it was too old, `fetcher` is called with
-// a modified http.ResponseWriter and the response is stored in the cache. If `fetcher` sets the "Expires" header,
-// the ttl is set appropriately (otherwise, the default ttl passed as argument here is used).
-// `maxmemory` should be in the unit bytes.
+// NewHttpHandler creates a new caching HTTP handler.
+//
+// The handler caches responses from the fetcher handler. If no cached response
+// is found or it has expired, fetcher is called to generate the response.
+//
+// If the fetcher sets an "Expires" header, the TTL is calculated from that header.
+// Otherwise, the default TTL is used. Responses with status codes other than 200
+// are cached with TTL=0 (immediate expiration).
+//
+// Parameters:
+//   - maxmemory: Maximum cache size in bytes (size of response bodies)
+//   - ttl: Default time-to-live for cached responses
+//   - fetcher: The handler to call when cache misses occur
+//
+// Example:
+//
+//	// Cache static files for 1 hour, max 100MB
+//	fileServer := http.FileServer(http.Dir("./static"))
+//	cachedHandler := lrucache.NewHttpHandler(100*1024*1024, 1*time.Hour, fileServer)
+//	http.Handle("/static/", cachedHandler)
 func NewHttpHandler(maxmemory int, ttl time.Duration, fetcher http.Handler) *HttpHandler {
 	return &HttpHandler{
 		cache:      New(maxmemory),
@@ -70,14 +98,26 @@ func NewHttpHandler(maxmemory int, ttl time.Duration, fetcher http.Handler) *Htt
 	}
 }
 
-// gorilla/mux style middleware:
+// NewMiddleware returns a gorilla/mux style middleware function.
+//
+// This is a convenience wrapper around NewHttpHandler for use with middleware chains.
+//
+// Example:
+//
+//	r := mux.NewRouter()
+//	r.Use(lrucache.NewMiddleware(100*1024*1024, 1*time.Hour))
 func NewMiddleware(maxmemory int, ttl time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return NewHttpHandler(maxmemory, ttl, next)
 	}
 }
 
-// Tries to serve a response to r from cache or calls next and stores the response to the cache for the next time.
+// ServeHTTP implements the http.Handler interface.
+//
+// It attempts to serve the response from cache. If not cached or expired,
+// it calls the fetcher handler and caches the result.
+//
+// Only GET requests are cached; other HTTP methods pass through to the fetcher.
 func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.ServeHTTP(rw, r)

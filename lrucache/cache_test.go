@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+// TestBasics validates basic cache operations: Get, Put, Del, and Keys.
+// It tests that values are cached correctly, retrieved without recomputation,
+// and can be deleted and recomputed.
 func TestBasics(t *testing.T) {
 	cache := New(123)
 
@@ -51,6 +54,9 @@ func TestBasics(t *testing.T) {
 	})
 }
 
+// TestExpiration validates that cache entries expire correctly based on their TTL.
+// It tests that expired entries are recomputed while non-expired entries are served
+// from cache, and that the Keys function properly evicts expired entries.
 func TestExpiration(t *testing.T) {
 	cache := New(123)
 
@@ -96,6 +102,9 @@ func TestExpiration(t *testing.T) {
 	})
 }
 
+// TestEviction validates the LRU eviction policy.
+// It tests that entries are evicted when the cache size limit is exceeded,
+// and that the least recently used entries are evicted first.
 func TestEviction(t *testing.T) {
 	c := New(100)
 	failIfCalled := func() (interface{}, time.Duration, int) {
@@ -151,8 +160,11 @@ func TestEviction(t *testing.T) {
 	})
 }
 
-// I know that this is a shity test,
-// time is relative and unreliable.
+// TestConcurrency validates that concurrent access to the same key is handled correctly.
+// It ensures that only one goroutine computes a value for a given key at a time,
+// while other goroutines wait for the result.
+//
+// Note: This test uses timing assumptions and may be flaky on heavily loaded systems.
 func TestConcurrency(t *testing.T) {
 	c := New(100)
 	var wg sync.WaitGroup
@@ -187,6 +199,9 @@ func TestConcurrency(t *testing.T) {
 	c.Keys(func(key string, val interface{}) {})
 }
 
+// TestPanic validates that panics in the compute function are handled correctly.
+// It ensures that the cache remains in a consistent state after a panic,
+// and that other keys can still be accessed normally.
 func TestPanic(t *testing.T) {
 	c := New(100)
 
