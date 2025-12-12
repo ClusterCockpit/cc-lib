@@ -2,6 +2,39 @@
 // All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
+// Package lrucache provides a thread-safe, in-memory LRU (Least Recently Used) cache
+// with TTL (Time To Live) support and size-based eviction.
+//
+// This cache is designed for multi-threaded applications where expensive computations
+// or I/O operations need to be cached. It provides automatic synchronization to ensure
+// that the same value is not computed multiple times concurrently.
+//
+// Key features:
+//   - Thread-safe: Safe for concurrent access from multiple goroutines
+//   - LRU eviction: Automatically evicts least recently used entries when memory limit is reached
+//   - TTL support: Entries expire after a configurable time-to-live
+//   - Lazy computation: Values are computed on-demand and only once per key
+//   - Concurrent computation prevention: If multiple goroutines request the same key,
+//     only one computes the value while others wait for the result
+//   - HTTP middleware: Includes an HTTP handler for caching HTTP responses
+//
+// Basic usage:
+//
+//	cache := lrucache.New(1000) // maxmemory in arbitrary units
+//
+//	value := cache.Get("key", func() (interface{}, time.Duration, int) {
+//	    // This closure is called only if the value is not cached or expired
+//	    result := expensiveComputation()
+//	    return result, 10 * time.Minute, len(result) // value, ttl, size
+//	})
+//
+// The size parameter is a user-defined estimate in any consistent unit. It can be:
+//   - Actual bytes: len(string) or len(slice) * sizeof(element)
+//   - Entry count: Use 1 for each entry to limit by number of entries
+//   - Custom metric: Any measure that makes sense for your use case
+//
+// See the README.md for more detailed examples and explanations.
 package lrucache
 
 import (
@@ -9,35 +42,97 @@ import (
 	"time"
 )
 
-// Type of the closure that must be passed to `Get` to
-// compute the value in case it is not cached.
+// ComputeValue is the type of the closure that must be passed to Get to
+// compute a value when it is not cached or has expired.
 //
-// returned values are the computed value to be stored in the cache,
-// the duration until this value will expire and a size estimate.
+// The closure should perform the expensive computation or I/O operation
+// and return three values:
+//
+//   - value: The computed value to be stored in the cache (can be any type)
+//   - ttl: Time-to-live duration until this value expires and needs recomputation
+//   - size: A size estimate in user-defined units (see package documentation)
+//
+// The closure is called synchronously and must not call methods on the same
+// cache instance to avoid deadlocks. If multiple goroutines request the same
+// key concurrently, only one will execute this closure while others wait.
+//
+// Example:
+//
+//	computeValue := func() (interface{}, time.Duration, int) {
+//	    data := fetchFromDatabase() // Expensive operation
+//	    return data, 5 * time.Minute, len(data)
+//	}
 type ComputeValue func() (value interface{}, ttl time.Duration, size int)
 
+// cacheEntry represents a single entry in the LRU cache.
+// It is part of a doubly-linked list for LRU tracking.
 type cacheEntry struct {
-	key   string
-	value interface{}
+	key   string      // Cache key
+	value interface{} // Cached value
 
-	expiration            time.Time
-	size                  int
+	// expiration is the time when this entry expires.
+	// A zero value indicates the value is currently being computed.
+	expiration time.Time
+
+	// size is the user-provided size estimate for this entry
+	size int
+
+	// waitingForComputation tracks how many goroutines are waiting
+	// for this value to be computed
 	waitingForComputation int
 
+	// Doubly-linked list pointers for LRU ordering
+	// (most recently used at head, least recently used at tail)
 	next, prev *cacheEntry
 }
 
+// Cache is a thread-safe LRU cache with TTL support.
+//
+// The cache uses a mutex for synchronization and a condition variable
+// to coordinate goroutines waiting for values being computed.
+//
+// Concurrency model:
+//   - All public methods are thread-safe
+//   - Multiple goroutines can read different keys concurrently
+//   - If multiple goroutines request the same uncached key, only one
+//     computes the value while others wait
+//   - The cache uses a condition variable (cond) to wake up waiting goroutines
+//
+// Memory management:
+//   - maxmemory: Maximum total size (in user-defined units)
+//   - usedmemory: Current total size of all cached entries
+//   - When usedmemory exceeds maxmemory, least recently used entries are evicted
+//
+// Data structures:
+//   - entries: Hash map for O(1) key lookup
+//   - head/tail: Doubly-linked list for LRU ordering (head = most recent)
 type Cache struct {
-	mutex                 sync.Mutex
-	cond                  *sync.Cond
-	maxmemory, usedmemory int
-	entries               map[string]*cacheEntry
-	head, tail            *cacheEntry
+	mutex                 sync.Mutex             // Protects all cache operations
+	cond                  *sync.Cond             // Coordinates waiting goroutines
+	maxmemory, usedmemory int                    // Memory limits and usage
+	entries               map[string]*cacheEntry // Fast key lookup
+	head, tail            *cacheEntry            // LRU list (head=newest, tail=oldest)
 }
 
-// Return a new instance of a LRU In-Memory Cache.
-// Read [the README](./README.md) for more information
-// on what is going on with `maxmemory`.
+// New creates and returns a new LRU cache instance.
+//
+// The maxmemory parameter sets the maximum total size of all cached entries.
+// The size is measured in user-defined units (see package documentation).
+// When the total size exceeds maxmemory, the least recently used entries
+// are evicted until the size is below the limit.
+//
+// Common strategies for maxmemory:
+//   - Bytes: Set to actual memory limit (e.g., 100*1024*1024 for 100MB)
+//   - Entry count: Set to max number of entries (use size=1 for each entry)
+//   - Custom: Any consistent unit that makes sense for your use case
+//
+// Example:
+//
+//	// Limit cache to approximately 10MB
+//	cache := lrucache.New(10 * 1024 * 1024)
+//
+//	// Limit cache to 1000 entries (using size=1 per entry)
+//	cache := lrucache.New(1000)
 func New(maxmemory int) *Cache {
 	cache := &Cache{
 		maxmemory: maxmemory,
@@ -47,12 +142,50 @@ func New(maxmemory int) *Cache {
 	return cache
 }
 
-// Return the cached value for key `key` or call `computeValue` and
-// store its return value in the cache. If called, the closure will be
-// called synchronous and __shall not call methods on the same cache__
-// or a deadlock might ocure. If `computeValue` is nil, the cache is checked
-// and if no entry was found, nil is returned. If another goroutine is currently
-// computing that value, the result is waited for.
+// Get retrieves the cached value for the given key or computes it using computeValue.
+//
+// Behavior:
+//   - If the key exists and hasn't expired: Returns the cached value immediately
+//   - If the key doesn't exist or has expired: Calls computeValue to compute the value
+//   - If computeValue is nil and key not found: Returns nil
+//   - If another goroutine is computing the same key: Waits for that computation to complete
+//
+// Concurrency guarantees:
+//   - Only one goroutine will execute computeValue for a given key at a time
+//   - Other goroutines requesting the same key will wait for the result
+//   - Different keys can be computed concurrently without blocking each other
+//   - The computeValue closure is called synchronously (not in a separate goroutine)
+//
+// IMPORTANT: The computeValue closure must NOT call methods on the same cache
+// instance, as this will cause a deadlock. If you need to access other cache
+// entries, do so before or after the Get call.
+//
+// Parameters:
+//   - key: The cache key to look up
+//   - computeValue: Closure to compute the value if not cached (can be nil for lookup-only)
+//
+// Returns:
+//   - The cached or computed value, or nil if computeValue is nil and key not found
+//
+// Examples:
+//
+//	// Basic usage with computation
+//	value := cache.Get("user:123", func() (interface{}, time.Duration, int) {
+//	    user := fetchUserFromDB(123)
+//	    return user, 10 * time.Minute, 1
+//	}).(User)
+//
+//	// Lookup-only (no computation)
+//	value := cache.Get("user:123", nil)
+//	if value == nil {
+//	    // Key not found or expired
+//	}
+//
+//	// With size calculation
+//	value := cache.Get("data", func() (interface{}, time.Duration, int) {
+//	    data := expensiveComputation()
+//	    return data, 1 * time.Hour, len(data) * 8 // Approximate bytes
+//	})
 func (c *Cache) Get(key string, computeValue ComputeValue) interface{} {
 	now := time.Now()
 
@@ -144,9 +277,23 @@ func (c *Cache) Get(key string, computeValue ComputeValue) interface{} {
 	return value
 }
 
-// Put a new value in the cache. If another goroutine is calling `Get` and
-// computing the value, this function waits for the computation to be done
-// before it overwrites the value.
+// Put stores a value in the cache with the specified key, size, and TTL.
+//
+// If another goroutine is currently computing this key via Get, Put will
+// wait for the computation to complete before overwriting the value.
+//
+// If the key already exists, the old value is replaced and the entry is
+// moved to the front of the LRU list (marked as most recently used).
+//
+// Parameters:
+//   - key: The cache key
+//   - value: The value to store (can be any type)
+//   - size: Size estimate in user-defined units
+//   - ttl: Time-to-live duration until the value expires
+//
+// Example:
+//
+//	cache.Put("config", configData, len(configData), 1 * time.Hour)
 func (c *Cache) Put(key string, value interface{}, size int, ttl time.Duration) {
 	now := time.Now()
 	c.mutex.Lock()
@@ -179,13 +326,21 @@ func (c *Cache) Put(key string, value interface{}, size int, ttl time.Duration) 
 	c.insertFront(entry)
 }
 
-// Remove the value at key `key` from the cache.
-// Return true if the key was in the cache and false
-// otherwise. It is possible that true is returned even
-// though the value already expired.
-// It is possible that false is returned even though the value
-// will show up in the cache if this function is called on a key
-// while that key is beeing computed.
+// Del removes the entry with the given key from the cache.
+//
+// Returns:
+//   - true if the key was in the cache (even if expired)
+//   - false if the key was not found
+//
+// Note: This function may return false even if the value will appear in the
+// cache later, if called while another goroutine is computing that key.
+// It may return true even if the value has already expired.
+//
+// Example:
+//
+//	if cache.Del("old-key") {
+//	    log.Println("Removed old-key from cache")
+//	}
 func (c *Cache) Del(key string) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -196,9 +351,23 @@ func (c *Cache) Del(key string) bool {
 	return false
 }
 
-// Call f for every entry in the cache. Some sanity checks
-// and eviction of expired keys are done as well.
-// The cache is fully locked for the complete duration of this call!
+// Keys iterates over all entries in the cache and calls f for each one.
+//
+// The function f receives the key and value of each entry. During iteration,
+// expired entries are automatically evicted and sanity checks are performed
+// on the internal data structures.
+//
+// IMPORTANT: The cache is fully locked for the entire duration of this call.
+// This means no other cache operations can proceed while Keys is running.
+// Keep the function f as fast as possible to minimize lock contention.
+//
+// The iteration order is not guaranteed.
+//
+// Example:
+//
+//	cache.Keys(func(key string, val interface{}) {
+//	    fmt.Printf("Key: %s, Value: %v\n", key, val)
+//	})
 func (c *Cache) Keys(f func(key string, val interface{})) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -250,6 +419,7 @@ func (c *Cache) Keys(f func(key string, val interface{})) {
 	}
 }
 
+// insertFront adds an entry to the front of the LRU list (most recently used position).
 func (c *Cache) insertFront(e *cacheEntry) {
 	e.next = c.head
 	c.head = e
@@ -264,6 +434,7 @@ func (c *Cache) insertFront(e *cacheEntry) {
 	}
 }
 
+// unlinkEntry removes an entry from the doubly-linked list without deleting it from the map.
 func (c *Cache) unlinkEntry(e *cacheEntry) {
 	if e == c.head {
 		c.head = e.next
@@ -279,6 +450,8 @@ func (c *Cache) unlinkEntry(e *cacheEntry) {
 	}
 }
 
+// evictEntry removes an entry from both the list and the map.
+// Returns false if the entry cannot be evicted (other goroutines are waiting for it).
 func (c *Cache) evictEntry(e *cacheEntry) bool {
 	if e.waitingForComputation != 0 {
 		// panic("LRUCACHE/CACHE > cannot evict this entry as other goroutines need the value")

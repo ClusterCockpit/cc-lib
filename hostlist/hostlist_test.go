@@ -10,6 +10,15 @@ import (
 	"testing"
 )
 
+// TestExpand validates the Expand function with various input patterns.
+// It tests:
+//   - Single nodes and duplicates
+//   - Zero-padded ranges
+//   - Nodes with suffixes
+//   - Multiple ranges and indices
+//   - Different prefixes and suffixes
+//   - Whitespace handling
+//   - Error conditions (invalid characters, malformed ranges, decreasing ranges)
 func TestExpand(t *testing.T) {
 	// Compare two slices of strings
 	equal := func(a, b []string) bool {
