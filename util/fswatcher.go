@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package util
 
 import (
@@ -11,6 +12,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// Listener is an interface for file system event callbacks.
+// Implementations should define what events to match and how to respond to them.
 type Listener interface {
 	EventCallback()
 	EventMatch(event string) bool
@@ -22,6 +25,9 @@ var (
 	listeners []Listener
 )
 
+// AddListener registers a new file system watcher for the specified path.
+// The watcher is initialized on the first call to AddListener.
+// The listener will be notified of file system events matching its EventMatch criteria.
 func AddListener(path string, l Listener) {
 	var err error
 
@@ -43,6 +49,8 @@ func AddListener(path string, l Listener) {
 	}
 }
 
+// FsWatcherShutdown closes the file system watcher.
+// This should be called during application shutdown to clean up resources.
 func FsWatcherShutdown() {
 	if w != nil {
 		w.Close()

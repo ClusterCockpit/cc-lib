@@ -348,7 +348,7 @@ func (mp *messageProcessor) AddDropMessagesByType(typestring string) error {
 	if isValid {
 		mp.mutex.Lock()
 		if _, ok := mp.dropTypes[typestring]; !ok {
-			cclog.ComponentDebug("MessageProcessor", "Adding type", typestring, "for dropping")
+			// cclog.ComponentDebug("MessageProcessor", "Adding type", typestring, "for dropping")
 			mp.dropTypes[typestring] = struct{}{}
 		}
 		mp.mutex.Unlock()
@@ -762,8 +762,6 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 	var err error = nil
 	out := lp.FromMessage(m)
 
-	name := out.Name()
-
 	if len(mp.stages) == 0 {
 		mp.SetStages(mp.DefaultStages())
 	}
@@ -787,7 +785,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 		case STAGENAME_DROP_BY_NAME:
 			if len(mp.dropMessages) > 0 {
 				// cclog.ComponentDebug("MessageProcessor", "Dropping by message name ", name)
-				if _, ok := mp.dropMessages[name]; ok {
+				if _, ok := mp.dropMessages[params["name"].(string)]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Drop")
 					return nil, nil
 				}
@@ -815,11 +813,14 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 		case STAGENAME_RENAME_BY_NAME:
 			if len(mp.renameMessages) > 0 {
 				// cclog.ComponentDebug("MessageProcessor", "Renaming by name match")
-				if newname, ok := mp.renameMessages[name]; ok {
+				if newname, ok := mp.renameMessages[params["name"].(string)]; ok {
 					// cclog.ComponentDebug("MessageProcessor", "Rename to", newname)
+					oldname := params["name"].(string)
 					out.SetName(newname)
+					params["name"] = newname
 					// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", name)
-					out.AddMeta("oldname", name)
+					out.AddMeta("oldname", oldname)
+					params["meta"].(map[string]interface{})["oldname"] = oldname
 				}
 			}
 		case STAGENAME_RENAME_IF:
@@ -832,7 +833,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 			}
 		case STAGENAME_ADD_TAG:
 			if len(mp.addTagsIf) > 0 {
-				cclog.ComponentDebug("MessageProcessor", "Adding tags")
+				// cclog.ComponentDebug("MessageProcessor", "Adding tags")
 				_, err = addTagIf(out, &params, &mp.addTagsIf)
 				if err != nil {
 					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
@@ -930,7 +931,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 			if mp.normalizeUnits {
 				// cclog.ComponentDebug("MessageProcessor", "Normalize units")
 				if out.IsMetric() {
-					_, err := normalizeUnits(out)
+					_, err := normalizeUnits(out, &params)
 					if err != nil {
 						return out, fmt.Errorf("failed to evaluate: %v", err.Error())
 					}

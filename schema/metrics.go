@@ -14,45 +14,80 @@ import (
 	"github.com/ClusterCockpit/cc-lib/util"
 )
 
-type (
-	JobData        map[string]map[MetricScope]*JobMetric
-	ScopedJobStats map[string]map[MetricScope][]*ScopedStats
-)
+// JobData maps metric names to their data organized by scope.
+// Structure: map[metricName]map[scope]*JobMetric
+//
+// For example: jobData["cpu_load"][MetricScopeNode] contains node-level CPU load data.
+// This structure allows efficient lookup of metrics at different hierarchical levels.
+type JobData map[string]map[MetricScope]*JobMetric
 
+// ScopedJobStats maps metric names to statistical summaries organized by scope.
+// Structure: map[metricName]map[scope][]*ScopedStats
+//
+// Used to store pre-computed statistics without the full time series data,
+// reducing memory footprint when only aggregated values are needed.
+type ScopedJobStats map[string]map[MetricScope][]*ScopedStats
+
+// JobMetric contains time series data and statistics for a single metric.
+//
+// The Series field holds time series data from individual nodes/hardware components,
+// while StatisticsSeries provides aggregated statistics across all series over time.
 type JobMetric struct {
-	StatisticsSeries *StatsSeries `json:"statisticsSeries,omitempty"`
-	Unit             Unit         `json:"unit"`
-	Series           []Series     `json:"series"`
-	Timestep         int          `json:"timestep"`
+	StatisticsSeries *StatsSeries `json:"statisticsSeries,omitempty"` // Aggregated statistics over time
+	Unit             Unit         `json:"unit"`                       // Unit of measurement
+	Series           []Series     `json:"series"`                     // Individual time series data
+	Timestep         int          `json:"timestep"`                   // Sampling interval in seconds
 }
 
+// Series represents a single time series of metric measurements.
+//
+// Each series corresponds to one source (e.g., one node, one core) identified by Hostname and optional ID.
+// The Data field contains the time-ordered measurements, and Statistics provides min/avg/max summaries.
 type Series struct {
-	Id         *string          `json:"id,omitempty"`
-	Hostname   string           `json:"hostname"`
-	Data       []Float          `json:"data"`
-	Statistics MetricStatistics `json:"statistics"`
+	Id         *string          `json:"id,omitempty"` // Optional ID (e.g., core ID, GPU ID)
+	Hostname   string           `json:"hostname"`     // Source hostname
+	Data       []Float          `json:"data"`         // Time series measurements
+	Statistics MetricStatistics `json:"statistics"`   // Statistical summary (min/avg/max)
 }
 
+// ScopedStats contains statistical summaries for a specific scope (e.g., one node, one socket).
+// Used when full time series data isn't needed, only the aggregated statistics.
 type ScopedStats struct {
-	Hostname string            `json:"hostname"`
-	Id       *string           `json:"id,omitempty"`
-	Data     *MetricStatistics `json:"data"`
+	Hostname string            `json:"hostname"`     // Source hostname
+	Id       *string           `json:"id,omitempty"` // Optional scope ID
+	Data     *MetricStatistics `json:"data"`         // Statistical summary
 }
 
+// MetricStatistics holds statistical summary values for metric data.
+// Provides the common statistical aggregations used throughout ClusterCockpit.
 type MetricStatistics struct {
-	Avg float64 `json:"avg"`
-	Min float64 `json:"min"`
-	Max float64 `json:"max"`
+	Avg float64 `json:"avg"` // Average/mean value
+	Min float64 `json:"min"` // Minimum value
+	Max float64 `json:"max"` // Maximum value
 }
 
+// StatsSeries contains aggregated statistics across multiple time series over time.
+//
+// Instead of storing individual series, this provides statistical summaries at each time step.
+// For example, at time t, Mean[t] is the average value across all series at that time.
+// Percentiles provides specified percentile values at each time step.
 type StatsSeries struct {
-	Percentiles map[int][]Float `json:"percentiles,omitempty"`
-	Mean        []Float         `json:"mean"`
-	Median      []Float         `json:"median"`
-	Min         []Float         `json:"min"`
-	Max         []Float         `json:"max"`
+	Percentiles map[int][]Float `json:"percentiles,omitempty"` // Percentile values over time (e.g., 10th, 50th, 90th)
+	Mean        []Float         `json:"mean"`                  // Mean values over time
+	Median      []Float         `json:"median"`                // Median values over time
+	Min         []Float         `json:"min"`                   // Minimum values over time
+	Max         []Float         `json:"max"`                   // Maximum values over time
 }
 
+// MetricScope defines the hierarchical level at which a metric is measured.
+//
+// Scopes form a hierarchy from coarse-grained (node) to fine-grained (hwthread/accelerator):
+//
+//	node > socket > memoryDomain > core > hwthread
+//	accelerator is a special scope at the same level as hwthread
+//
+// The scopePrecedence map defines numeric ordering for scope comparisons,
+// which is used when aggregating metrics across different scopes.
 type MetricScope string
 
 const (
@@ -63,6 +98,8 @@ const (
 	MetricScopeMemoryDomain MetricScope = "memoryDomain"
 	MetricScopeCore         MetricScope = "core"
 	MetricScopeHWThread     MetricScope = "hwthread"
+
+	// TODO: Add Job and Application scopes
 
 	MetricScopeAccelerator MetricScope = "accelerator"
 )

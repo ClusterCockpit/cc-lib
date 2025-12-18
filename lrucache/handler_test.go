@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// TestHandlerBasics validates that the HTTP handler caches responses correctly.
+// It tests that the first request calls the fetcher and subsequent requests
+// serve the cached response without calling the fetcher again.
 func TestHandlerBasics(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/test1", nil)
 	rw := httptest.NewRecorder()

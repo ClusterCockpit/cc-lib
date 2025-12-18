@@ -3,7 +3,7 @@
 This library can be embedded into your existing go applications
 and play the role *Memcached* or *Redis* might play for others.
 It is inspired by [PHP Symfony's Cache Components](https://symfony.com/doc/current/components/cache/adapters/array_cache_adapter.html),
-having a similar API. This library can not be used for persistance,
+having a similar API. This library can not be used for persistence,
 is not properly tested yet and a bit special in a few ways described
 below (Especially with regards to the memory usage/`size`).
 
@@ -122,3 +122,21 @@ sitting in your cache might increase the memory consumption of your process by
 two times the maximum size of the cache. You can decrease the *target
 percentage* to reduce the effect, but then you might have negative performance
 effects when your cache is not filled.
+
+## API Reference
+
+For detailed API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/lrucache).
+
+## Testing
+
+Run the test suite:
+
+```bash
+go test -v github.com/ClusterCockpit/cc-lib/lrucache
+```
+
+Check test coverage:
+
+```bash
+go test -cover github.com/ClusterCockpit/cc-lib/lrucache
+```

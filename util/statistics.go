@@ -2,30 +2,33 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package util
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"sort"
-
-	"golang.org/x/exp/constraints"
 )
 
-func Min[T constraints.Ordered](a, b T) T {
+// Min returns the minimum of two values of any ordered type.
+func Min[T cmp.Ordered](a, b T) T {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func Max[T constraints.Ordered](a, b T) T {
+// Max returns the maximum of two values of any ordered type.
+func Max[T cmp.Ordered](a, b T) T {
 	if a > b {
 		return a
 	}
 	return b
 }
 
+// sortedCopy creates a sorted copy of a float64 slice without modifying the original.
 func sortedCopy(input []float64) []float64 {
 	sorted := make([]float64, len(input))
 	copy(sorted, input)
@@ -33,6 +36,8 @@ func sortedCopy(input []float64) []float64 {
 	return sorted
 }
 
+// Mean calculates the arithmetic mean (average) of a float64 slice.
+// Returns NaN and an error if the input slice is empty.
 func Mean(input []float64) (float64, error) {
 	if len(input) == 0 {
 		return math.NaN(), fmt.Errorf("input array is empty: %#v", input)
@@ -44,6 +49,10 @@ func Mean(input []float64) (float64, error) {
 	return sum / float64(len(input)), nil
 }
 
+// Median calculates the median value of a float64 slice.
+// For even-length slices, it returns the mean of the two middle values.
+// For odd-length slices, it returns the middle value.
+// Returns NaN and an error if the input slice is empty.
 func Median(input []float64) (median float64, err error) {
 	c := sortedCopy(input)
 	// Even numbers: add the two middle numbers, divide by two (use mean function)
