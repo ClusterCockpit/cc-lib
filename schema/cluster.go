@@ -116,11 +116,12 @@ type ClusterSupport struct {
 // GlobalMetricListItem represents a metric in the global metric catalog.
 // Tracks which clusters and subclusters support this metric across the entire system.
 type GlobalMetricListItem struct {
-	Name         string           `json:"name"`                // Metric name
-	Unit         Unit             `json:"unit"`                // Unit of measurement
-	Scope        MetricScope      `json:"scope"`               // Metric scope level
-	Footprint    string           `json:"footprint,omitempty"` // Footprint category
-	Availability []ClusterSupport `json:"availability"`        // Where this metric is available
+	Name         string      `json:"name"`                // Metric name
+	Unit         Unit        `json:"unit"`                // Unit of measurement
+	Scope        MetricScope `json:"scope"`               // Metric scope level
+	Footprint    string      `json:"footprint,omitempty"` // Footprint category
+	Restrict     bool
+	Availability []ClusterSupport `json:"availability"` // Where this metric is available
 }
 
 // GetSocketsFromHWThreads returns socket IDs that contain any of the given hardware threads.
