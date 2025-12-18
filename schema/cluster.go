@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package schema
 
 import (
@@ -78,8 +79,9 @@ type SubClusterConfig struct {
 	Metric               // Embedded metric thresholds
 	Footprint     string `json:"footprint,omitempty"` // Footprint category for this metric
 	Energy        string `json:"energy"`              // Energy measurement configuration
-	Remove        bool   `json:"remove"`              // Whether to exclude this metric for this subcluster
 	LowerIsBetter bool   `json:"lowerIsBetter"`       // Whether lower values indicate better performance
+	Restrict      bool   `json:"restrict"`            // Restrict visibility to non user roles
+	Remove        bool   `json:"remove"`              // Whether to exclude this metric for this subcluster
 }
 
 // MetricConfig defines the configuration for a performance metric at the cluster level.
@@ -92,6 +94,7 @@ type MetricConfig struct {
 	Footprint     string              `json:"footprint,omitempty"`   // Footprint category
 	SubClusters   []*SubClusterConfig `json:"subClusters,omitempty"` // Subcluster-specific overrides
 	Timestep      int                 `json:"timestep"`              // Measurement interval in seconds
+	Restrict      bool                `json:"restrict"`              // Restrict visibility to non user roles
 	LowerIsBetter bool                `json:"lowerIsBetter"`         // Whether lower values are better
 }
 
@@ -120,25 +123,27 @@ type GlobalMetricListItem struct {
 	Availability []ClusterSupport `json:"availability"`        // Where this metric is available
 }
 
-// Return a list of socket IDs given a list of hwthread IDs.  Even if just one
-// hwthread is in that socket, add it to the list.  If no hwthreads other than
-// those in the argument list are assigned to one of the sockets in the first
-// return value, return true as the second value.  TODO: Optimize this, there
-// must be a more efficient way/algorithm.
+// GetSocketsFromHWThreads returns socket IDs that contain any of the given hardware threads.
+// The exclusive return value is true if all hardware threads in the returned sockets
+// are present in the input list (i.e., the job has exclusive access to those sockets).
 func (topo *Topology) GetSocketsFromHWThreads(
 	hwthreads []int,
 ) (sockets []int, exclusive bool) {
-	socketsMap := map[int]int{}
-	for _, hwthread := range hwthreads {
-		for socket, hwthreadsInSocket := range topo.Socket {
-			for _, hwthreadInSocket := range hwthreadsInSocket {
-				if hwthread == hwthreadInSocket {
-					socketsMap[socket] += 1
-				}
-			}
+	// Build hwthread -> socket lookup map
+	hwthreadToSocket := make(map[int]int, len(topo.Node))
+	for socket, hwthreadsInSocket := range topo.Socket {
+		for _, hwt := range hwthreadsInSocket {
+			hwthreadToSocket[hwt] = socket
 		}
 	}
-
+	// Count hwthreads per socket from input
+	socketsMap := make(map[int]int)
+	for _, hwt := range hwthreads {
+		if socket, ok := hwthreadToSocket[hwt]; ok {
+			socketsMap[socket]++
+		}
+	}
+	// Build result and check exclusivity
 	exclusive = true
 	hwthreadsPerSocket := len(topo.Node) / len(topo.Socket)
 	sockets = make([]int, 0, len(socketsMap))
@@ -146,31 +151,32 @@ func (topo *Topology) GetSocketsFromHWThreads(
 		sockets = append(sockets, socket)
 		exclusive = exclusive && count == hwthreadsPerSocket
 	}
-
 	return sockets, exclusive
 }
 
-// Return a list of socket IDs given a list of core IDs.  Even if just one
-// core is in that socket, add it to the list.  If no cores other than
-// those in the argument list are assigned to one of the sockets in the first
-// return value, return true as the second value.  TODO: Optimize this, there
-// must be a more efficient way/algorithm.
+// GetSocketsFromCores returns socket IDs that contain any of the given cores.
+// The exclusive return value is true if all hardware threads in the returned sockets
+// belong to cores in the input list (i.e., the job has exclusive access to those sockets).
 func (topo *Topology) GetSocketsFromCores(
 	cores []int,
 ) (sockets []int, exclusive bool) {
-	socketsMap := map[int]int{}
+	// Build hwthread -> socket lookup map
+	hwthreadToSocket := make(map[int]int, len(topo.Node))
+	for socket, hwthreadsInSocket := range topo.Socket {
+		for _, hwt := range hwthreadsInSocket {
+			hwthreadToSocket[hwt] = socket
+		}
+	}
+	// Count hwthreads per socket from input cores
+	socketsMap := make(map[int]int)
 	for _, core := range cores {
-		for _, hwthreadInCore := range topo.Core[core] {
-			for socket, hwthreadsInSocket := range topo.Socket {
-				for _, hwthreadInSocket := range hwthreadsInSocket {
-					if hwthreadInCore == hwthreadInSocket {
-						socketsMap[socket] += 1
-					}
-				}
+		for _, hwt := range topo.Core[core] {
+			if socket, ok := hwthreadToSocket[hwt]; ok {
+				socketsMap[socket]++
 			}
 		}
 	}
-
+	// Build result and check exclusivity
 	exclusive = true
 	hwthreadsPerSocket := len(topo.Node) / len(topo.Socket)
 	sockets = make([]int, 0, len(socketsMap))
@@ -178,29 +184,30 @@ func (topo *Topology) GetSocketsFromCores(
 		sockets = append(sockets, socket)
 		exclusive = exclusive && count == hwthreadsPerSocket
 	}
-
 	return sockets, exclusive
 }
 
-// Return a list of core IDs given a list of hwthread IDs.  Even if just one
-// hwthread is in that core, add it to the list.  If no hwthreads other than
-// those in the argument list are assigned to one of the cores in the first
-// return value, return true as the second value.  TODO: Optimize this, there
-// must be a more efficient way/algorithm.
+// GetCoresFromHWThreads returns core IDs that contain any of the given hardware threads.
+// The exclusive return value is true if all hardware threads in the returned cores
+// are present in the input list (i.e., the job has exclusive access to those cores).
 func (topo *Topology) GetCoresFromHWThreads(
 	hwthreads []int,
 ) (cores []int, exclusive bool) {
-	coresMap := map[int]int{}
-	for _, hwthread := range hwthreads {
-		for core, hwthreadsInCore := range topo.Core {
-			for _, hwthreadInCore := range hwthreadsInCore {
-				if hwthread == hwthreadInCore {
-					coresMap[core] += 1
-				}
-			}
+	// Build hwthread -> core lookup map
+	hwthreadToCore := make(map[int]int, len(topo.Node))
+	for core, hwthreadsInCore := range topo.Core {
+		for _, hwt := range hwthreadsInCore {
+			hwthreadToCore[hwt] = core
 		}
 	}
-
+	// Count hwthreads per core from input
+	coresMap := make(map[int]int)
+	for _, hwt := range hwthreads {
+		if core, ok := hwthreadToCore[hwt]; ok {
+			coresMap[core]++
+		}
+	}
+	// Build result and check exclusivity
 	exclusive = true
 	hwthreadsPerCore := len(topo.Node) / len(topo.Core)
 	cores = make([]int, 0, len(coresMap))
@@ -208,37 +215,37 @@ func (topo *Topology) GetCoresFromHWThreads(
 		cores = append(cores, core)
 		exclusive = exclusive && count == hwthreadsPerCore
 	}
-
 	return cores, exclusive
 }
 
-// Return a list of memory domain IDs given a list of hwthread IDs.  Even if
-// just one hwthread is in that memory domain, add it to the list.  If no
-// hwthreads other than those in the argument list are assigned to one of the
-// memory domains in the first return value, return true as the second value.
-// TODO: Optimize this, there must be a more efficient way/algorithm.
+// GetMemoryDomainsFromHWThreads returns memory domain IDs that contain any of the given hardware threads.
+// The exclusive return value is true if all hardware threads in the returned memory domains
+// are present in the input list (i.e., the job has exclusive access to those memory domains).
 func (topo *Topology) GetMemoryDomainsFromHWThreads(
 	hwthreads []int,
 ) (memDoms []int, exclusive bool) {
-	memDomsMap := map[int]int{}
-	for _, hwthread := range hwthreads {
-		for memDom, hwthreadsInmemDom := range topo.MemoryDomain {
-			for _, hwthreadInmemDom := range hwthreadsInmemDom {
-				if hwthread == hwthreadInmemDom {
-					memDomsMap[memDom] += 1
-				}
-			}
+	// Build hwthread -> memory domain lookup map
+	hwthreadToMemDom := make(map[int]int, len(topo.Node))
+	for memDom, hwthreadsInMemDom := range topo.MemoryDomain {
+		for _, hwt := range hwthreadsInMemDom {
+			hwthreadToMemDom[hwt] = memDom
 		}
 	}
-
+	// Count hwthreads per memory domain from input
+	memDomsMap := make(map[int]int)
+	for _, hwt := range hwthreads {
+		if memDom, ok := hwthreadToMemDom[hwt]; ok {
+			memDomsMap[memDom]++
+		}
+	}
+	// Build result and check exclusivity
 	exclusive = true
-	hwthreadsPermemDom := len(topo.Node) / len(topo.MemoryDomain)
+	hwthreadsPerMemDom := len(topo.Node) / len(topo.MemoryDomain)
 	memDoms = make([]int, 0, len(memDomsMap))
 	for memDom, count := range memDomsMap {
 		memDoms = append(memDoms, memDom)
-		exclusive = exclusive && count == hwthreadsPermemDom
+		exclusive = exclusive && count == hwthreadsPerMemDom
 	}
-
 	return memDoms, exclusive
 }
 
