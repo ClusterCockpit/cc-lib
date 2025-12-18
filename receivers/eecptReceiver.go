@@ -81,7 +81,7 @@ type EECPTReceiver struct {
 func NewJob(ident string) *EECPTReceiverJob {
 	j := new(EECPTReceiverJob)
 	j.ident = ident
-	cclog.ComponentDebug("EECPTReceiver", "New job", ident)
+	cclog.ComponentDebug("EECPTReceiver", "New job: ", ident)
 	j.tags = make(map[string]string)
 	j.tasks = make(map[int64]*EECPTReceiverTask)
 	return j
@@ -91,7 +91,7 @@ func (job *EECPTReceiverJob) newTask(id int64) {
 	if _, ok := job.tasks[id]; !ok {
 		job.tasks[id] = new(EECPTReceiverTask)
 		job.tasks[id].ident = fmt.Sprintf("%d", id)
-		cclog.ComponentDebug("EECPTReceiver", "New task", id)
+		cclog.ComponentDebug("EECPTReceiver", "New task: ", id)
 		job.tasks[id].buffer = make([]float64, 0)
 		job.tasks[id].tags = make(map[string]string)
 		job.tasks[id].subtasks = make(map[int64]*EECPTReceiverTask)
@@ -225,7 +225,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	if len(r.config.IdleTimeout) > 0 {
 		t, err := time.ParseDuration(r.config.IdleTimeout)
 		if err == nil {
-			cclog.ComponentDebug(r.name, "idleTimeout", t)
+			cclog.ComponentDebug(r.name, "idleTimeout: ", t)
 			r.config.idleTimeout = t
 		}
 	}
@@ -233,7 +233,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	if len(r.config.AnalysisInterval) > 0 {
 		t, err := time.ParseDuration(r.config.AnalysisInterval)
 		if err == nil {
-			cclog.ComponentDebug(r.name, "analysisInterval", t)
+			cclog.ComponentDebug(r.name, "analysisInterval: ", t)
 			r.config.analysisInterval = t
 		}
 	}
@@ -276,7 +276,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	}
 	addr := fmt.Sprintf("%s:%s", r.config.Addr, r.config.Port)
 	uri := addr + p
-	cclog.ComponentDebug(r.name, "INIT", "listen on:", uri)
+	cclog.ComponentDebug(r.name, "INIT ", "listen on:", uri)
 
 	// Register handler function r.ServerHttp for path p in the DefaultServeMux
 	http.HandleFunc(p, r.ServerHttp)
@@ -290,6 +290,7 @@ func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
 	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
 
 	r.jobs = make(map[string]*EECPTReceiverJob)
+	r.analysisDone = make(chan bool)
 	return nil
 }
 
@@ -304,36 +305,35 @@ func (r *EECPTReceiver) Start() {
 		r.wg.Done()
 	}()
 	r.analysisTicker = time.NewTicker(r.config.analysisInterval)
-	r.analysisDone = make(chan bool)
 	r.wg.Add(1)
-	go func() {
+	go func(myr **EECPTReceiver) {
 		for {
 			select {
-			case <-r.analysisDone:
-				r.analysisTicker.Stop()
-				r.wg.Done()
+			case <-(*myr).analysisDone:
+				(*myr).analysisTicker.Stop()
+				(*myr).wg.Done()
 				return
-			case <-r.analysisTicker.C:
-				for _, job := range r.jobs {
+			case <-(*myr).analysisTicker.C:
+				for _, job := range (*myr).jobs {
 					result := job.Analyse()
 					if result > job.ChiSquareLimit() {
-						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s changed phases", job.ident))
+						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s changed phases (analysis %f chiSquareLimit %f)", job.ident, result, job.ChiSquareLimit()))
 						y, err := lp.NewEvent("region", map[string]string{"type": "node", "stype": "application"}, nil, "region changed", time.Now())
 						if err == nil {
 							y.AddTag("stype-id", job.ident)
-							m, err := r.mp.ProcessMessage(y)
+							m, err := (*myr).mp.ProcessMessage(y)
 							if err == nil && m != nil {
-								r.sink <- m
+								(*myr).sink <- m
 							}
 						}
 						job.Reset()
 					} else {
-						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s no change (analysis %f chiSquareLimit %f", job.ident, result, job.ChiSquareLimit()))
+						cclog.ComponentDebug(r.name, fmt.Sprintf("Job %s no change (analysis %f chiSquareLimit %f)", job.ident, result, job.ChiSquareLimit()))
 					}
 				}
 			}
 		}
-	}()
+	}(&r)
 }
 
 func fieldToFloat64(input interface{}) float64 {

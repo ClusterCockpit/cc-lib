@@ -32,7 +32,7 @@ type NatsReceiverConfig struct {
 
 type NatsReceiver struct {
 	receiver
-	nc *nats.Conn
+	nc  *nats.Conn
 	sub *nats.Subscription
 	// meta   map[string]string
 	config NatsReceiverConfig
@@ -187,7 +187,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 
 	// Connect to NATS server
 	url := fmt.Sprintf("nats://%s:%s", r.config.Addr, r.config.Port)
-	cclog.ComponentDebug(r.name, "NewNatsReceiver", url, "Subject", r.config.Subject)
+	cclog.ComponentDebug(r.name, "NewNatsReceiver ", url, " Subject ", r.config.Subject)
 	if nc, err := nats.Connect(url, uinfo); err == nil {
 		r.nc = nc
 	} else {
