@@ -3,6 +3,7 @@ package receivers
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,29 +19,45 @@ var natsReceiverTestConfig json.RawMessage = json.RawMessage(`{
 	"subject" : "test"
 }`)
 
+var serverReady = make(chan bool)
+
 func TestNatsReceiver(t *testing.T) {
 	numMessage := 10
 	sink := make(chan lp.CCMessage, numMessage)
+	serverDone := make(chan bool)
+	var wg sync.WaitGroup
 
 	opts := &server.Options{
 		Host: "localhost",
 		Port: 8082,
 	}
 	uri := fmt.Sprintf("nats://%s:%d", opts.Host, opts.Port)
-	t.Logf("starting nats server for %s", uri)
-	ns, err := server.NewServer(opts)
-	server.Run(ns)
 
-	if !ns.ReadyForConnections(4 * time.Second) {
-		t.Errorf("nats server not ready for connection after %d seconds", 4)
-		return
-	}
-	t.Logf("connecting nats client to %s", uri)
-	c, err := nats.Connect(uri, nil)
-	if err != nil {
-		t.Errorf("failed to connect to nats server %s: %s", uri, err.Error())
-		return
-	}
+	wg.Add(1)
+	go func() {
+
+		t.Logf("starting nats server for %s", uri)
+		ns, err := server.NewServer(opts)
+		if err != nil {
+			t.Errorf("failed to start nats server for %s: %s", uri, err.Error())
+			return
+		}
+		server.Run(ns)
+
+		if !ns.ReadyForConnections(4 * time.Second) {
+			t.Errorf("nats server not ready for connection after %d seconds", 4)
+			return
+		}
+		serverReady <- true
+		<-serverDone
+		wg.Done()
+		t.Log("Closing nats server")
+		ns.Shutdown()
+
+	}()
+
+	<-serverReady
+	t.Log("nats server started")
 
 	r, err := NewNatsReceiver("testreceiver", natsReceiverTestConfig)
 	if err != nil {
@@ -50,6 +67,13 @@ func TestNatsReceiver(t *testing.T) {
 	r.SetSink(sink)
 	t.Log("Starting nats receiver")
 	r.Start()
+
+	t.Logf("connecting nats client to %s", uri)
+	c, err := nats.Connect(uri, nil)
+	if err != nil {
+		t.Errorf("failed to connect to nats server %s: %s", uri, err.Error())
+		return
+	}
 
 	msgs := gen_messages(numMessage)
 	for _, m := range msgs {
@@ -61,7 +85,6 @@ func TestNatsReceiver(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second)
 	recvm := make([]lp.CCMessage, 0, numMessage)
 	for i := 0; i < numMessage && len(sink) > 0; i++ {
 		recvm = append(recvm, <-sink)
@@ -80,6 +103,7 @@ func TestNatsReceiver(t *testing.T) {
 	r.Close()
 	t.Log("Closing nats client")
 	c.Close()
-	t.Log("Closing nats server")
-	ns.Shutdown()
+	serverDone <- true
+	wg.Wait()
+
 }
