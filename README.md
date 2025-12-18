@@ -7,7 +7,7 @@ weight: 1
 hugo_path: docs/reference/cc-lib/_index.md
 -->
 
-[![GoDoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib?status.svg)](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib)
+[![GoDoc](https://godoc.org/github.com/ClusterCockpit/cc-lib?status.svg)](https://godoc.org/github.com/ClusterCockpit/cc-lib)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ClusterCockpit/cc-lib)](https://goreportcard.com/report/github.com/ClusterCockpit/cc-lib)
 
 # cc-lib
