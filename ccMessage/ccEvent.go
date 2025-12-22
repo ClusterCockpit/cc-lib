@@ -31,12 +31,7 @@ func NewEvent(name string,
 }
 
 func (m *ccMessage) IsEvent() bool {
-	if v, ok := m.GetField("event"); ok {
-		if _, ok := v.(string); ok {
-			return true
-		}
-	}
-	return false
+	return m.hasStringField("event")
 }
 
 func (m *ccMessage) GetEventValue() (string, bool) {

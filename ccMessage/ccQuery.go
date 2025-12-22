@@ -19,14 +19,8 @@ func NewQuery(name string,
 	return NewMessage(name, tags, meta, map[string]any{"query": q}, tm)
 }
 
-// IsQuery checks if the message is of type Query
 func (m *ccMessage) IsQuery() bool {
-	if v, ok := m.GetField("query"); ok {
-		if _, ok := v.(string); ok {
-			return true
-		}
-	}
-	return false
+	return m.hasStringField("query")
 }
 
 // GetQueryValue returns the query string if the message is of type Query

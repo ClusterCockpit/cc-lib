@@ -30,12 +30,7 @@ func NewLog(name string,
 }
 
 func (m *ccMessage) IsLog() bool {
-	if v, ok := m.GetField("log"); ok {
-		if _, ok := v.(string); ok {
-			return true
-		}
-	}
-	return false
+	return m.hasStringField("log")
 }
 
 func (m *ccMessage) GetLogValue() (string, bool) {

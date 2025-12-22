@@ -58,12 +58,11 @@ func NewPutControl(name string,
 }
 
 func (m *ccMessage) IsControl() bool {
-	if v, ok := m.GetField("control"); ok {
-		if me, ok := m.GetTag("method"); ok {
-			if _, ok := v.(string); ok && (me == "PUT" || me == "GET") {
-				return true
-			}
-		}
+	if !m.hasStringField("control") {
+		return false
+	}
+	if method, ok := m.GetTag("method"); ok {
+		return method == "PUT" || method == "GET"
 	}
 	return false
 }
