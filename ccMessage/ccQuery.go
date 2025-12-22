@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -23,7 +22,7 @@ func NewQuery(name string,
 // IsQuery checks if the message is of type Query
 func (m *ccMessage) IsQuery() bool {
 	if v, ok := m.GetField("query"); ok {
-		if reflect.TypeOf(v) == reflect.TypeOf("string") {
+		if _, ok := v.(string); ok {
 			return true
 		}
 	}
@@ -31,11 +30,11 @@ func (m *ccMessage) IsQuery() bool {
 }
 
 // GetQueryValue returns the query string if the message is of type Query
-func (m *ccMessage) GetQueryValue() string {
+func (m *ccMessage) GetQueryValue() (string, bool) {
 	if m.IsQuery() {
 		if v, ok := m.GetField("query"); ok {
-			return v.(string)
+			return v.(string), true
 		}
 	}
-	return ""
+	return "", false
 }

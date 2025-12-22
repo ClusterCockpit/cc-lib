@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -61,7 +60,7 @@ func NewPutControl(name string,
 func (m *ccMessage) IsControl() bool {
 	if v, ok := m.GetField("control"); ok {
 		if me, ok := m.GetTag("method"); ok {
-			if reflect.TypeOf(v) == reflect.TypeOf("string") && (me == "PUT" || me == "GET") {
+			if _, ok := v.(string); ok && (me == "PUT" || me == "GET") {
 				return true
 			}
 		}
@@ -69,20 +68,20 @@ func (m *ccMessage) IsControl() bool {
 	return false
 }
 
-func (m *ccMessage) GetControlValue() string {
+func (m *ccMessage) GetControlValue() (string, bool) {
 	if m.IsControl() {
 		if v, ok := m.GetField("control"); ok {
-			return v.(string)
+			return v.(string), true
 		}
 	}
-	return ""
+	return "", false
 }
 
-func (m *ccMessage) GetControlMethod() string {
+func (m *ccMessage) GetControlMethod() (string, bool) {
 	if m.IsControl() {
 		if v, ok := m.GetTag("method"); ok {
-			return v
+			return v, true
 		}
 	}
-	return ""
+	return "", false
 }

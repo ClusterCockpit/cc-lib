@@ -32,11 +32,12 @@ const (
 	CCMSG_TYPE_EVENT                        // Event message type
 	CCMSG_TYPE_LOG                          // Log message type
 	CCMSG_TYPE_CONTROL                      // Control message type
+	CCMSG_TYPE_QUERY                        // Query message type
 )
 
 const (
 	MIN_CCMSG_TYPE     = CCMSG_TYPE_METRIC
-	MAX_CCMSG_TYPE     = CCMSG_TYPE_CONTROL
+	MAX_CCMSG_TYPE     = CCMSG_TYPE_QUERY
 	CCMSG_TYPE_INVALID = MAX_CCMSG_TYPE + 1
 )
 
@@ -51,6 +52,8 @@ func (t CCMessageType) String() string {
 		return "log"
 	case CCMSG_TYPE_CONTROL:
 		return "control"
+	case CCMSG_TYPE_QUERY:
+		return "query"
 	}
 	return "invalid"
 }
@@ -66,6 +69,8 @@ func (t CCMessageType) FieldKey() string {
 		return "log"
 	case CCMSG_TYPE_CONTROL:
 		return "control"
+	case CCMSG_TYPE_QUERY:
+		return "query"
 	}
 	return "invalid"
 }
@@ -94,6 +99,10 @@ type ccMessageJSON struct {
 // CCMessage is the interface for accessing and manipulating ClusterCockpit messages.
 // It provides methods for converting to other formats (InfluxDB point, Line Protocol, JSON),
 // accessing metadata (Name, Time, Tags, Meta, Fields), and checking message type.
+//
+// Thread Safety: CCMessage instances are NOT thread-safe. Concurrent access to the same
+// CCMessage from multiple goroutines must be synchronized externally. For concurrent use,
+// either use locking mechanisms or create separate message instances using FromMessage().
 type CCMessage interface {
 	ToPoint(metaAsTags map[string]bool) *write.Point            // Generate influxDB point for data type ccMessage
 	ToLineProtocol(metaAsTags map[string]bool) string           // Generate influxDB line protocol for data type ccMessage
@@ -126,17 +135,17 @@ type CCMessage interface {
 
 	MessageType() CCMessageType // Return message type
 	IsMetric() bool             // Check if message is a metric
-	GetMetricValue() any
+	GetMetricValue() (value any, ok bool)
 	IsLog() bool // Check if message is a log
-	GetLogValue() string
+	GetLogValue() (value string, ok bool)
 	IsEvent() bool // Check if message is an event
-	GetEventValue() string
+	GetEventValue() (value string, ok bool)
 	IsControl() bool // Check if message is a control message
-	GetControlValue() string
-	GetControlMethod() string
+	GetControlValue() (value string, ok bool)
+	GetControlMethod() (method string, ok bool)
 	IsQuery() bool // Check if message is a query
-	GetQueryValue() string
-	IsJobEvent() (string, bool) // Check if message is a job event (returns event name and bool)
+	GetQueryValue() (value string, ok bool)
+	IsJobEvent() (eventName string, ok bool) // Check if message is a job event (returns event name and bool)
 	GetJob() (*schema.Job, error)
 }
 
@@ -501,6 +510,8 @@ func (m *ccMessage) MessageType() CCMessageType {
 		return CCMSG_TYPE_LOG
 	} else if m.HasField("control") {
 		return CCMSG_TYPE_CONTROL
+	} else if m.HasField("query") {
+		return CCMSG_TYPE_QUERY
 	}
 	return CCMSG_TYPE_INVALID
 }

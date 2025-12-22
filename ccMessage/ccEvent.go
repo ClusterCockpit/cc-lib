@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -33,18 +32,18 @@ func NewEvent(name string,
 
 func (m *ccMessage) IsEvent() bool {
 	if v, ok := m.GetField("event"); ok {
-		if reflect.TypeOf(v) == reflect.TypeOf("string") {
+		if _, ok := v.(string); ok {
 			return true
 		}
 	}
 	return false
 }
 
-func (m *ccMessage) GetEventValue() string {
+func (m *ccMessage) GetEventValue() (string, bool) {
 	if m.IsEvent() {
 		if v, ok := m.GetField("event"); ok {
-			return v.(string)
+			return v.(string), true
 		}
 	}
-	return ""
+	return "", false
 }

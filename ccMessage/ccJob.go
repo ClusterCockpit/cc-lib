@@ -7,6 +7,7 @@ package ccmessage
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -50,9 +51,9 @@ func NewJobStopEvent(job *schema.Job) (CCMessage, error) {
 // IsJobEvent checks if the message is a job-related event (start_job or stop_job).
 //
 // Returns:
-//   - name: The event name ("start_job" or "stop_job") if the message is a job event
+//   - eventName: The event name ("start_job" or "stop_job") if the message is a job event
 //   - ok: true if the message is a job event, false otherwise
-func (m *ccMessage) IsJobEvent() (string, bool) {
+func (m *ccMessage) IsJobEvent() (eventName string, ok bool) {
 	if !m.IsEvent() {
 		return "", false
 	}
@@ -73,7 +74,10 @@ func (m *ccMessage) IsJobEvent() (string, bool) {
 //   - job: Pointer to the deserialized schema.Job structure
 //   - err: Error if deserialization fails or if unknown fields are present
 func (m *ccMessage) GetJob() (job *schema.Job, err error) {
-	value := m.GetEventValue()
+	value, ok := m.GetEventValue()
+	if !ok {
+		return nil, errors.New("message is not a valid event")
+	}
 	d := json.NewDecoder(strings.NewReader(value))
 	d.DisallowUnknownFields()
 	job = &schema.Job{}

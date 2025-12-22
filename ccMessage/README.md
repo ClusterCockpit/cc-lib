@@ -218,3 +218,5 @@ if msg.IsQuery() {
 
 7. **Type checking**: Use the type detection methods (`IsMetric()`, `IsEvent()`, etc.) before accessing type-specific values to avoid runtime errors.
 
+8. **Thread safety**: CCMessage instances are NOT thread-safe. If you need to access a message from multiple goroutines, either use external synchronization (mutexes) or create separate copies with `FromMessage()` for each goroutine.
+

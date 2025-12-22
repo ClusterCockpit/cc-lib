@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -35,18 +34,18 @@ func NewMetric(name string,
 
 func (m *ccMessage) IsMetric() bool {
 	if v, ok := m.GetField("value"); ok {
-		if reflect.TypeOf(v) != reflect.TypeOf("string") {
+		if _, ok := v.(string); !ok {
 			return true
 		}
 	}
 	return false
 }
 
-func (m *ccMessage) GetMetricValue() any {
+func (m *ccMessage) GetMetricValue() (any, bool) {
 	if m.IsMetric() {
 		if v, ok := m.GetField("value"); ok {
-			return v
+			return v, true
 		}
 	}
-	return nil
+	return nil, false
 }

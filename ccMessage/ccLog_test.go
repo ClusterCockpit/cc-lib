@@ -28,8 +28,8 @@ func TestNewLog(t *testing.T) {
 		t.Error("Expected IsLog() to return true")
 	}
 
-	if msg.GetLogValue() != logPayload {
-		t.Errorf("Expected GetLogValue() to return '%s', got '%s'", logPayload, msg.GetLogValue())
+	if value, ok := msg.GetLogValue(); !ok || value != logPayload {
+		t.Errorf("Expected GetLogValue() to return '%s', got '%s' (ok=%v)", logPayload, value, ok)
 	}
 }
 
@@ -43,8 +43,8 @@ func TestNewLog_EmptyMessage(t *testing.T) {
 		t.Error("Expected IsLog() to return true even with empty message")
 	}
 
-	if msg.GetLogValue() != "" {
-		t.Errorf("Expected empty string, got '%s'", msg.GetLogValue())
+	if value, ok := msg.GetLogValue(); !ok || value != "" {
+		t.Errorf("Expected empty string, got '%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -67,8 +67,8 @@ func TestIsLog_WithoutLogField(t *testing.T) {
 func TestGetLogValue_NonLog(t *testing.T) {
 	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
 
-	if value := msg.GetLogValue(); value != "" {
-		t.Errorf("Expected empty string for non-log, got '%s'", value)
+	if value, ok := msg.GetLogValue(); ok {
+		t.Errorf("Expected ok=false for non-log, got value='%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -79,7 +79,7 @@ func TestNewLog_MultilineMessage(t *testing.T) {
 		t.Fatalf("NewLog with multiline message failed: %v", err)
 	}
 
-	if msg.GetLogValue() != multilineLog {
-		t.Errorf("Expected multiline log to be preserved, got '%s'", msg.GetLogValue())
+	if value, ok := msg.GetLogValue(); !ok || value != multilineLog {
+		t.Errorf("Expected multiline log to be preserved, got '%s' (ok=%v)", value, ok)
 	}
 }
