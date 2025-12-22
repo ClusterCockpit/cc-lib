@@ -392,7 +392,10 @@ func EmptyMessage() CCMessage {
 	}
 }
 
-// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol metric.
+// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol v1 metric.
+//
+// Deprecated: This function depends on the deprecated line-protocol v1 library.
+// Use FromBytes() instead for parsing line protocol data with the v2 library.
 func FromInfluxMetric(other lp1.Metric) CCMessage {
 	m := &ccMessage{
 		name:   other.Name(),
@@ -402,7 +405,6 @@ func FromInfluxMetric(other lp1.Metric) CCMessage {
 		tm:     other.Time(),
 	}
 
-	// deep copy tags and fields
 	for _, otherTag := range other.TagList() {
 		m.tags[otherTag.Key] = otherTag.Value
 	}
@@ -520,23 +522,20 @@ func (m *ccMessage) Bytes() ([]byte, error) {
 	for _, k := range sortedkeys {
 		v, ok := m.GetTag(k)
 		if !ok {
-			msg := fmt.Sprintf("CCMessage: Failed to get tag for key %s", k)
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("serialization failed: tag key '%s' disappeared during iteration (concurrent modification?)", k)
 		}
 		encoder.AddTag(k, v)
 	}
 	for k, v := range m.Fields() {
 		nv, ok := lp2.NewValue(v)
 		if !ok {
-			msg := fmt.Sprintf("CCMessage: Failed to get field value for key %s", k)
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("serialization failed: field '%s' has unsupported type %T (value: %v)", k, v, v)
 		}
 		encoder.AddField(k, nv)
 	}
 	encoder.EndLine(m.Time())
 	if err := encoder.Err(); err != nil {
-		msg := fmt.Sprintf("CCMessage: Failed to encode message: %v", err.Error())
-		return nil, errors.New(msg)
+		return nil, fmt.Errorf("line protocol encoding failed for message '%s': %w", m.Name(), err)
 	}
 	return encoder.Bytes(), nil
 }

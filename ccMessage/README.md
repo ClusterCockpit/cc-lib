@@ -56,16 +56,52 @@ type CCMessage interface {
 
 func NewMessage(name string, tags map[string]string, meta map[string]string, fields map[string]interface{}, tm time.Time) (CCMessage, error)
 func FromMessage(other CCMessage) CCMessage
-func FromInfluxMetric(other lp.Metric) CCMessage
+func FromBytes(data []byte) ([]CCMessage, error)
 ```
 
 The `CCMessage` interface provides the same functions as the `MutableMetric` like `{Add, Get, Remove, Has}{Tag, Field}` and additionally provides `{Add, Get, Remove, Has}Meta`.
 
 The InfluxDB protocol creates a new metric with `influx.New(name, tags, fields, time)` while CCMessage uses `ccMessage.New(name, tags, meta, fields, time)` where `tags` and `meta` are both of type `map[string]string`.
 
-You can copy a CCMessage with `FromFromMessage(other CCMessage) CCMessage`. If you get an `influx.Metric` from a function, like the line protocol parser, you can use `FromInfluxMetric(other influx.Metric) CCMessage` to get a CCMessage out of it (see `NatsReceiver` for an example).
+You can copy a CCMessage with `FromMessage(other CCMessage) CCMessage`. To parse InfluxDB line protocol data, use `FromBytes(data []byte) ([]CCMessage, error)` which decodes one or more messages from line protocol format.
 
 Although the [cc-specifications](https://github.com/ClusterCockpit/cc-specifications/blob/master/interfaces/lineprotocol/README.md) defines that there is only a `value` field for the metric value, the CCMessage still can have multiple values similar to the InfluxDB line protocol.
+
+## Design Decisions
+
+### Meta vs Tags
+
+CCMessage extends InfluxDB line protocol with a separate `meta` map in addition to `tags`. This separation serves important purposes:
+
+- **Tags** are used for filtering and querying in time-series databases. They're indexed and optimized for search operations.
+- **Meta** fields contain descriptive metadata that doesn't need to be indexed (e.g., `unit`, `scope`, `source`).
+
+When converting to InfluxDB line protocol via `ToPoint()` or `ToLineProtocol()`, you control which meta fields should be promoted to tags using the `metaAsTags` parameter. This provides flexibility without forcing all metadata into the tag space.
+
+**Example:**
+```golang
+msg, _ := ccMessage.NewMetric(
+    "cpu_usage",
+    map[string]string{"hostname": "node001", "type": "node"},  // Tags for querying
+    map[string]string{"unit": "percent", "scope": "hwthread"}, // Meta for context
+    75.5,
+    time.Now(),
+)
+
+// Convert with unit as tag, scope remains in meta (not exported)
+lp := msg.ToLineProtocol(map[string]bool{"unit": true})
+```
+
+### Tag Sorting
+
+When serializing messages to InfluxDB line protocol (via `Bytes()` or `ToLineProtocol()`), tags are sorted alphabetically by key. This ensures:
+
+1. **Deterministic output**: Same message always produces identical serialization
+2. **Test reliability**: Output can be compared for equality in tests
+3. **Cache efficiency**: Consistent ordering improves cache hit rates in downstream systems
+4. **Line protocol compliance**: InfluxDB recommends sorted tags for optimal performance
+
+The sorting happens only during serialization; tags are stored in an unsorted map internally for efficient access.
 
 ## Message Type Helpers
 
