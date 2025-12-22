@@ -32,6 +32,9 @@ func NewMetric(name string,
 	return NewMessage(name, tags, meta, map[string]any{"value": value}, tm)
 }
 
+// IsMetric returns true if the message is a metric message.
+// A message is considered a metric if it has a "value" field containing
+// a non-string value (int64, uint64, float64, or bool).
 func (m *ccMessage) IsMetric() bool {
 	if v, ok := m.GetField("value"); ok {
 		if _, ok := v.(string); !ok {
@@ -41,6 +44,11 @@ func (m *ccMessage) IsMetric() bool {
 	return false
 }
 
+// GetMetricValue returns the metric value and true if this is a metric message.
+// Returns (nil, false) if the message is not a metric.
+//
+// The returned value will be one of: int64, uint64, float64, or bool,
+// depending on the original type provided to NewMetric.
 func (m *ccMessage) GetMetricValue() (any, bool) {
 	if m.IsMetric() {
 		if v, ok := m.GetField("value"); ok {

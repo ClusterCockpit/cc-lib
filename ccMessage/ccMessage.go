@@ -4,7 +4,50 @@
 // license that can be found in the LICENSE file.
 
 // Package ccmessage provides a message format and interface for ClusterCockpit.
-// It extends the InfluxDB line protocol with additional meta information.
+//
+// CCMessage extends the InfluxDB line protocol with additional meta information,
+// supporting multiple message types: metrics, events, logs, control messages, and queries.
+//
+// # Message Types
+//
+// The package supports five message types:
+//
+//   - Metric: Numerical measurements (CPU usage, memory, network throughput)
+//   - Event: Significant occurrences (job start/stop, node failures)
+//   - Log: Textual log messages
+//   - Control: Configuration requests (GET) or updates (PUT)
+//   - Query: Database queries or search requests
+//
+// # Basic Usage
+//
+//	// Create a metric
+//	msg, err := ccmessage.NewMetric(
+//	    "cpu_usage",
+//	    map[string]string{"hostname": "node001"},
+//	    map[string]string{"unit": "percent"},
+//	    75.5,
+//	    time.Now(),
+//	)
+//
+//	// Check message type
+//	if msg.IsMetric() {
+//	    value, ok := msg.GetMetricValue()
+//	    // ...
+//	}
+//
+//	// Convert to InfluxDB line protocol
+//	lineProtocol := msg.ToLineProtocol(map[string]bool{"unit": true})
+//
+// # Thread Safety
+//
+// CCMessage instances are NOT thread-safe. For concurrent access, either use
+// external synchronization or create separate copies with FromMessage().
+//
+// # Meta vs Tags
+//
+// Tags are indexed in time-series databases for querying, while meta fields
+// store descriptive metadata. Use the metaAsTags parameter when converting
+// to control which meta fields become tags.
 package ccmessage
 
 import (
@@ -299,6 +342,40 @@ func (m *ccMessage) RemoveField(key string) {
 }
 
 // NewMessage creates a new CCMessage with the given name, tags, meta, fields, and timestamp.
+//
+// Parameters:
+//   - name: Message/metric name (must not be empty or whitespace-only)
+//   - tags: Key-value pairs for indexing and querying (keys must not be empty)
+//   - meta: Metadata for context (keys must not be empty)
+//   - fields: Data fields (at least one valid field required, keys must not be empty)
+//   - tm: Timestamp (must not be zero value)
+//
+// Returns an error if:
+//   - name is empty or whitespace-only
+//   - timestamp is zero
+//   - any tag, meta, or field key is empty or whitespace-only
+//   - no fields provided
+//   - all field values are nil or invalid after type conversion
+//   - any float field is NaN or Inf
+//
+// Field values are automatically converted to standard types:
+//   - All integer types → int64 or uint64
+//   - All float types → float64
+//   - []byte → string
+//   - Pointer types are dereferenced
+//
+// Example:
+//
+//	msg, err := NewMessage(
+//	    "cpu_usage",
+//	    map[string]string{"hostname": "node001", "type": "node"},
+//	    map[string]string{"unit": "percent", "scope": "hwthread"},
+//	    map[string]any{"value": 75.5},
+//	    time.Now(),
+//	)
+//	if err != nil {
+//	    // handle validation error
+//	}
 func NewMessage(
 	name string,
 	tags map[string]string,
