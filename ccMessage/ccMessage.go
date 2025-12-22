@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	maps0 "maps"
+	"math"
 	"sort"
+	"strings"
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -304,6 +306,30 @@ func NewMessage(
 	fields map[string]any,
 	tm time.Time,
 ) (CCMessage, error) {
+	if strings.TrimSpace(name) == "" {
+		return nil, errors.New("message name cannot be empty")
+	}
+
+	if tm.IsZero() {
+		return nil, errors.New("timestamp cannot be zero")
+	}
+
+	for k := range tags {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("tag keys cannot be empty")
+		}
+	}
+
+	for k := range meta {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("meta keys cannot be empty")
+		}
+	}
+
+	if len(fields) == 0 {
+		return nil, errors.New("at least one field is required")
+	}
+
 	m := &ccMessage{
 		name:   name,
 		tags:   maps.Clone(tags),
@@ -318,13 +344,27 @@ func NewMessage(
 		m.meta = make(map[string]string)
 	}
 
-	// deep copy fields
 	for k, v := range fields {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("field keys cannot be empty")
+		}
+
 		v := convertField(v)
 		if v == nil {
 			continue
 		}
+
+		if f, ok := v.(float64); ok {
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return nil, fmt.Errorf("field '%s' has invalid float value (NaN or Inf)", k)
+			}
+		}
+
 		m.fields[k] = v
+	}
+
+	if len(m.fields) == 0 {
+		return nil, errors.New("all field values were nil or invalid")
 	}
 
 	return m, nil
@@ -516,6 +556,14 @@ func (m *ccMessage) MessageType() CCMessageType {
 	return CCMSG_TYPE_INVALID
 }
 
+func (m *ccMessage) hasStringField(key string) bool {
+	if v, ok := m.GetField(key); ok {
+		_, isString := v.(string)
+		return isString
+	}
+	return false
+}
+
 // convertField converts data types of fields by the following schemata:
 //
 //	                       *float32, *float64,                      float32, float64 -> float64
@@ -526,67 +574,55 @@ func (m *ccMessage) MessageType() CCMessageType {
 // *bool,                                      bool                                  -> bool
 func convertField(v any) any {
 	switch v := v.(type) {
-	case float64:
+	// Already in target format - return as-is
+	case float64, int64, uint64, string, bool:
 		return v
-	case int64:
-		return v
-	case string:
-		return v
-	case bool:
-		return v
+
+	// Signed integers -> int64
 	case int:
 		return int64(v)
-	case uint:
-		return uint64(v)
-	case uint64:
-		return uint64(v)
-	case []byte:
-		return string(v)
 	case int32:
 		return int64(v)
 	case int16:
 		return int64(v)
 	case int8:
 		return int64(v)
+
+	// Unsigned integers -> uint64
+	case uint:
+		return uint64(v)
 	case uint32:
 		return uint64(v)
 	case uint16:
 		return uint64(v)
 	case uint8:
 		return uint64(v)
+
+	// Floats -> float64
 	case float32:
 		return float64(v)
+
+	// Bytes -> string
+	case []byte:
+		return string(v)
+
+	// Pointer types - dereference and convert
 	case *float64:
 		if v != nil {
 			return *v
 		}
+	case *float32:
+		if v != nil {
+			return float64(*v)
+		}
+
 	case *int64:
-		if v != nil {
-			return *v
-		}
-	case *string:
-		if v != nil {
-			return *v
-		}
-	case *bool:
 		if v != nil {
 			return *v
 		}
 	case *int:
 		if v != nil {
 			return int64(*v)
-		}
-	case *uint:
-		if v != nil {
-			return uint64(*v)
-		}
-	case *uint64:
-		if v != nil {
-			return uint64(*v)
-		}
-	case *[]byte:
-		if v != nil {
-			return string(*v)
 		}
 	case *int32:
 		if v != nil {
@@ -600,6 +636,15 @@ func convertField(v any) any {
 		if v != nil {
 			return int64(*v)
 		}
+
+	case *uint64:
+		if v != nil {
+			return *v
+		}
+	case *uint:
+		if v != nil {
+			return uint64(*v)
+		}
 	case *uint32:
 		if v != nil {
 			return uint64(*v)
@@ -612,10 +657,21 @@ func convertField(v any) any {
 		if v != nil {
 			return uint64(*v)
 		}
-	case *float32:
+
+	case *string:
 		if v != nil {
-			return float64(*v)
+			return *v
 		}
+	case *[]byte:
+		if v != nil {
+			return string(*v)
+		}
+
+	case *bool:
+		if v != nil {
+			return *v
+		}
+
 	default:
 		return nil
 	}

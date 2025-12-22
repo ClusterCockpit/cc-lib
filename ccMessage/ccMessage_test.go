@@ -7,14 +7,15 @@ package ccmessage
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 )
 
 func TestJSONEncode(t *testing.T) {
 	input := []CCMessage{
-		&ccMessage{name: "test1", tags: map[string]string{"type": "node"}, meta: map[string]string{"unit": "B"}, fields: map[string]interface{}{"value": 1.23}, tm: time.Now()},
-		&ccMessage{name: "test2", tags: map[string]string{"type": "socket", "type-id": "0"}, meta: map[string]string{"unit": "B"}, fields: map[string]interface{}{"value": 1.23}, tm: time.Now()},
+		&ccMessage{name: "test1", tags: map[string]string{"type": "node"}, meta: map[string]string{"unit": "B"}, fields: map[string]any{"value": 1.23}, tm: time.Now()},
+		&ccMessage{name: "test2", tags: map[string]string{"type": "socket", "type-id": "0"}, meta: map[string]string{"unit": "B"}, fields: map[string]any{"value": 1.23}, tm: time.Now()},
 	}
 
 	x, err := json.Marshal(input)
@@ -83,7 +84,7 @@ func TestMessageType_Control(t *testing.T) {
 }
 
 func TestMessageType_Invalid(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"unknown": "field"}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"unknown": "field"}, time.Now())
 	if msg.MessageType() != CCMSG_TYPE_INVALID {
 		t.Errorf("Expected CCMSG_TYPE_INVALID, got %v", msg.MessageType())
 	}
@@ -115,7 +116,7 @@ func TestFromMessage_DeepCopy(t *testing.T) {
 }
 
 func TestConvertField_IntTypes(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{
+	msg, _ := NewMessage("test", nil, nil, map[string]any{
 		"int":    int(10),
 		"int8":   int8(10),
 		"int16":  int16(10),
@@ -146,7 +147,7 @@ func TestConvertField_IntTypes(t *testing.T) {
 }
 
 func TestConvertField_FloatTypes(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{
+	msg, _ := NewMessage("test", nil, nil, map[string]any{
 		"float32": float32(1.5),
 		"float64": float64(2.5),
 	}, time.Now())
@@ -161,7 +162,7 @@ func TestConvertField_FloatTypes(t *testing.T) {
 }
 
 func TestConvertField_StringAndBytes(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{
+	msg, _ := NewMessage("test", nil, nil, map[string]any{
 		"string": "test",
 		"bytes":  []byte("test"),
 	}, time.Now())
@@ -176,7 +177,7 @@ func TestConvertField_StringAndBytes(t *testing.T) {
 }
 
 func TestConvertField_Bool(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{
+	msg, _ := NewMessage("test", nil, nil, map[string]any{
 		"bool_true":  true,
 		"bool_false": false,
 	}, time.Now())
@@ -216,5 +217,76 @@ func TestToLineProtocol(t *testing.T) {
 	// Basic validation that it contains the metric name
 	if len(lp) < len("cpu_usage") {
 		t.Error("Line protocol seems too short")
+	}
+}
+
+func TestNewMessage_EmptyName(t *testing.T) {
+	_, err := NewMessage("", nil, nil, map[string]any{"value": 1.0}, time.Now())
+	if err == nil {
+		t.Error("Expected error for empty name")
+	}
+}
+
+func TestNewMessage_WhitespaceName(t *testing.T) {
+	_, err := NewMessage("   ", nil, nil, map[string]any{"value": 1.0}, time.Now())
+	if err == nil {
+		t.Error("Expected error for whitespace-only name")
+	}
+}
+
+func TestNewMessage_ZeroTimestamp(t *testing.T) {
+	_, err := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Time{})
+	if err == nil {
+		t.Error("Expected error for zero timestamp")
+	}
+}
+
+func TestNewMessage_EmptyTagKey(t *testing.T) {
+	_, err := NewMessage("test", map[string]string{"": "value"}, nil, map[string]any{"value": 1.0}, time.Now())
+	if err == nil {
+		t.Error("Expected error for empty tag key")
+	}
+}
+
+func TestNewMessage_EmptyMetaKey(t *testing.T) {
+	_, err := NewMessage("test", nil, map[string]string{"": "value"}, map[string]any{"value": 1.0}, time.Now())
+	if err == nil {
+		t.Error("Expected error for empty meta key")
+	}
+}
+
+func TestNewMessage_EmptyFieldKey(t *testing.T) {
+	_, err := NewMessage("test", nil, nil, map[string]any{"": 1.0}, time.Now())
+	if err == nil {
+		t.Error("Expected error for empty field key")
+	}
+}
+
+func TestNewMessage_NoFields(t *testing.T) {
+	_, err := NewMessage("test", nil, nil, map[string]any{}, time.Now())
+	if err == nil {
+		t.Error("Expected error for no fields")
+	}
+}
+
+func TestNewMessage_NaNValue(t *testing.T) {
+	_, err := NewMessage("test", nil, nil, map[string]any{"value": math.NaN()}, time.Now())
+	if err == nil {
+		t.Error("Expected error for NaN value")
+	}
+}
+
+func TestNewMessage_InfValue(t *testing.T) {
+	_, err := NewMessage("test", nil, nil, map[string]any{"value": math.Inf(1)}, time.Now())
+	if err == nil {
+		t.Error("Expected error for Inf value")
+	}
+}
+
+func TestNewMessage_AllNilFields(t *testing.T) {
+	type unsupportedType struct{ data string }
+	_, err := NewMessage("test", nil, nil, map[string]any{"bad": unsupportedType{"test"}}, time.Now())
+	if err == nil {
+		t.Error("Expected error when all fields are nil/invalid")
 	}
 }
