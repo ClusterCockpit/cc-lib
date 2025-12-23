@@ -9,57 +9,70 @@ hugo_path: docs/reference/cc-lib/receivers/redfish.md
 ---
 -->
 
-## Redfish receiver
+## `redfish` receiver
 
-The Redfish receiver uses the [Redfish (specification)](https://www.dmtf.org/standards/redfish) to query thermal and power metrics. Thermal metrics may include various fan speeds and temperatures. Power metrics may include the current power consumption of various hardware components. It may also include the minimum, maximum and average power consumption of these components in a given time interval. The receiver will poll each configured redfish device once in a given interval. Multiple devices can be accessed in parallel to increase throughput.
+The `redfish` receiver uses the [Redfish specification](https://www.dmtf.org/standards/redfish) to query thermal and power metrics from modern hardware management interfaces. It polls multiple devices in parallel to maintain high throughput.
 
-### Configuration structure
+### Configuration Structure
 
 ```json
 {
-    "<redfish receiver name>": {
-        "type": "redfish",
-        "username": "<Username>",
-        "password": "<Password>",
-        "endpoint": "https://%h-bmc",
-        "exclude_metrics": [ "min_consumed_watts" ],
-        "client_config": [
-            {
-                "host_list": "n[1,2-4]"
-            },
-            {
-                "host_list": "n5"
-                "disable_power_metrics": true
-            },
-            {
-                "host_list": "n6" ],
-                "username": "<Username 2>",
-                "password": "<Password 2>",
-                "endpoint": "https://%h-BMC",
-                "disable_thermal_metrics": true
-            }
-        ]
-    }
+  "my_redfish_receiver": {
+    "type": "redfish",
+    "interval": "30s",
+    "fanout": 64,
+    "http_insecure": true,
+    "http_timeout": "10s",
+    "username": "admin",
+    "password": "password",
+    "endpoint": "https://%h-bmc",
+    "exclude_metrics": [ "min_consumed_watts" ],
+    "process_messages": [],
+    "client_config": [
+      {
+        "host_list": "node[01-04]"
+      },
+      {
+        "host_list": "node05",
+        "disable_power_metrics": true
+      },
+      {
+        "host_list": "node06",
+        "username": "user2",
+        "password": "password2",
+        "disable_thermal_metrics": true
+      }
+    ]
+  }
 }
 ```
 
-Global settings:
+### Global Configuration Options
 
-- `fanout`: Maximum number of simultaneous redfish connections (default: 64)
-- `interval`: How often the redfish power metrics should be read and send to the sink (default: 30 s)
-- `http_insecure`: Control whether a client verifies the server's certificate (default: true == do not verify server's certificate)
-- `http_timeout`: Time limit for requests made by this HTTP client (default: 10 s)
+- `type`: Must be `redfish`.
+- `interval`: Polling interval (default: `30s`).
+- `fanout`: Maximum number of simultaneous connections (default: `64`).
+- `http_insecure`: Skip SSL certificate verification (default: `true`).
+- `http_timeout`: Timeout for HTTP requests (default: `10s`).
+- `process_messages`: Optional message processing rules.
 
-Global and per redfish device settings (per redfish device settings overwrite the global settings):
+### Global and Per-Device Options
 
-- `disable_power_metrics`: disable collection of power metrics
-- `disable_processor_metrics`: disable collection of processor metrics
-- `disable_thermal_metrics`: disable collection of thermal metrics
-- `exclude_metrics`: list of excluded metrics
-- `username`: User name to authenticate with
-- `password`: Password to use for authentication
-- `endpoint`: URL of the redfish service (placeholder `%h` gets replaced by the hostname)
+These settings can be defined globally and overridden in `client_config`:
 
-Per redfish device settings:
+- `endpoint`: URL template for the Redfish service. `%h` is replaced by the hostname.
+- `username`: Username for authentication.
+- `password`: Password for authentication.
+- `disable_power_metrics`: Disable collection of power metrics.
+- `disable_processor_metrics`: Disable collection of processor metrics.
+- `disable_thermal_metrics`: Disable collection of thermal metrics.
+- `exclude_metrics`: List of specific metrics to exclude.
 
-- `host_list`: List of hosts with the same client configuration
+### Per-Device Options (`client_config`)
+
+- `host_list`: [Hostlist expression](../hostlist/README.md) of hosts sharing this configuration.
+
+### Requirements
+
+- **Platform**: Linux only.
+- **Hardware**: Management controllers must support the Redfish API.

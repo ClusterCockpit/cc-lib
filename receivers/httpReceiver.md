@@ -11,44 +11,52 @@ hugo_path: docs/reference/cc-lib/receivers/http.md
 
 ## `http` receiver
 
-The `http` receiver can be used receive metrics through HTTP POST requests.
+The `http` receiver accepts metrics through HTTP POST requests. It is commonly used to receive data from remote collectors or applications that can push metrics in InfluxDB line protocol.
 
-### Configuration structure
+### Configuration Structure
 
 ```json
 {
-  "<name>": {
+  "my_http_receiver": {
     "type": "http",
-    "address" : "",
+    "address" : "0.0.0.0",
     "port" : "8080",
     "path" : "/write",
     "idle_timeout": "120s",
+    "keep_alives_enabled": true,
     "username": "myUser",
-    "password": "myPW"
+    "password": "myPW",
+    "process_messages": []
   }
 }
 ```
 
-- `type`: makes the receiver a `http` receiver
-- `address`: Listen address
-- `port`: Listen port
-- `path`: URL path for the write endpoint
-- `idle_timeout`: Maximum amount of time to wait for the next request when keep-alives are enabled should be larger than the measurement interval to keep the connection open
-- `keep_alives_enabled`: Controls whether HTTP keep-alives are enabled. By default, keep-alives are enabled.
-- `username`: username for basic authentication
-- `password`: password for basic authentication
+### Configuration Options
 
-The HTTP endpoint listens to `http://<address>:<port>/<path>`
+- `type`: Must be `http`.
+- `address`: IP address to listen on (default: empty for all interfaces).
+- `port`: Port to listen on (default: `8080`).
+- `path`: URL path for the write endpoint (e.g., `/write`).
+- `idle_timeout`: Maximum idle time for keep-alive connections (default: `120s`).
+- `keep_alives_enabled`: Whether to enable HTTP keep-alives (default: `true`).
+- `username`: Optional username for basic authentication.
+- `password`: Optional password for basic authentication.
+- `process_messages`: Optional message processing rules.
+
+The HTTP endpoint listens at `http://<address>:<port>/<path>`.
+
+### Ingress Format
+
+The receiver expects data in [InfluxDB line protocol](https://docs.influxdata.com/influxdb/v2.7/reference/syntax/line-protocol/). Multiple lines can be sent in a single POST request.
 
 ### Debugging
 
-- Install [curl](https://curl.se/)
-- Use curl to send message to `http` receiver
+You can use `curl` to test the receiver:
 
-  ```bash
-  curl http://localhost:8080/write \
+```bash
+curl http://localhost:8080/write \
   --user "myUser:myPW" \
   --data \
-  "myMetric,hostname=myHost,type=hwthread,type-id=0,unit=Hz value=400000i 1694777161164284635
-  myMetric,hostname=myHost,type=hwthread,type-id=1,unit=Hz value=400001i 1694777161164284635"
-  ```
+"myMetric,hostname=myHost,type=hwthread,type-id=0,unit=Hz value=400000i 1694777161164284635
+myMetric,hostname=myHost,type=hwthread,type-id=1,unit=Hz value=400001i 1694777161164284635"
+```

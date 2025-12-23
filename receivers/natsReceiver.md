@@ -12,57 +12,53 @@ hugo_path: docs/reference/cc-lib/receivers/nats.md
 
 ## `nats` receiver
 
-The `nats` receiver can be used receive metrics from the NATS network. The `nats` receiver subscribes to the topic `database` and listens on `address` and `port` for metrics in the InfluxDB line protocol.
+The `nats` receiver subscribes to a [NATS](https://nats.io/) subject to receive metrics in InfluxDB line protocol. It is useful for decoupled metric collection where sources publish to a message bus.
 
-### Configuration structure
+### Configuration Structure
 
 ```json
 {
-  "<name>": {
+  "my_nats_receiver": {
     "type": "nats",
     "address" : "nats-server.example.org",
     "port" : "4222",
-    "subject" : "subject",
+    "subject" : "metrics",
     "user": "natsuser",
     "password": "natssecret",
-    "nkey_file": "/path/to/nkey_file"
+    "nkey_file": "/path/to/nkey_file",
+    "process_messages": []
   }
 }
 ```
 
-- `type`: makes the receiver a `nats` receiver
-- `address`: Address of the NATS control server
-- `port`: Port of the NATS control server
-- `subject`: Subscribes to this subject and receive metrics
-- `user`: Connect to nats using this user
-- `password`: Connect to nats using this password
-- `nkey_file`: Path to credentials file with NKEY
+### Configuration Options
+
+- `type`: Must be `nats`.
+- `address`: Hostname or IP of the NATS server (default: `localhost`).
+- `port`: Port of the NATS server (default: `4222`).
+- `subject`: (Required) The NATS subject to subscribe to.
+- `user`: Optional username for authentication.
+- `password`: Optional password for authentication.
+- `nkey_file`: Optional path to an NKEY credentials file.
+- `process_messages`: Optional message processing rules.
 
 ### Debugging
 
-- Install NATS server and command line client
-- Start NATS server
+You can use the NATS command line client to interact with the server and verify the receiver.
 
-  ```bash
-  nats-server --net nats-server.example.org --port 4222
-  ```
+1.  **Check NATS server status**:
+    ```bash
+    nats --server=nats-server.example.org:4222 server check
+    ```
 
-- Check NATS server works as expected
+2.  **Monitor all messages**:
+    ```bash
+    nats --server=nats-server.example.org:4222 sub ">"
+    ```
 
-  ```bash
-  nats --server=nats-server-db.example.org:4222 server check
-  ```
-
-- Use NATS command line client to subscribe to all messages
-
-  ```bash
-  nats --server=nats-server-db.example.org:4222 sub ">"
-  ```
-
-- Use NATS command line client to send message to NATS receiver
-
-  ```bash
-  nats --server=nats-server-db.example.org:4222 pub subject \
-  "myMetric,hostname=myHost,type=hwthread,type-id=0,unit=Hz value=400000i 1694777161164284635
-  myMetric,hostname=myHost,type=hwthread,type-id=1,unit=Hz value=400001i 1694777161164284635"
-  ```
+3.  **Publish test metrics**:
+    ```bash
+    nats --server=nats-server.example.org:4222 pub metrics \
+    "myMetric,hostname=myHost,type=hwthread,type-id=0,unit=Hz value=400000i 1694777161164284635
+    myMetric,hostname=myHost,type=hwthread,type-id=1,unit=Hz value=400001i 1694777161164284635"
+    ```

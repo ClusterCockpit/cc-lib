@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -17,30 +18,26 @@ import (
 	"time"
 
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
 	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
 	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
 )
 
 const HTTP_RECEIVER_PORT = "8080"
 
+// HttpReceiverConfig configures the HTTP receiver for accepting metrics via POST requests.
 type HttpReceiverConfig struct {
 	defaultReceiverConfig
-	Addr string `json:"address"`
-	Port string `json:"port"`
-	Path string `json:"path"`
+	Addr string `json:"address"` // Listen address (default: empty for all interfaces)
+	Port string `json:"port"`    // Listen port (default: 8080)
+	Path string `json:"path"`    // HTTP path to listen on
 
-	// Maximum amount of time to wait for the next request when keep-alives are enabled
-	// should be larger than the measurement interval to keep the connection open
-	IdleTimeout string `json:"idle_timeout"`
+	IdleTimeout string `json:"idle_timeout"` // Max idle time for keep-alive connections (default: 120s)
 	idleTimeout time.Duration
 
-	// Controls whether HTTP keep-alives are enabled. By default, keep-alives are enabled
-	KeepAlivesEnabled bool `json:"keep_alives_enabled"`
+	KeepAlivesEnabled bool `json:"keep_alives_enabled"` // Enable HTTP keep-alive (default: true)
 
-	// Basic authentication
-	Username     string `json:"username"`
-	Password     string `json:"password"`
+	Username     string `json:"username"` // Basic auth username (optional)
+	Password     string `json:"password"` // Basic auth password (optional)
 	useBasicAuth bool
 }
 
@@ -50,82 +47,6 @@ type HttpReceiver struct {
 	config HttpReceiverConfig
 	server *http.Server
 	wg     sync.WaitGroup
-}
-
-func (r *HttpReceiver) Init(name string, config json.RawMessage) error {
-	r.name = fmt.Sprintf("HttpReceiver(%s)", name)
-
-	// Set default values
-	r.config.Port = HTTP_RECEIVER_PORT
-	r.config.KeepAlivesEnabled = true
-	// should be larger than the measurement interval to keep the connection open
-	r.config.IdleTimeout = "120s"
-
-	// Read config
-	if len(config) > 0 {
-		err := json.Unmarshal(config, &r.config)
-		if err != nil {
-			cclog.ComponentError(r.name, "Error reading config:", err.Error())
-			return err
-		}
-	}
-	if len(r.config.Port) == 0 {
-		return errors.New("not all configuration variables set required by HttpReceiver")
-	}
-
-	// Check idle timeout config
-	if len(r.config.IdleTimeout) > 0 {
-		t, err := time.ParseDuration(r.config.IdleTimeout)
-		if err == nil {
-			cclog.ComponentDebug(r.name, "idleTimeout", t)
-			r.config.idleTimeout = t
-		}
-	}
-
-	// Check basic authentication config
-	if len(r.config.Username) > 0 || len(r.config.Password) > 0 {
-		r.config.useBasicAuth = true
-	}
-	if r.config.useBasicAuth && len(r.config.Username) == 0 {
-		return errors.New("basic authentication requires username")
-	}
-	if r.config.useBasicAuth && len(r.config.Password) == 0 {
-		return errors.New("basic authentication requires password")
-	}
-	msgp, err := mp.NewMessageProcessor()
-	if err != nil {
-		return fmt.Errorf("initialization of message processor failed: %v", err.Error())
-	}
-	r.mp = msgp
-	if len(r.config.MessageProcessor) > 0 {
-		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
-		if err != nil {
-			return fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
-		}
-	}
-	r.mp.AddAddMetaByCondition("true", "source", r.name)
-	//
-	//r.meta = map[string]string{"source": r.name}
-	p := r.config.Path
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
-	}
-	addr := fmt.Sprintf("%s:%s", r.config.Addr, r.config.Port)
-	uri := addr + p
-	cclog.ComponentDebug(r.name, "INIT", "listen on:", uri)
-
-	// Register handler function r.ServerHttp for path p in the DefaultServeMux
-	http.HandleFunc(p, r.ServerHttp)
-
-	// Create http server
-	r.server = &http.Server{
-		Addr:        addr,
-		Handler:     nil, // handler to invoke, http.DefaultServeMux if nil
-		IdleTimeout: r.config.idleTimeout,
-	}
-	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
-
-	return nil
 }
 
 func (r *HttpReceiver) Start() {
@@ -155,93 +76,110 @@ func (r *HttpReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if r.sink != nil {
-		d := influx.NewDecoder(req.Body)
-		for d.Next() {
+	if r.sink == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-			// Decode measurement name
-			measurement, err := d.Measurement()
-			if err != nil {
-				msg := "ServerHttp: Failed to decode measurement: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				http.Error(w, msg, http.StatusInternalServerError)
-				return
-			}
-
-			// Decode tags
-			tags := make(map[string]string)
-			for {
-				key, value, err := d.NextTag()
-				if err != nil {
-					msg := "ServerHttp: Failed to decode tag: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					http.Error(w, msg, http.StatusInternalServerError)
-					return
-				}
-				if key == nil {
-					break
-				}
-				tags[string(key)] = string(value)
-			}
-
-			// Decode fields
-			fields := make(map[string]interface{})
-			for {
-				key, value, err := d.NextField()
-				if err != nil {
-					msg := "ServerHttp: Failed to decode field: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					http.Error(w, msg, http.StatusInternalServerError)
-					return
-				}
-				if key == nil {
-					break
-				}
-				fields[string(key)] = value.Interface()
-			}
-
-			// Decode time stamp
-			t, err := d.Time(influx.Nanosecond, time.Time{})
-			if err != nil {
-				msg := "ServerHttp: Failed to decode time stamp: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				http.Error(w, msg, http.StatusInternalServerError)
-				return
-			}
-
-			y, _ := lp.NewMessage(
-				string(measurement),
-				tags,
-				nil,
-				fields,
-				t,
-			)
-
-			m, err := r.mp.ProcessMessage(y)
-			if err == nil && m != nil {
-				r.sink <- m
-			}
-
-		}
-		// Check for IO errors
-		err := d.Err()
+	d := influx.NewDecoder(req.Body)
+	for d.Next() {
+		y, err := DecodeInfluxMessage(d)
 		if err != nil {
-			msg := "ServerHttp: Failed to decode: " + err.Error()
+			msg := "ServerHttp: Failed to decode message: " + err.Error()
 			cclog.ComponentError(r.name, msg)
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}
+
+		m, err := r.mp.ProcessMessage(y)
+		if err == nil && m != nil {
+			r.sink <- m
+		}
+	}
+
+	if err := d.Err(); err != nil {
+		msg := "ServerHttp: Failed to decode: " + err.Error()
+		cclog.ComponentError(r.name, msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
 func (r *HttpReceiver) Close() {
+	cclog.ComponentDebug(r.name, "CLOSE")
 	r.server.Shutdown(context.Background())
+	r.wg.Wait()
+	cclog.ComponentDebug(r.name, "DONE")
 }
 
 func NewHttpReceiver(name string, config json.RawMessage) (Receiver, error) {
 	r := new(HttpReceiver)
-	err := r.Init(name, config)
-	return r, err
+	r.name = fmt.Sprintf("HttpReceiver(%s)", name)
+
+	r.config.Port = HTTP_RECEIVER_PORT
+	r.config.KeepAlivesEnabled = true
+	r.config.IdleTimeout = "120s"
+
+	if len(config) > 0 {
+		err := json.Unmarshal(config, &r.config)
+		if err != nil {
+			cclog.ComponentError(r.name, "Error reading config:", err.Error())
+			return nil, err
+		}
+	}
+	if len(r.config.Port) == 0 {
+		return nil, errors.New("not all configuration variables set required by HttpReceiver")
+	}
+
+	if len(r.config.IdleTimeout) > 0 {
+		t, err := time.ParseDuration(r.config.IdleTimeout)
+		if err == nil {
+			cclog.ComponentDebug(r.name, "idleTimeout", t)
+			r.config.idleTimeout = t
+		}
+	}
+
+	if len(r.config.Username) > 0 || len(r.config.Password) > 0 {
+		r.config.useBasicAuth = true
+	}
+	if r.config.useBasicAuth && len(r.config.Username) == 0 {
+		return nil, errors.New("basic authentication requires username")
+	}
+	if r.config.useBasicAuth && len(r.config.Password) == 0 {
+		return nil, errors.New("basic authentication requires password")
+	}
+
+	msgp, err := mp.NewMessageProcessor()
+	if err != nil {
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
+	}
+	r.mp = msgp
+	if len(r.config.MessageProcessor) > 0 {
+		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
+		}
+	}
+	r.mp.AddAddMetaByCondition("true", "source", r.name)
+
+	p := r.config.Path
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	addr := fmt.Sprintf("%s:%s", r.config.Addr, r.config.Port)
+	uri := addr + p
+	cclog.ComponentDebug(r.name, "INIT", "listen on:", uri)
+
+	http.HandleFunc(p, r.ServerHttp)
+
+	r.server = &http.Server{
+		Addr:        addr,
+		Handler:     nil,
+		IdleTimeout: r.config.idleTimeout,
+	}
+	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
+
+	return r, nil
 }

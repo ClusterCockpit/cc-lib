@@ -6,6 +6,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -56,7 +57,9 @@ type IPMIReceiver struct {
 	wg   sync.WaitGroup // wait group for IPMI receiver
 }
 
-// doReadMetrics reads metrics from all configure IPMI hosts.
+// doReadMetric reads sensor data from all configured IPMI hosts using the ipmi-sensors command.
+// It executes the command with appropriate options, parses the CSV output, and sends
+// normalized metrics (power, temperature, fan_speed, voltage, current) to the sink.
 func (r *IPMIReceiver) doReadMetric() {
 	for i := range r.config.ClientConfigs {
 		clientConfig := &r.config.ClientConfigs[i]

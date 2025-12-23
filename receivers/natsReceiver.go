@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -11,23 +12,22 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
 	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
 	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
 	nats "github.com/nats-io/nats.go"
 )
 
+// NatsReceiverConfig configures the NATS receiver for subscribing to metric messages.
 type NatsReceiverConfig struct {
 	defaultReceiverConfig
-	Addr     string `json:"address"`
-	Port     string `json:"port"`
-	Subject  string `json:"subject"`
-	User     string `json:"user,omitempty"`
-	Password string `json:"password,omitempty"`
-	NkeyFile string `json:"nkey_file,omitempty"`
+	Addr     string `json:"address"`             // NATS server address (default: localhost)
+	Port     string `json:"port"`                // NATS server port (default: 4222)
+	Subject  string `json:"subject"`             // NATS subject to subscribe to (required)
+	User     string `json:"user,omitempty"`      // Username for authentication
+	Password string `json:"password,omitempty"`  // Password for authentication
+	NkeyFile string `json:"nkey_file,omitempty"` // Path to NKey credentials file
 }
 
 type NatsReceiver struct {
@@ -52,86 +52,40 @@ func (r *NatsReceiver) Start() {
 
 // _NatsReceive receives subscribed messages from the NATS server
 func (r *NatsReceiver) _NatsReceive(m *nats.Msg) {
-	if r.sink != nil {
-		d := influx.NewDecoderWithBytes(m.Data)
-		for d.Next() {
+	if r.sink == nil {
+		return
+	}
 
-			// Decode measurement name
-			measurement, err := d.Measurement()
-			if err != nil {
-				msg := "_NatsReceive: Failed to decode measurement: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				return
-			}
+	d := influx.NewDecoderWithBytes(m.Data)
+	for d.Next() {
+		y, err := DecodeInfluxMessage(d)
+		if err != nil {
+			cclog.ComponentError(r.name, "_NatsReceive: Failed to decode message:", err)
+			return
+		}
 
-			// Decode tags
-			tags := make(map[string]string)
-			for {
-				key, value, err := d.NextTag()
-				if err != nil {
-					msg := "_NatsReceive: Failed to decode tag: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					return
-				}
-				if key == nil {
-					break
-				}
-				tags[string(key)] = string(value)
-			}
-
-			// Decode fields
-			fields := make(map[string]interface{})
-			for {
-				key, value, err := d.NextField()
-				if err != nil {
-					msg := "_NatsReceive: Failed to decode field: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					return
-				}
-				if key == nil {
-					break
-				}
-				fields[string(key)] = value.Interface()
-			}
-
-			// Decode time stamp
-			t, err := d.Time(influx.Nanosecond, time.Time{})
-			if err != nil {
-				msg := "_NatsReceive: Failed to decode time: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				return
-			}
-
-			y, err := lp.NewMessage(
-				string(measurement),
-				tags,
-				nil,
-				fields,
-				t,
-			)
-			if err == nil {
-				m, err := r.mp.ProcessMessage(y)
-				if err == nil && m != nil && r.sink != nil {
-					r.sink <- m
-				}
-			}
+		msg, err := r.mp.ProcessMessage(y)
+		if err == nil && msg != nil {
+			r.sink <- msg
 		}
 	}
 }
 
 // Close closes the connection to the NATS server
 func (r *NatsReceiver) Close() {
-	if r.nc != nil {
-		cclog.ComponentDebug(r.name, "DRAIN")
-		err := r.sub.Drain()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to drain subscription to subject '%s': %s", r.config.Subject, err.Error())
-			cclog.ComponentError(r.name, msg)
-		}
-		r.sub.Unsubscribe()
-		cclog.ComponentDebug(r.name, "CLOSE")
-		r.nc.Close()
+	if r.nc == nil {
+		return
 	}
+
+	defer r.nc.Close()
+	defer r.sub.Unsubscribe()
+
+	cclog.ComponentDebug(r.name, "DRAIN")
+	err := r.sub.Drain()
+	if err != nil {
+		cclog.ComponentError(r.name, "Failed to drain subscription to subject", r.config.Subject, ":", err)
+	}
+	cclog.ComponentDebug(r.name, "CLOSE")
 }
 
 // NewNatsReceiver creates a new Receiver which subscribes to messages from a NATS server
@@ -157,13 +111,13 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	r.mp = p
 	if len(r.config.MessageProcessor) > 0 {
 		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 
@@ -195,7 +149,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 		return nil, err
 	}
 
-	sub, err := r.nc.Subscribe(r.config.Subject, func(m *nats.Msg) { return })
+	sub, err := r.nc.Subscribe(r.config.Subject, func(m *nats.Msg) {})
 	if err != nil {
 		err = fmt.Errorf("Failed to test subscribe to subject '%s': %s", r.config.Subject, err.Error())
 		cclog.ComponentError(r.name, err)

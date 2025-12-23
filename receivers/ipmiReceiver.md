@@ -9,51 +9,62 @@ hugo_path: docs/reference/cc-lib/receivers/ipmi.md
 ---
 -->
 
-## IPMI Receiver
+## `ipmi` receiver
 
-The IPMI Receiver uses `ipmi-sensors` from the [FreeIPMI](https://www.gnu.org/software/freeipmi/) project to read IPMI sensor readings and sensor data repository (SDR) information. The available metrics depend on the sensors provided by the hardware vendor but typically contain temperature, fan speed, voltage and power metrics.
+The `ipmi` receiver uses `ipmi-sensors` from the [FreeIPMI](https://www.gnu.org/software/freeipmi/) project to read IPMI sensor readings and sensor data repository (SDR) information. It is designed for polling metrics from BMCs (Baseboard Management Controllers).
 
-### Configuration structure
+### Configuration Structure
 
 ```json
 {
-    "<IPMI receiver name>": {
-        "type": "ipmi",
-        "interval": "30s",
-        "fanout": 256,
-        "username": "<Username>",
-        "password": "<Password>",
-        "endpoint": "ipmi-sensors://%h-bmc",
-        "exclude_metrics": [ "fan_speed", "voltage" ],
-        "client_config": [
-            {
-                "host_list": "n[1,2-4]"
-            },
-            {
-                "host_list": "n[5-6]",
-                "driver_type": "LAN",
-                "cli_options": [ "--workaround-flags=..." ],
-                "password": "<Password 2>"
-            }
-        ]
-    }
+  "my_ipmi_receiver": {
+    "type": "ipmi",
+    "interval": "30s",
+    "fanout": 256,
+    "username": "admin",
+    "password": "password",
+    "endpoint": "ipmi-sensors://%h-bmc",
+    "exclude_metrics": [ "fan_speed", "voltage" ],
+    "process_messages": [],
+    "client_config": [
+      {
+        "host_list": "node[01-04]"
+      },
+      {
+        "host_list": "node[05-08]",
+        "driver_type": "LAN_2_0",
+        "cli_options": [ "--workaround-flags=..." ],
+        "password": "different_password"
+      }
+    ]
+  }
 }
 ```
 
-Global settings:
+### Global Configuration Options
 
-- `interval`: How often the IPMI sensor metrics should be read and send to the sink (default: 30 s)
+- `type`: Must be `ipmi`.
+- `interval`: How often to poll the IPMI sensors (default: `30s`).
+- `fanout`: Maximum number of simultaneous IPMI connections (default: `64`).
+- `process_messages`: Optional message processing rules.
 
-Global and per IPMI device settings (per IPMI device settings overwrite the global settings):
+### Global and Per-Device Options
 
-- `exclude_metrics`: list of excluded metrics e.g. fan_speed, power, temperature, utilization, voltage
-- `fanout`: Maximum number of simultaneous IPMI connections (default: 64)
-- `driver_type`: Out of band IPMI driver (default: LAN_2_0)
-- `username`: User name to authenticate with
-- `password`: Password to use for authentication
-- `endpoint`: URL of the IPMI device (placeholder `%h` gets replaced by the hostname)
+These settings can be defined globally and overridden in `client_config`:
 
-Per IPMI device settings:
+- `endpoint`: URL/Template for the IPMI device. `%h` is replaced by the hostname (e.g., `ipmi-sensors://%h-bmc`).
+- `username`: Username for authentication.
+- `password`: Password for authentication.
+- `driver_type`: IPMI driver type (default: `LAN_2_0`).
+- `exclude_metrics`: List of metrics to exclude (e.g., `fan_speed`, `voltage`, `temperature`, `power`, `utilization`).
 
-- `host_list`: List of hosts with the same client configuration
-- `cli_options`: Additional command line options for ipmi-sensors
+### Per-Device Options (`client_config`)
+
+- `host_list`: [Hostlist expression](../hostlist/README.md) of hosts sharing this configuration.
+- `cli_options`: Additional command line options passed to `ipmi-sensors`.
+
+### Requirements
+
+- **Platform**: Linux only.
+- **Tools**: `ipmi-sensors` must be installed and available in the PATH.
+- **Permissions**: The user running the collector must have permission to execute `ipmi-sensors`.
