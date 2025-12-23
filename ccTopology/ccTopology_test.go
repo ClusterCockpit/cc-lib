@@ -93,6 +93,25 @@ func TestGetCores(t *testing.T) {
 	t.Log("[", strings.Join(Ssocks, ","), "]")
 }
 
+func TestGetMemoryDomains(t *testing.T) {
+	var topo Topology
+
+	topo, err := LocalTopology()
+	if err != nil {
+		t.Error("failed to initialize topology: ", err.Error())
+	}
+
+	doms := topo.GetMemoryDomains()
+	if len(doms) == 0 {
+		t.Error("no memory domains reported for system")
+	}
+	Sdoms := topo.GetMemoryDomainStrings()
+	if len(Sdoms) == 0 {
+		t.Error("no memory domains reported for system")
+	}
+	t.Log("[", strings.Join(Sdoms, ","), "]")
+}
+
 func TestGetPciDevices(t *testing.T) {
 	var topo Topology
 
