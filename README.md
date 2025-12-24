@@ -59,13 +59,13 @@ The library is designed to be modular, allowing you to use individual packages a
 
 ### Utilities
 
-| Package                    | Description                                                             |
-| -------------------------- | ----------------------------------------------------------------------- |
-| [lrucache](./lrucache)     | Thread-safe LRU cache with TTL support and HTTP middleware              |
-| [hostlist](./hostlist)     | Hostlist expansion for compact host specifications (e.g., `node[1-10]`) |
-| [ccUnits](./ccUnits)       | Unit conversion and handling for metrics                                |
-| [util](./util)             | Common utility functions and helpers                                    |
-| [runtimeEnv](./runtimeEnv) | Runtime environment detection and information                           |
+| Package                | Description                                                             |
+| ---------------------- | ----------------------------------------------------------------------- |
+| [lrucache](./lrucache) | Thread-safe LRU cache with TTL support and HTTP middleware              |
+| [hostlist](./hostlist) | Hostlist expansion for compact host specifications (e.g., `node[1-10]`) |
+| [ccUnits](./ccUnits)   | Unit conversion and handling for metrics                                |
+| [util](./util)         | Common utility functions and helpers                                    |
+| [runtime](./runtime)   | Runtime environment setup, privilege dropping, and systemd integration  |
 
 ## Installation
 
@@ -149,6 +149,7 @@ config.Watch(func() {
 - [lrucache](./lrucache/README.md) - LRU cache with TTL
 - [messageProcessor](./messageProcessor/README.md) - Message processing
 - [receivers](./receivers/README.md) - Metric receivers
+- [runtime](./runtime/README.md) - Runtime environment setup
 - [schema](./schema/README.md) - JSON schema validation
 - [sinks](./sinks/README.md) - Metric sinks
 - [util](./util/README.md) - Utility functions
