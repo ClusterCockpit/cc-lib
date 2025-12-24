@@ -16,9 +16,9 @@ import (
 	//	"time"
 	"os/exec"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 )
 
 const (

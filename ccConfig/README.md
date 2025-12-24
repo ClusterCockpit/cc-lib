@@ -134,7 +134,7 @@ package main
 import (
     "encoding/json"
     "log"
-    ccconfig "github.com/ClusterCockpit/cc-lib/ccConfig"
+    ccconfig "github.com/ClusterCockpit/cc-lib/v2/ccConfig"
 )
 
 type AppConfig struct {

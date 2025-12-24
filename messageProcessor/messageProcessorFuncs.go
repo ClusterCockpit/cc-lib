@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	lp2 "github.com/ClusterCockpit/cc-lib/ccMessage"
-	units "github.com/ClusterCockpit/cc-lib/ccUnits"
+	lp2 "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	units "github.com/ClusterCockpit/cc-lib/v2/ccUnits"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 )

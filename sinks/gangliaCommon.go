@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 func GangliaMetricName(point lp.CCMessage) string {

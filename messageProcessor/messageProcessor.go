@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"

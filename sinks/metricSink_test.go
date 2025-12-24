@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 func gen_messages(numMessage int) ([]lp.CCMessage, error) {

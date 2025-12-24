@@ -11,7 +11,7 @@ import (
 	"sort"
 	"unsafe"
 
-	"github.com/ClusterCockpit/cc-lib/util"
+	"github.com/ClusterCockpit/cc-lib/v2/util"
 )
 
 // JobData maps metric names to their data organized by scope.

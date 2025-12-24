@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ClusterCockpit/cc-lib/ccMessage"
+	"github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 func ExampleNewMetric() {

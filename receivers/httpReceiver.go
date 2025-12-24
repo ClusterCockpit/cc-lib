@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
 )
 

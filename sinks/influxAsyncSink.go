@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2Api "github.com/influxdata/influxdb-client-go/v2/api"
 	influxdb2ApiHttp "github.com/influxdata/influxdb-client-go/v2/api/http"

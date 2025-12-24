@@ -10,8 +10,8 @@ package receivers
 import (
 	"encoding/json"
 
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 )
 
 // defaultReceiverConfig contains common configuration fields for all receivers.

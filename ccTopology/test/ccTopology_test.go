@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ClusterCockpit/cc-lib/ccTopology"
+	"github.com/ClusterCockpit/cc-lib/v2/ccTopology"
 )
 
 func TestLocalRemote(t *testing.T) {

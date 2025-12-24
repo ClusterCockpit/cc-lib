@@ -10,7 +10,7 @@ import (
 	"math"
 	"strconv"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 )
 
 // Float is a custom float64 type with special handling for NaN values in JSON and GraphQL serialization.

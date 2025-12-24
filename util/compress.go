@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 )
 
 // CompressFile compresses a file using gzip compression.

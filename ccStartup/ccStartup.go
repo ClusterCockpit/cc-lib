@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	"github.com/ClusterCockpit/cc-lib/ccTopology"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	"github.com/ClusterCockpit/cc-lib/v2/ccTopology"
 	"github.com/nats-io/nats.go"
 )
 

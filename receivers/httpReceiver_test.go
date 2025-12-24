@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 var httpReceiverTestConfig json.RawMessage = json.RawMessage(`{

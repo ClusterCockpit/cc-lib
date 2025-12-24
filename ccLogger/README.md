@@ -25,7 +25,7 @@ The ccLogger component provides a unified logging interface for ClusterCockpit a
 ## Quick Start
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/ccLogger"
+import "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 
 func main() {
     // Initialize with log level and timestamp preference
@@ -183,10 +183,10 @@ journalctl -u myservice | grep '\[scheduler\]'
 
 ## API Reference
 
-For complete API documentation, see the [package documentation](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/ccLogger) or run:
+For complete API documentation, see the [package documentation](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2/ccLogger) or run:
 
 ```bash
-go doc github.com/ClusterCockpit/cc-lib/ccLogger
+go doc github.com/ClusterCockpit/cc-lib/v2/ccLogger
 ```
 
 ## Examples
@@ -196,7 +196,7 @@ go doc github.com/ClusterCockpit/cc-lib/ccLogger
 ```go
 package main
 
-import "github.com/ClusterCockpit/cc-lib/ccLogger"
+import "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 
 func main() {
     cclogger.Init("info", false)

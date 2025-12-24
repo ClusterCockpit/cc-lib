@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	"github.com/ClusterCockpit/cc-lib/sinks"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	"github.com/ClusterCockpit/cc-lib/v2/sinks"
 )
 
 type mainConfig struct {

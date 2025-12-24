@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/ClusterCockpit/cc-lib/schema"
+	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
 // Default number of points required to trigger resampling.

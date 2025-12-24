@@ -24,7 +24,7 @@ The `runtimeEnv` package provides utilities for runtime environment setup and sy
 ## Installation
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/runtimeEnv"
+import "github.com/ClusterCockpit/cc-lib/v2/runtimeEnv"
 ```
 
 ## Quick Start
@@ -36,7 +36,7 @@ import (
     "log"
     "os"
     
-    "github.com/ClusterCockpit/cc-lib/runtimeEnv"
+    "github.com/ClusterCockpit/cc-lib/v2/runtimeEnv"
 )
 
 func main() {
@@ -330,8 +330,8 @@ import (
     "os/signal"
     "syscall"
     
-    "github.com/ClusterCockpit/cc-lib/ccLogger"
-    "github.com/ClusterCockpit/cc-lib/runtimeEnv"
+    "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+    "github.com/ClusterCockpit/cc-lib/v2/runtimeEnv"
 )
 
 func main() {
@@ -391,7 +391,7 @@ import (
     "net/http"
     "os"
     
-    "github.com/ClusterCockpit/cc-lib/runtimeEnv"
+    "github.com/ClusterCockpit/cc-lib/v2/runtimeEnv"
 )
 
 func main() {
@@ -470,7 +470,7 @@ All functions are thread-safe and can be called from multiple goroutines. Howeve
 The package includes comprehensive tests for all functions. Run tests with:
 
 ```bash
-go test -v github.com/ClusterCockpit/cc-lib/runtimeEnv
+go test -v github.com/ClusterCockpit/cc-lib/v2/runtimeEnv
 ```
 
 ## Security Considerations
@@ -493,7 +493,7 @@ go test -v github.com/ClusterCockpit/cc-lib/runtimeEnv
 
 ## API Reference
 
-For complete API documentation, see [pkg.go.dev](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/runtimeEnv).
+For complete API documentation, see [pkg.go.dev](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2/runtimeEnv).
 
 ## License
 

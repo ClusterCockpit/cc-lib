@@ -7,8 +7,8 @@ weight: 1
 hugo_path: docs/reference/cc-lib/_index.md
 -->
 
-[![GoDoc](https://godoc.org/github.com/ClusterCockpit/cc-lib?status.svg)](https://godoc.org/github.com/ClusterCockpit/cc-lib)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ClusterCockpit/cc-lib)](https://goreportcard.com/report/github.com/ClusterCockpit/cc-lib)
+[![GoDoc](https://godoc.org/github.com/ClusterCockpit/cc-lib/v2?status.svg)](https://godoc.org/github.com/ClusterCockpit/cc-lib/v2)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ClusterCockpit/cc-lib/v2)](https://goreportcard.com/report/github.com/ClusterCockpit/cc-lib/v2)
 
 # cc-lib
 
@@ -70,7 +70,7 @@ The library is designed to be modular, allowing you to use individual packages a
 ## Installation
 
 ```bash
-go get github.com/ClusterCockpit/cc-lib
+go get github.com/ClusterCockpit/cc-lib/v2
 ```
 
 **Requirements:**
@@ -82,7 +82,7 @@ go get github.com/ClusterCockpit/cc-lib
 ### Using the LRU Cache
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/lrucache"
+import "github.com/ClusterCockpit/cc-lib/v2/lrucache"
 
 cache := lrucache.New(1000) // maxmemory in arbitrary units
 
@@ -96,7 +96,7 @@ value := cache.Get("key", func() (interface{}, time.Duration, int) {
 ### Expanding Hostlists
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/hostlist"
+import "github.com/ClusterCockpit/cc-lib/v2/hostlist"
 
 hosts, err := hostlist.Expand("node[1-10],gpu[1-4]")
 // Returns: [gpu1, gpu2, gpu3, gpu4, node1, node2, ..., node10]
@@ -105,7 +105,7 @@ hosts, err := hostlist.Expand("node[1-10],gpu[1-4]")
 ### Creating Messages
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/ccMessage"
+import "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 
 msg, err := ccMessage.NewMessage(
     "temperature",
@@ -119,7 +119,7 @@ msg, err := ccMessage.NewMessage(
 ### Using Configuration Management
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/ccConfig"
+import "github.com/ClusterCockpit/cc-lib/v2/ccConfig"
 
 config := ccConfig.New()
 config.AddFile("config.json")
@@ -135,7 +135,7 @@ config.Watch(func() {
 
 ## Documentation
 
-- **API Documentation**: [pkg.go.dev/github.com/ClusterCockpit/cc-lib](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib)
+- **API Documentation**: [pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2)
 - **Package READMEs**: Each package has its own README with detailed documentation and examples
 
 ### Package Documentation

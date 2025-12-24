@@ -66,7 +66,7 @@ import (
 	lp2 "github.com/influxdata/line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/maps"
 
-	"github.com/ClusterCockpit/cc-lib/schema"
+	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
 // CCMessageType defines the type of a CCMessage

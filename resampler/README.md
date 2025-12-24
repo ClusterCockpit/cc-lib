@@ -22,8 +22,8 @@ The `SimpleResampler` function performs simple downsampling by selecting every n
 
 **Example:**
 ```go
-import "github.com/ClusterCockpit/cc-lib/resampler"
-import "github.com/ClusterCockpit/cc-lib/schema"
+import "github.com/ClusterCockpit/cc-lib/v2/resampler"
+import "github.com/ClusterCockpit/cc-lib/v2/schema"
 
 data := []schema.Float{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}
 downsampled, newFreq, err := resampler.SimpleResampler(data, 1, 2)
@@ -51,8 +51,8 @@ The `LargestTriangleThreeBucket` function implements a sophisticated downsamplin
 
 **Example:**
 ```go
-import "github.com/ClusterCockpit/cc-lib/resampler"
-import "github.com/ClusterCockpit/cc-lib/schema"
+import "github.com/ClusterCockpit/cc-lib/v2/resampler"
+import "github.com/ClusterCockpit/cc-lib/v2/schema"
 
 // Generate some sample data with peaks
 data := make([]schema.Float, 1000)

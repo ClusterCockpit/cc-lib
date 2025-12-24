@@ -1,4 +1,4 @@
-module github.com/ClusterCockpit/cc-lib
+module github.com/ClusterCockpit/cc-lib/v2
 
 go 1.24.0
 

@@ -16,9 +16,9 @@ import (
 	"strings"
 	"sync"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

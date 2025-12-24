@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
-	mp "github.com/ClusterCockpit/cc-lib/messageProcessor"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 )
 
 // SampleReceiver configuration: receiver type, listen address, port

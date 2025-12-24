@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
+	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 func generate_message_lists(num_lists, num_entries int) ([][]lp.CCMessage, error) {

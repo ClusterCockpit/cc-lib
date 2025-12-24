@@ -24,7 +24,7 @@ The `hostlist` package provides functionality to expand compact hostlist specifi
 ## Installation
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/hostlist"
+import "github.com/ClusterCockpit/cc-lib/v2/hostlist"
 ```
 
 ## Quick Start
@@ -36,7 +36,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/ClusterCockpit/cc-lib/hostlist"
+    "github.com/ClusterCockpit/cc-lib/v2/hostlist"
 )
 
 func main() {
@@ -195,7 +195,7 @@ for _, host := range hostList {
 
 ## API Reference
 
-For detailed API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/hostlist).
+For detailed API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2/hostlist).
 
 ### Main Function
 
@@ -210,13 +210,13 @@ Converts a compact hostlist specification into a slice of individual host names.
 Run the test suite:
 
 ```bash
-go test -v github.com/ClusterCockpit/cc-lib/hostlist
+go test -v github.com/ClusterCockpit/cc-lib/v2/hostlist
 ```
 
 Check test coverage:
 
 ```bash
-go test -cover github.com/ClusterCockpit/cc-lib/hostlist
+go test -cover github.com/ClusterCockpit/cc-lib/v2/hostlist
 ```
 
 ## License

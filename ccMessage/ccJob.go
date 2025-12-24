@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ClusterCockpit/cc-lib/schema"
+	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
 // NewJobStartEvent creates an event message for a job start.

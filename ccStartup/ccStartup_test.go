@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	topo "github.com/ClusterCockpit/cc-lib/ccTopology"
+	topo "github.com/ClusterCockpit/cc-lib/v2/ccTopology"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )

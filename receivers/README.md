@@ -108,7 +108,7 @@ type Receiver interface {
 The `influxDecoder.go` provides a helper function `DecodeInfluxMessage` to simplify parsing InfluxDB line protocol data into `CCMessage` objects. This is used by most receivers that accept line protocol data.
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/receivers"
+import "github.com/ClusterCockpit/cc-lib/v2/receivers"
 // ...
 msg, err := receivers.DecodeInfluxMessage(decoder)
 ```

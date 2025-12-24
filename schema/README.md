@@ -89,7 +89,7 @@ Validates JSON data against embedded JSON schemas:
 ```go
 import (
     "bytes"
-    "github.com/ClusterCockpit/cc-lib/schema"
+    "github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
 // Validate cluster.json against schema

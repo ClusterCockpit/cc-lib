@@ -68,7 +68,7 @@ import (
 	"strings"
 	"syscall"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 )
 
 // LoadEnv reads a .env file and adds all variable definitions to the process environment.

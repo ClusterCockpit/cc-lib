@@ -9,7 +9,7 @@ import (
 	"errors"
 	"os"
 
-	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
+	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 )
 
 // CheckFileExists checks if a file or directory exists at the given path.

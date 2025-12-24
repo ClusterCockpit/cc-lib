@@ -20,7 +20,7 @@ This package contains utilities for:
 Go's standard JSON encoder doesn't support NaN values (see [golang/go#3480](https://github.com/golang/go/issues/3480)). This package provides a `Float` type that properly handles NaN values in JSON by converting them to/from `null`.
 
 ```go
-import "github.com/ClusterCockpit/cc-lib/util"
+import "github.com/ClusterCockpit/cc-lib/v2/util"
 
 // Create a Float value
 f := util.Float(3.14)
@@ -123,7 +123,7 @@ json.Unmarshal([]byte(`"*"`), &sel)
 
 ## Documentation
 
-For complete API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/util).
+For complete API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2/util).
 
 ## Testing
 

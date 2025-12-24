@@ -125,18 +125,18 @@ effects when your cache is not filled.
 
 ## API Reference
 
-For detailed API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/lrucache).
+For detailed API documentation, see the [godoc](https://pkg.go.dev/github.com/ClusterCockpit/cc-lib/v2/lrucache).
 
 ## Testing
 
 Run the test suite:
 
 ```bash
-go test -v github.com/ClusterCockpit/cc-lib/lrucache
+go test -v github.com/ClusterCockpit/cc-lib/v2/lrucache
 ```
 
 Check test coverage:
 
 ```bash
-go test -cover github.com/ClusterCockpit/cc-lib/lrucache
+go test -cover github.com/ClusterCockpit/cc-lib/v2/lrucache
 ```
