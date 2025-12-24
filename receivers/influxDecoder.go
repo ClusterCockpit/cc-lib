@@ -5,6 +5,9 @@
 // additional authors:
 // Holger Obermaier (NHR@KIT)
 
+// Package receivers provides a modular system for collecting metrics, events, and logs from various sources.
+// It defines a common Receiver interface and a ReceiveManager to orchestrate multiple receiver instances.
+// Receivers collect data from external sources, convert it into CCMessage format, and send it to a unified sink channel.
 package receivers
 
 import (
@@ -34,7 +37,7 @@ func DecodeInfluxMessage(d *influx.Decoder) (lp.CCMessage, error) {
 		tags[string(key)] = string(value)
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for {
 		key, value, err := d.NextField()
 		if err != nil {
