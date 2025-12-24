@@ -1,0 +1,34 @@
+name: runtime
+
+on:
+  push:
+    paths:
+      - "runtime/**"
+      - "go.sum"
+      - "go.mod"
+      - ".github/workflows/runtime.yml"
+
+jobs:
+  runtime:
+    name: Golang unit tests for runtime
+    runs-on: ubuntu-latest
+    steps:
+      # See: https://github.com/marketplace/actions/checkout
+      # Checkout git repository and submodules
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # See: https://github.com/marketplace/actions/setup-go-environment
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          check-latest: true
+
+      # Run 'go test' in specified test target
+      - name: Run Golang tests
+        run: |
+          cd runtime
+          go test
