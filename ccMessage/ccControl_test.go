@@ -54,12 +54,12 @@ func TestNewPutControl(t *testing.T) {
 		t.Error("Expected IsControl() to return true")
 	}
 
-	if msg.GetControlValue() != "test_value" {
-		t.Errorf("Expected GetControlValue() to return 'test_value', got '%s'", msg.GetControlValue())
+	if value, ok := msg.GetControlValue(); !ok || value != "test_value" {
+		t.Errorf("Expected GetControlValue() to return 'test_value', got '%s' (ok=%v)", value, ok)
 	}
 
-	if msg.GetControlMethod() != "PUT" {
-		t.Errorf("Expected GetControlMethod() to return 'PUT', got '%s'", msg.GetControlMethod())
+	if method, ok := msg.GetControlMethod(); !ok || method != "PUT" {
+		t.Errorf("Expected GetControlMethod() to return 'PUT', got '%s' (ok=%v)", method, ok)
 	}
 }
 
@@ -90,15 +90,15 @@ func TestIsControl_WithNonStringValue(t *testing.T) {
 func TestGetControlValue_EmptyString(t *testing.T) {
 	msg, _ := NewGetControl("test", nil, nil, time.Now())
 
-	if value := msg.GetControlValue(); value != "" {
-		t.Errorf("Expected empty string for GET control, got '%s'", value)
+	if value, ok := msg.GetControlValue(); !ok || value != "" {
+		t.Errorf("Expected empty string for GET control, got '%s' (ok=%v)", value, ok)
 	}
 }
 
 func TestGetControlMethod_GET(t *testing.T) {
 	msg, _ := NewGetControl("test", nil, nil, time.Now())
 
-	if method := msg.GetControlMethod(); method != "GET" {
-		t.Errorf("Expected 'GET', got '%s'", method)
+	if method, ok := msg.GetControlMethod(); !ok || method != "GET" {
+		t.Errorf("Expected 'GET', got '%s' (ok=%v)", method, ok)
 	}
 }

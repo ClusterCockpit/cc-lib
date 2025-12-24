@@ -12,28 +12,36 @@ hugo_path: docs/reference/cc-lib/receivers/prometheus.md
 
 ## `prometheus` receiver
 
-The `prometheus` receiver can be used to scrape the metrics of a single `prometheus` client. It does **not** use any official Golang library but making simple HTTP get requests and parse the response.
+The `prometheus` receiver scrapes metrics from a single Prometheus-compatible endpoint. It periodically makes HTTP GET requests to the configured endpoint and parses the response.
 
-### Configuration structure
+### Configuration Structure
 
 ```json
 {
-  "<name>": {
+  "my_prometheus_receiver": {
     "type": "prometheus",
-    "address" : "testpromhost",
-    "port" : "12345",
-    "path" : "/prometheus",
-    "interval": "5s",
-    "ssl" : true,
+    "address" : "prometheus-client.example.org",
+    "port" : "9100",
+    "path" : "/metrics",
+    "interval": "15s",
+    "ssl" : false,
+    "process_messages": []
   }
 }
 ```
 
-- `type`: makes the receiver a `prometheus` receiver
-- `address`: Hostname or IP of the Prometheus agent
-- `port`: Port of Prometheus agent
-- `path`: Path to the Prometheus endpoint
-- `interval`: Scrape the Prometheus endpoint in this interval (default '5s')
-- `ssl`: Use SSL or not
+### Configuration Options
+
+- `type`: Must be `prometheus`.
+- `address`: Hostname or IP of the Prometheus agent.
+- `port`: Port of the Prometheus agent.
+- `path`: Path to the Prometheus endpoint (default: `/metrics`).
+- `interval`: Scrape interval (default: `5s`).
+- `ssl`: Whether to use HTTPS (default: `false`).
+- `process_messages`: Optional message processing rules.
 
 The receiver requests data from `http(s)://<address>:<port>/<path>`.
+
+### Implementation Notes
+
+This receiver does not use the official Prometheus client library. Instead, it performs simple HTTP requests and parses the Prometheus text format manually to minimize dependencies.

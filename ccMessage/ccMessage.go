@@ -4,7 +4,50 @@
 // license that can be found in the LICENSE file.
 
 // Package ccmessage provides a message format and interface for ClusterCockpit.
-// It extends the InfluxDB line protocol with additional meta information.
+//
+// CCMessage extends the InfluxDB line protocol with additional meta information,
+// supporting multiple message types: metrics, events, logs, control messages, and queries.
+//
+// # Message Types
+//
+// The package supports five message types:
+//
+//   - Metric: Numerical measurements (CPU usage, memory, network throughput)
+//   - Event: Significant occurrences (job start/stop, node failures)
+//   - Log: Textual log messages
+//   - Control: Configuration requests (GET) or updates (PUT)
+//   - Query: Database queries or search requests
+//
+// # Basic Usage
+//
+//	// Create a metric
+//	msg, err := ccmessage.NewMetric(
+//	    "cpu_usage",
+//	    map[string]string{"hostname": "node001"},
+//	    map[string]string{"unit": "percent"},
+//	    75.5,
+//	    time.Now(),
+//	)
+//
+//	// Check message type
+//	if msg.IsMetric() {
+//	    value, ok := msg.GetMetricValue()
+//	    // ...
+//	}
+//
+//	// Convert to InfluxDB line protocol
+//	lineProtocol := msg.ToLineProtocol(map[string]bool{"unit": true})
+//
+// # Thread Safety
+//
+// CCMessage instances are NOT thread-safe. For concurrent access, either use
+// external synchronization or create separate copies with FromMessage().
+//
+// # Meta vs Tags
+//
+// Tags are indexed in time-series databases for querying, while meta fields
+// store descriptive metadata. Use the metaAsTags parameter when converting
+// to control which meta fields become tags.
 package ccmessage
 
 import (
@@ -12,7 +55,9 @@ import (
 	"errors"
 	"fmt"
 	maps0 "maps"
+	"math"
 	"sort"
+	"strings"
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -32,11 +77,12 @@ const (
 	CCMSG_TYPE_EVENT                        // Event message type
 	CCMSG_TYPE_LOG                          // Log message type
 	CCMSG_TYPE_CONTROL                      // Control message type
+	CCMSG_TYPE_QUERY                        // Query message type
 )
 
 const (
 	MIN_CCMSG_TYPE     = CCMSG_TYPE_METRIC
-	MAX_CCMSG_TYPE     = CCMSG_TYPE_CONTROL
+	MAX_CCMSG_TYPE     = CCMSG_TYPE_QUERY
 	CCMSG_TYPE_INVALID = MAX_CCMSG_TYPE + 1
 )
 
@@ -51,6 +97,8 @@ func (t CCMessageType) String() string {
 		return "log"
 	case CCMSG_TYPE_CONTROL:
 		return "control"
+	case CCMSG_TYPE_QUERY:
+		return "query"
 	}
 	return "invalid"
 }
@@ -66,6 +114,8 @@ func (t CCMessageType) FieldKey() string {
 		return "log"
 	case CCMSG_TYPE_CONTROL:
 		return "control"
+	case CCMSG_TYPE_QUERY:
+		return "query"
 	}
 	return "invalid"
 }
@@ -94,6 +144,10 @@ type ccMessageJSON struct {
 // CCMessage is the interface for accessing and manipulating ClusterCockpit messages.
 // It provides methods for converting to other formats (InfluxDB point, Line Protocol, JSON),
 // accessing metadata (Name, Time, Tags, Meta, Fields), and checking message type.
+//
+// Thread Safety: CCMessage instances are NOT thread-safe. Concurrent access to the same
+// CCMessage from multiple goroutines must be synchronized externally. For concurrent use,
+// either use locking mechanisms or create separate message instances using FromMessage().
 type CCMessage interface {
 	ToPoint(metaAsTags map[string]bool) *write.Point            // Generate influxDB point for data type ccMessage
 	ToLineProtocol(metaAsTags map[string]bool) string           // Generate influxDB line protocol for data type ccMessage
@@ -126,17 +180,17 @@ type CCMessage interface {
 
 	MessageType() CCMessageType // Return message type
 	IsMetric() bool             // Check if message is a metric
-	GetMetricValue() any
+	GetMetricValue() (value any, ok bool)
 	IsLog() bool // Check if message is a log
-	GetLogValue() string
+	GetLogValue() (value string, ok bool)
 	IsEvent() bool // Check if message is an event
-	GetEventValue() string
+	GetEventValue() (value string, ok bool)
 	IsControl() bool // Check if message is a control message
-	GetControlValue() string
-	GetControlMethod() string
+	GetControlValue() (value string, ok bool)
+	GetControlMethod() (method string, ok bool)
 	IsQuery() bool // Check if message is a query
-	GetQueryValue() string
-	IsJobEvent() (string, bool) // Check if message is a job event (returns event name and bool)
+	GetQueryValue() (value string, ok bool)
+	IsJobEvent() (eventName string, ok bool) // Check if message is a job event (returns event name and bool)
 	GetJob() (*schema.Job, error)
 }
 
@@ -288,6 +342,40 @@ func (m *ccMessage) RemoveField(key string) {
 }
 
 // NewMessage creates a new CCMessage with the given name, tags, meta, fields, and timestamp.
+//
+// Parameters:
+//   - name: Message/metric name (must not be empty or whitespace-only)
+//   - tags: Key-value pairs for indexing and querying (keys must not be empty)
+//   - meta: Metadata for context (keys must not be empty)
+//   - fields: Data fields (at least one valid field required, keys must not be empty)
+//   - tm: Timestamp (must not be zero value)
+//
+// Returns an error if:
+//   - name is empty or whitespace-only
+//   - timestamp is zero
+//   - any tag, meta, or field key is empty or whitespace-only
+//   - no fields provided
+//   - all field values are nil or invalid after type conversion
+//   - any float field is NaN or Inf
+//
+// Field values are automatically converted to standard types:
+//   - All integer types → int64 or uint64
+//   - All float types → float64
+//   - []byte → string
+//   - Pointer types are dereferenced
+//
+// Example:
+//
+//	msg, err := NewMessage(
+//	    "cpu_usage",
+//	    map[string]string{"hostname": "node001", "type": "node"},
+//	    map[string]string{"unit": "percent", "scope": "hwthread"},
+//	    map[string]any{"value": 75.5},
+//	    time.Now(),
+//	)
+//	if err != nil {
+//	    // handle validation error
+//	}
 func NewMessage(
 	name string,
 	tags map[string]string,
@@ -295,6 +383,30 @@ func NewMessage(
 	fields map[string]any,
 	tm time.Time,
 ) (CCMessage, error) {
+	if strings.TrimSpace(name) == "" {
+		return nil, errors.New("message name cannot be empty")
+	}
+
+	if tm.IsZero() {
+		return nil, errors.New("timestamp cannot be zero")
+	}
+
+	for k := range tags {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("tag keys cannot be empty")
+		}
+	}
+
+	for k := range meta {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("meta keys cannot be empty")
+		}
+	}
+
+	if len(fields) == 0 {
+		return nil, errors.New("at least one field is required")
+	}
+
 	m := &ccMessage{
 		name:   name,
 		tags:   maps.Clone(tags),
@@ -309,13 +421,27 @@ func NewMessage(
 		m.meta = make(map[string]string)
 	}
 
-	// deep copy fields
 	for k, v := range fields {
+		if strings.TrimSpace(k) == "" {
+			return nil, errors.New("field keys cannot be empty")
+		}
+
 		v := convertField(v)
 		if v == nil {
 			continue
 		}
+
+		if f, ok := v.(float64); ok {
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return nil, fmt.Errorf("field '%s' has invalid float value (NaN or Inf)", k)
+			}
+		}
+
 		m.fields[k] = v
+	}
+
+	if len(m.fields) == 0 {
+		return nil, errors.New("all field values were nil or invalid")
 	}
 
 	return m, nil
@@ -343,7 +469,10 @@ func EmptyMessage() CCMessage {
 	}
 }
 
-// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol metric.
+// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol v1 metric.
+//
+// Deprecated: This function depends on the deprecated line-protocol v1 library.
+// Use FromBytes() instead for parsing line protocol data with the v2 library.
 func FromInfluxMetric(other lp1.Metric) CCMessage {
 	m := &ccMessage{
 		name:   other.Name(),
@@ -353,7 +482,6 @@ func FromInfluxMetric(other lp1.Metric) CCMessage {
 		tm:     other.Time(),
 	}
 
-	// deep copy tags and fields
 	for _, otherTag := range other.TagList() {
 		m.tags[otherTag.Key] = otherTag.Value
 	}
@@ -471,23 +599,20 @@ func (m *ccMessage) Bytes() ([]byte, error) {
 	for _, k := range sortedkeys {
 		v, ok := m.GetTag(k)
 		if !ok {
-			msg := fmt.Sprintf("CCMessage: Failed to get tag for key %s", k)
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("serialization failed: tag key '%s' disappeared during iteration (concurrent modification?)", k)
 		}
 		encoder.AddTag(k, v)
 	}
 	for k, v := range m.Fields() {
 		nv, ok := lp2.NewValue(v)
 		if !ok {
-			msg := fmt.Sprintf("CCMessage: Failed to get field value for key %s", k)
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("serialization failed: field '%s' has unsupported type %T (value: %v)", k, v, v)
 		}
 		encoder.AddField(k, nv)
 	}
 	encoder.EndLine(m.Time())
 	if err := encoder.Err(); err != nil {
-		msg := fmt.Sprintf("CCMessage: Failed to encode message: %v", err.Error())
-		return nil, errors.New(msg)
+		return nil, fmt.Errorf("line protocol encoding failed for message '%s': %w", m.Name(), err)
 	}
 	return encoder.Bytes(), nil
 }
@@ -501,8 +626,18 @@ func (m *ccMessage) MessageType() CCMessageType {
 		return CCMSG_TYPE_LOG
 	} else if m.HasField("control") {
 		return CCMSG_TYPE_CONTROL
+	} else if m.HasField("query") {
+		return CCMSG_TYPE_QUERY
 	}
 	return CCMSG_TYPE_INVALID
+}
+
+func (m *ccMessage) hasStringField(key string) bool {
+	if v, ok := m.GetField(key); ok {
+		_, isString := v.(string)
+		return isString
+	}
+	return false
 }
 
 // convertField converts data types of fields by the following schemata:
@@ -515,67 +650,55 @@ func (m *ccMessage) MessageType() CCMessageType {
 // *bool,                                      bool                                  -> bool
 func convertField(v any) any {
 	switch v := v.(type) {
-	case float64:
+	// Already in target format - return as-is
+	case float64, int64, uint64, string, bool:
 		return v
-	case int64:
-		return v
-	case string:
-		return v
-	case bool:
-		return v
+
+	// Signed integers -> int64
 	case int:
 		return int64(v)
-	case uint:
-		return uint64(v)
-	case uint64:
-		return uint64(v)
-	case []byte:
-		return string(v)
 	case int32:
 		return int64(v)
 	case int16:
 		return int64(v)
 	case int8:
 		return int64(v)
+
+	// Unsigned integers -> uint64
+	case uint:
+		return uint64(v)
 	case uint32:
 		return uint64(v)
 	case uint16:
 		return uint64(v)
 	case uint8:
 		return uint64(v)
+
+	// Floats -> float64
 	case float32:
 		return float64(v)
+
+	// Bytes -> string
+	case []byte:
+		return string(v)
+
+	// Pointer types - dereference and convert
 	case *float64:
 		if v != nil {
 			return *v
 		}
+	case *float32:
+		if v != nil {
+			return float64(*v)
+		}
+
 	case *int64:
-		if v != nil {
-			return *v
-		}
-	case *string:
-		if v != nil {
-			return *v
-		}
-	case *bool:
 		if v != nil {
 			return *v
 		}
 	case *int:
 		if v != nil {
 			return int64(*v)
-		}
-	case *uint:
-		if v != nil {
-			return uint64(*v)
-		}
-	case *uint64:
-		if v != nil {
-			return uint64(*v)
-		}
-	case *[]byte:
-		if v != nil {
-			return string(*v)
 		}
 	case *int32:
 		if v != nil {
@@ -589,6 +712,15 @@ func convertField(v any) any {
 		if v != nil {
 			return int64(*v)
 		}
+
+	case *uint64:
+		if v != nil {
+			return *v
+		}
+	case *uint:
+		if v != nil {
+			return uint64(*v)
+		}
 	case *uint32:
 		if v != nil {
 			return uint64(*v)
@@ -601,10 +733,21 @@ func convertField(v any) any {
 		if v != nil {
 			return uint64(*v)
 		}
-	case *float32:
+
+	case *string:
 		if v != nil {
-			return float64(*v)
+			return *v
 		}
+	case *[]byte:
+		if v != nil {
+			return string(*v)
+		}
+
+	case *bool:
+		if v != nil {
+			return *v
+		}
+
 	default:
 		return nil
 	}

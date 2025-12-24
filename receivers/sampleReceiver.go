@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -89,15 +90,14 @@ func NewSampleReceiver(name string, config json.RawMessage) (Receiver, error) {
 	// create new message processor
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		cclog.ComponentError(r.name, "Initialization of message processor failed:", err.Error())
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		cclog.ComponentError(r.name, "Initialization of message processor failed:", err)
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	r.mp = p
-	// Set static information
 	err = r.mp.AddAddMetaByCondition("true", "source", r.name)
 	if err != nil {
-		cclog.ComponentError(r.name, fmt.Sprintf("Failed to add static information source=%s:", r.name), err.Error())
-		return nil, fmt.Errorf("failed to add static information source=%s: %v", r.name, err.Error())
+		cclog.ComponentError(r.name, fmt.Sprintf("Failed to add static information source=%s:", r.name), err)
+		return nil, fmt.Errorf("failed to add static information source=%s: %w", r.name, err)
 	}
 
 	// Set defaults in r.config
@@ -116,8 +116,8 @@ func NewSampleReceiver(name string, config json.RawMessage) (Receiver, error) {
 	if len(r.config.MessageProcessor) > 0 {
 		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
 		if err != nil {
-			cclog.ComponentError(r.name, "Failed parsing JSON for message processor:", err.Error())
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			cclog.ComponentError(r.name, "Failed parsing JSON for message processor:", err)
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 

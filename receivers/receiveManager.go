@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -14,12 +15,6 @@ import (
 	cclog "github.com/ClusterCockpit/cc-lib/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/ccMessage"
 )
-
-var AvailableReceivers = map[string]func(name string, config json.RawMessage) (Receiver, error){
-	"http":  NewHttpReceiver,
-	"nats":  NewNatsReceiver,
-	"eecpt": NewEECPTReceiver,
-}
 
 type receiveManager struct {
 	inputs []Receiver

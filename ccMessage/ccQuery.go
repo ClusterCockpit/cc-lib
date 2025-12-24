@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -20,22 +19,16 @@ func NewQuery(name string,
 	return NewMessage(name, tags, meta, map[string]any{"query": q}, tm)
 }
 
-// IsQuery checks if the message is of type Query
 func (m *ccMessage) IsQuery() bool {
-	if v, ok := m.GetField("query"); ok {
-		if reflect.TypeOf(v) == reflect.TypeOf("string") {
-			return true
-		}
-	}
-	return false
+	return m.hasStringField("query")
 }
 
 // GetQueryValue returns the query string if the message is of type Query
-func (m *ccMessage) GetQueryValue() string {
+func (m *ccMessage) GetQueryValue() (string, bool) {
 	if m.IsQuery() {
 		if v, ok := m.GetField("query"); ok {
-			return v.(string)
+			return v.(string), true
 		}
 	}
-	return ""
+	return "", false
 }

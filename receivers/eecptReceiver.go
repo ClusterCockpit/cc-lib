@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package receivers
 
 import (
@@ -22,8 +23,10 @@ import (
 	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
 )
 
-const CCCPT_RECEIVER_PORT = "8080"
-const chiSquareDistThreshold float64 = 1.0e-12
+const (
+	CCCPT_RECEIVER_PORT            = "8080"
+	chiSquareDistThreshold float64 = 1.0e-12
+)
 
 // overwritten by configuration. 4 is the minimum
 var eecpt_analysis_buffer_size = 4
@@ -107,13 +110,15 @@ func (job *EECPTReceiverJob) newTask(id int64) {
 // 	}
 // }
 
+// Analyse performs chi-square statistical test to detect phase transitions in application behavior.
+// It computes the chi-square statistic by comparing the expected rate of change (prev)
+// with the observed change (last) across all tasks in the job.
+// Returns the chi-square test statistic value.
 func (job *EECPTReceiverJob) Analyse() float64 {
 	result := float64(0)
-	// cclog.ComponentDebug("EECPTReceiver", "Analyze application", job.ident, "with", len(job.tasks), "tasks")
 	for _, task := range job.tasks {
 		prev, last, err := task.Analyse()
 		if err == nil && prev > chiSquareDistThreshold {
-			// cclog.ComponentDebug("EECPTReceiver", "Task", task.ident, "Prev", prev, "Last", last)
 			result += math.Pow(last-prev, 2) / prev
 		}
 	}
@@ -126,6 +131,10 @@ func (job *EECPTReceiverJob) Reset() {
 	}
 }
 
+// ChiSquareLimit returns the critical chi-square value at 95% confidence level (p=0.05)
+// for the given number of degrees of freedom (number of tasks).
+// These are pre-calculated chi-square distribution values used to determine
+// if a phase transition is statistically significant.
 func (job *EECPTReceiverJob) ChiSquareLimit() float64 {
 	length := len(job.tasks)
 	switch {
@@ -153,6 +162,10 @@ func (job *EECPTReceiverJob) ChiSquareLimit() float64 {
 	return 1.0985e3
 }
 
+// Analyse computes the expected rate of change (prev) and last observed change (last)
+// for this task's metric buffer. Returns (prev, last, error).
+// prev = average rate of change over buffer history
+// last = most recent change
 func (task *EECPTReceiverTask) Analyse() (float64, float64, error) {
 	task.bufferLock.RLock()
 	defer task.bufferLock.RUnlock()
@@ -164,6 +177,7 @@ func (task *EECPTReceiverTask) Analyse() (float64, float64, error) {
 	last := float64(task.buffer[buflen-1] - task.buffer[buflen-2])
 	return prev, last, nil
 }
+
 func (task *EECPTReceiverTask) PrintBuffer() {
 	task.bufferLock.RLock()
 	buflen := len(task.buffer)
@@ -195,103 +209,6 @@ func (task *EECPTReceiverTask) Reset() {
 	// add the last value back to the buffer
 	task.buffer = append(task.buffer, last)
 	task.bufferLock.Unlock()
-}
-
-func (r *EECPTReceiver) Init(name string, config json.RawMessage) error {
-	r.name = fmt.Sprintf("EECPTReceiver(%s)", name)
-
-	// Set default values
-	r.config.Port = HTTP_RECEIVER_PORT
-	r.config.KeepAlivesEnabled = true
-	// should be larger than the measurement interval to keep the connection open
-	r.config.IdleTimeout = "120s"
-	r.config.AnalysisBufferLength = eecpt_analysis_buffer_size
-	r.config.AnalysisInterval = "5m"
-	r.config.AnalysisMetric = "region_metric"
-
-	// Read config
-	if len(config) > 0 {
-		err := json.Unmarshal(config, &r.config)
-		if err != nil {
-			cclog.ComponentError(r.name, "Error reading config:", err.Error())
-			return err
-		}
-	}
-	if len(r.config.Port) == 0 {
-		return errors.New("not all configuration variables set required by EECPTReceiver")
-	}
-
-	// Check idle timeout config
-	if len(r.config.IdleTimeout) > 0 {
-		t, err := time.ParseDuration(r.config.IdleTimeout)
-		if err == nil {
-			cclog.ComponentDebug(r.name, "idleTimeout: ", t)
-			r.config.idleTimeout = t
-		}
-	}
-	// Check analysis interval config
-	if len(r.config.AnalysisInterval) > 0 {
-		t, err := time.ParseDuration(r.config.AnalysisInterval)
-		if err == nil {
-			cclog.ComponentDebug(r.name, "analysisInterval: ", t)
-			r.config.analysisInterval = t
-		}
-	}
-
-	// Check basic authentication config
-	if len(r.config.Username) > 0 || len(r.config.Password) > 0 {
-		r.config.useBasicAuth = true
-	}
-	if r.config.useBasicAuth && len(r.config.Username) == 0 {
-		return errors.New("basic authentication requires username")
-	}
-	if r.config.useBasicAuth && len(r.config.Password) == 0 {
-		return errors.New("basic authentication requires password")
-	}
-
-	// Check size of analysis buffer
-	if r.config.AnalysisBufferLength <= 0 {
-		return fmt.Errorf("buffer length of %d not allowed", r.config.AnalysisBufferLength)
-	}
-	eecpt_analysis_buffer_size = r.config.AnalysisBufferLength
-
-	// Configure message processor
-	msgp, err := mp.NewMessageProcessor()
-	if err != nil {
-		return fmt.Errorf("initialization of message processor failed: %v", err.Error())
-	}
-	r.mp = msgp
-	if len(r.config.MessageProcessor) > 0 {
-		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
-		if err != nil {
-			return fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
-		}
-	}
-	r.mp.AddAddMetaByCondition("true", "source", r.name)
-
-	//r.meta = map[string]string{"source": r.name}
-	p := r.config.Path
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
-	}
-	addr := fmt.Sprintf("%s:%s", r.config.Addr, r.config.Port)
-	uri := addr + p
-	cclog.ComponentDebug(r.name, "INIT ", "listen on:", uri)
-
-	// Register handler function r.ServerHttp for path p in the DefaultServeMux
-	http.HandleFunc(p, r.ServerHttp)
-
-	// Create http server
-	r.server = &http.Server{
-		Addr:        addr,
-		Handler:     nil, // handler to invoke, http.DefaultServeMux if nil
-		IdleTimeout: r.config.idleTimeout,
-	}
-	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
-
-	r.jobs = make(map[string]*EECPTReceiverJob)
-	r.analysisDone = make(chan bool)
-	return nil
 }
 
 func (r *EECPTReceiver) Start() {
@@ -426,86 +343,35 @@ func (r *EECPTReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if r.sink != nil {
-		d := influx.NewDecoder(req.Body)
-		for d.Next() {
+	if r.sink == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-			// Decode measurement name
-			measurement, err := d.Measurement()
-			if err != nil {
-				msg := "ServerHttp: Failed to decode measurement: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				http.Error(w, msg, http.StatusInternalServerError)
-				return
-			}
-
-			// Decode tags
-			tags := make(map[string]string)
-			for {
-				key, value, err := d.NextTag()
-				if err != nil {
-					msg := "ServerHttp: Failed to decode tag: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					http.Error(w, msg, http.StatusInternalServerError)
-					return
-				}
-				if key == nil {
-					break
-				}
-				tags[string(key)] = string(value)
-			}
-
-			// Decode fields
-			fields := make(map[string]interface{})
-			for {
-				key, value, err := d.NextField()
-				if err != nil {
-					msg := "ServerHttp: Failed to decode field: " + err.Error()
-					cclog.ComponentError(r.name, msg)
-					http.Error(w, msg, http.StatusInternalServerError)
-					return
-				}
-				if key == nil {
-					break
-				}
-				fields[string(key)] = value.Interface()
-			}
-
-			// Decode time stamp
-			t, err := d.Time(influx.Nanosecond, time.Time{})
-			if err != nil {
-				msg := "ServerHttp: Failed to decode time stamp: " + err.Error()
-				cclog.ComponentError(r.name, msg)
-				http.Error(w, msg, http.StatusInternalServerError)
-				return
-			}
-
-			y, _ := lp.NewMessage(
-				string(measurement),
-				tags,
-				nil,
-				fields,
-				t,
-			)
-
-			if r.sink != nil {
-				m, err := r.mp.ProcessMessage(y)
-				if err == nil && m != nil {
-					r.sink <- m
-					if m.Name() == r.config.AnalysisMetric {
-						r.toAnalysis(m)
-					}
-				}
-			}
-		}
-		// Check for IO errors
-		err := d.Err()
+	d := influx.NewDecoder(req.Body)
+	for d.Next() {
+		y, err := DecodeInfluxMessage(d)
 		if err != nil {
-			msg := "ServerHttp: Failed to decode: " + err.Error()
+			msg := "ServerHttp: Failed to decode message: " + err.Error()
 			cclog.ComponentError(r.name, msg)
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}
+
+		m, err := r.mp.ProcessMessage(y)
+		if err == nil && m != nil {
+			r.sink <- m
+			if m.Name() == r.config.AnalysisMetric {
+				r.toAnalysis(m)
+			}
+		}
+	}
+
+	if err := d.Err(); err != nil {
+		msg := "ServerHttp: Failed to decode: " + err.Error()
+		cclog.ComponentError(r.name, msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -520,6 +386,89 @@ func (r *EECPTReceiver) Close() {
 
 func NewEECPTReceiver(name string, config json.RawMessage) (Receiver, error) {
 	r := new(EECPTReceiver)
-	err := r.Init(name, config)
-	return r, err
+	r.name = fmt.Sprintf("EECPTReceiver(%s)", name)
+
+	r.config.Port = HTTP_RECEIVER_PORT
+	r.config.KeepAlivesEnabled = true
+	r.config.IdleTimeout = "120s"
+	r.config.AnalysisBufferLength = eecpt_analysis_buffer_size
+	r.config.AnalysisInterval = "5m"
+	r.config.AnalysisMetric = "region_metric"
+
+	if len(config) > 0 {
+		err := json.Unmarshal(config, &r.config)
+		if err != nil {
+			cclog.ComponentError(r.name, "Error reading config:", err.Error())
+			return nil, err
+		}
+	}
+	if len(r.config.Port) == 0 {
+		return nil, errors.New("not all configuration variables set required by EECPTReceiver")
+	}
+
+	if len(r.config.IdleTimeout) > 0 {
+		t, err := time.ParseDuration(r.config.IdleTimeout)
+		if err == nil {
+			cclog.ComponentDebug(r.name, "idleTimeout: ", t)
+			r.config.idleTimeout = t
+		}
+	}
+
+	if len(r.config.AnalysisInterval) > 0 {
+		t, err := time.ParseDuration(r.config.AnalysisInterval)
+		if err == nil {
+			cclog.ComponentDebug(r.name, "analysisInterval: ", t)
+			r.config.analysisInterval = t
+		}
+	}
+
+	if len(r.config.Username) > 0 || len(r.config.Password) > 0 {
+		r.config.useBasicAuth = true
+	}
+	if r.config.useBasicAuth && len(r.config.Username) == 0 {
+		return nil, errors.New("basic authentication requires username")
+	}
+	if r.config.useBasicAuth && len(r.config.Password) == 0 {
+		return nil, errors.New("basic authentication requires password")
+	}
+
+	if r.config.AnalysisBufferLength <= 0 {
+		return nil, fmt.Errorf("buffer length of %d not allowed", r.config.AnalysisBufferLength)
+	}
+	eecpt_analysis_buffer_size = r.config.AnalysisBufferLength
+
+	msgp, err := mp.NewMessageProcessor()
+	if err != nil {
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
+	}
+	r.mp = msgp
+	if len(r.config.MessageProcessor) > 0 {
+		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
+		}
+	}
+	r.mp.AddAddMetaByCondition("true", "source", r.name)
+
+	p := r.config.Path
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	addr := fmt.Sprintf("%s:%s", r.config.Addr, r.config.Port)
+	uri := addr + p
+	cclog.ComponentDebug(r.name, "INIT ", "listen on:", uri)
+
+	http.HandleFunc(p, r.ServerHttp)
+
+	r.server = &http.Server{
+		Addr:        addr,
+		Handler:     nil,
+		IdleTimeout: r.config.idleTimeout,
+	}
+	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)
+
+	r.jobs = make(map[string]*EECPTReceiverJob)
+	r.analysisDone = make(chan bool)
+
+	return r, nil
 }

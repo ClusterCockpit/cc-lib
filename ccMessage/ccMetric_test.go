@@ -27,8 +27,8 @@ func TestNewMetric_Float(t *testing.T) {
 		t.Error("Expected IsMetric() to return true")
 	}
 
-	if msg.GetMetricValue() != 75.5 {
-		t.Errorf("Expected GetMetricValue() to return 75.5, got '%v'", msg.GetMetricValue())
+	if value, ok := msg.GetMetricValue(); !ok || value != 75.5 {
+		t.Errorf("Expected GetMetricValue() to return 75.5, got '%v' (ok=%v)", value, ok)
 	}
 }
 
@@ -42,8 +42,8 @@ func TestNewMetric_Int(t *testing.T) {
 		t.Error("Expected IsMetric() to return true for int value")
 	}
 
-	if msg.GetMetricValue() != int64(1024) {
-		t.Errorf("Expected GetMetricValue() to return 1024, got '%v'", msg.GetMetricValue())
+	if value, ok := msg.GetMetricValue(); !ok || value != int64(1024) {
+		t.Errorf("Expected GetMetricValue() to return 1024, got '%v' (ok=%v)", value, ok)
 	}
 }
 
@@ -57,8 +57,8 @@ func TestNewMetric_Uint(t *testing.T) {
 		t.Error("Expected IsMetric() to return true for uint value")
 	}
 
-	if msg.GetMetricValue() != uint64(999999) {
-		t.Errorf("Expected GetMetricValue() to return 999999, got '%v'", msg.GetMetricValue())
+	if value, ok := msg.GetMetricValue(); !ok || value != uint64(999999) {
+		t.Errorf("Expected GetMetricValue() to return 999999, got '%v' (ok=%v)", value, ok)
 	}
 }
 
@@ -82,8 +82,8 @@ func TestIsMetric_WithoutValueField(t *testing.T) {
 func TestGetMetricValue_NonMetric(t *testing.T) {
 	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"event": "test"}, time.Now())
 
-	if value := msg.GetMetricValue(); value != nil {
-		t.Errorf("Expected nil for non-metric, got '%v'", value)
+	if value, ok := msg.GetMetricValue(); ok {
+		t.Errorf("Expected ok=false for non-metric, got value='%v' (ok=%v)", value, ok)
 	}
 }
 
@@ -97,8 +97,8 @@ func TestNewMetric_Zero(t *testing.T) {
 		t.Error("Expected IsMetric() to return true for zero value")
 	}
 
-	if msg.GetMetricValue() != 0.0 {
-		t.Errorf("Expected GetMetricValue() to return 0.0, got '%v'", msg.GetMetricValue())
+	if value, ok := msg.GetMetricValue(); !ok || value != 0.0 {
+		t.Errorf("Expected GetMetricValue() to return 0.0, got '%v' (ok=%v)", value, ok)
 	}
 }
 
@@ -108,7 +108,7 @@ func TestNewMetric_NegativeValue(t *testing.T) {
 		t.Fatalf("NewMetric with negative value failed: %v", err)
 	}
 
-	if msg.GetMetricValue() != -15.5 {
-		t.Errorf("Expected GetMetricValue() to return -15.5, got '%v'", msg.GetMetricValue())
+	if value, ok := msg.GetMetricValue(); !ok || value != -15.5 {
+		t.Errorf("Expected GetMetricValue() to return -15.5, got '%v' (ok=%v)", value, ok)
 	}
 }

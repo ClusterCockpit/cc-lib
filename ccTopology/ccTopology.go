@@ -6,6 +6,7 @@ package ccTopology
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -102,6 +103,30 @@ hwloc_obj_t _hwloc_get_child(hwloc_obj_t obj, unsigned int offset) {
 	return NULL;
 }
 
+hwloc_obj_t _hwloc_get_memory_child(hwloc_obj_t obj, unsigned int offset) {
+	if (offset < obj->memory_arity)
+	{
+		return &obj->memory_first_child[offset];
+	}
+	return NULL;
+}
+
+hwloc_obj_t _hwloc_get_io_child(hwloc_obj_t obj, unsigned int offset) {
+	if (offset < obj->io_arity)
+	{
+		return &obj->io_first_child[offset];
+	}
+	return NULL;
+}
+
+int _hwloc_cpuset_size(hwloc_cpuset_t cpuset) {
+	return hwloc_bitmap_weight(cpuset);
+}
+
+int _hwloc_cpuset_isset(hwloc_cpuset_t cpuset, unsigned id) {
+	return hwloc_bitmap_isset(cpuset, id);
+}
+
 */
 import "C"
 
@@ -129,6 +154,7 @@ const (
 	HWLOC_TYPE_MEMCACHE   HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MEMCACHE
 	HWLOC_TYPE_MISC       HWLOC_OBJ_TYPE = C.HWLOC_OBJ_MISC
 	HWLOC_TYPE_DIE        HWLOC_OBJ_TYPE = C.HWLOC_OBJ_DIE
+	HWLOC_TYPE_MAX        HWLOC_OBJ_TYPE = C.HWLOC_OBJ_TYPE_MAX
 )
 
 type HWLOC_OBJ_OSDEV_TYPE int
@@ -143,15 +169,18 @@ const (
 )
 
 type Object struct {
-	Type         HWLOC_OBJ_TYPE `json:"type"`
-	TypeString   string         `json:"typestring"`
-	ID           uint           `json:"id"`
-	IDString     string         `json:"idstring"`
-	Depth        int            `json:"depth"`
-	LogicalIndex uint           `json:"logical_index"`
-	parent       int64
-	Infos        map[string]string `json:"infos"`
-	Children     []Object          `json:"children"`
+	Type           HWLOC_OBJ_TYPE `json:"type"`
+	TypeString     string         `json:"typestring"`
+	ID             uint           `json:"id"`
+	IDString       string         `json:"idstring"`
+	Depth          int            `json:"depth"`
+	LogicalIndex   uint           `json:"logical_index"`
+	parent         int64
+	Infos          map[string]string `json:"infos"`
+	Children       []Object          `json:"children"`
+	MemoryChildren []Object          `json:"memory_children"`
+	IOChildren     []Object          `json:"io_children"`
+	HwlocObject    C.hwloc_obj_t
 }
 
 type CCTopologyFlags uint
@@ -173,6 +202,8 @@ type Topology interface {
 	GetDieStrings() []string
 	GetCores() []uint
 	GetCoreStrings() []string
+	GetMemoryDomains() []uint
+	GetMemoryDomainStrings() []string
 	GetPciDevices() []uint
 	GetPciDeviceStrings() []string
 	GetHwthreadsOfSocket(socket uint) []uint
@@ -187,9 +218,13 @@ type Topology interface {
 
 var filterPciClasses = []string{
 	"0x300",
+	"0x880",
 }
 
 func skipPciDevice(obj Object) bool {
+	if obj.Type != HWLOC_TYPE_PCI_DEVICE {
+		return false
+	}
 	return !slices.Contains(filterPciClasses, obj.Infos["class_id"])
 }
 
@@ -213,6 +248,12 @@ func (t *HWLOC_OBJ_TYPE) String() string {
 		return "die"
 	case HWLOC_TYPE_PCI_DEVICE:
 		return "accelerator"
+	case HWLOC_TYPE_GROUP:
+		return "group"
+	case HWLOC_TYPE_MISC:
+		return "misc"
+	case HWLOC_TYPE_MEMCACHE:
+		return "memcache"
 	case HWLOC_TYPE_L1CACHE:
 		return "l1cache"
 	case HWLOC_TYPE_L2CACHE:
@@ -278,6 +319,13 @@ func addObject(o Object, objects *[]*Object) {
 	for _, c := range o.Children {
 		addObject(c, objects)
 	}
+	for _, c := range o.MemoryChildren {
+		addObject(c, objects)
+	}
+	for _, c := range o.IOChildren {
+		addObject(c, objects)
+	}
+
 }
 func (t *topology) UnmarshalJSON(in []byte) error {
 	err := json.Unmarshal(in, &t.root)
@@ -288,18 +336,24 @@ func (t *topology) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
-func convertObject(hwloc_obj C.hwloc_obj_t) Object {
+func convertObject(hwloc_obj C.hwloc_obj_t) (Object, bool, error) {
 	// ty := HWLOC_OBJ_TYPE(hwloc_obj._type)
 	// fmt.Printf("HwlocObject Type %s with ID %d SubType '%s' Name '%s' LogIdx %d Infos %d\n", ty.String(), int(hwloc_obj.os_index), C.GoString(hwloc_obj.subtype), C.GoString(hwloc_obj.name), int(hwloc_obj.logical_index), int(hwloc_obj.infos_count))
+	if HWLOC_OBJ_TYPE(hwloc_obj._type) >= HWLOC_TYPE_MAX {
+		return Object{}, true, errors.New("invalid hwloc obj type")
+	}
 	o := Object{
-		Type:         HWLOC_OBJ_TYPE(hwloc_obj._type),
-		ID:           uint(hwloc_obj.os_index),
-		LogicalIndex: uint(hwloc_obj.logical_index),
-		Depth:        int(hwloc_obj.depth),
-		IDString:     fmt.Sprintf("%d", hwloc_obj.os_index),
-		Infos:        make(map[string]string),
-		Children:     make([]Object, 0),
-		parent:       -1,
+		Type:           HWLOC_OBJ_TYPE(hwloc_obj._type),
+		ID:             uint(hwloc_obj.os_index),
+		LogicalIndex:   uint(hwloc_obj.logical_index),
+		Depth:          int(hwloc_obj.depth),
+		IDString:       fmt.Sprintf("%d", hwloc_obj.os_index),
+		Infos:          make(map[string]string),
+		Children:       make([]Object, 0),
+		MemoryChildren: make([]Object, 0),
+		IOChildren:     make([]Object, 0),
+		HwlocObject:    hwloc_obj,
+		parent:         -1,
 	}
 	o.TypeString = o.Type.String()
 	if hwloc_obj.parent != nil {
@@ -370,7 +424,7 @@ func convertObject(hwloc_obj C.hwloc_obj_t) Object {
 			}
 		}
 	}
-	return o
+	return o, false, nil
 }
 
 func (t *topology) additionalMachineOps(hwtopo C.hwloc_topology_t) []Object {
@@ -378,8 +432,11 @@ func (t *topology) additionalMachineOps(hwtopo C.hwloc_topology_t) []Object {
 	nbobj := C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_PCI_DEVICE)
 	for j := range int(nbobj) {
 		hwobj := C.hwloc_get_obj_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_PCI_DEVICE, C.uint(j))
-		obj := convertObject(hwobj)
-		if skipPciDevice(obj) {
+		obj, skip, err := convertObject(hwobj)
+		if skip || skipPciDevice(obj) {
+			continue
+		}
+		if err != nil {
 			continue
 		}
 		numa_file := filepath.Join("/sys/bus/pci/devices", obj.Infos["pci_address"], "numa_node")
@@ -396,8 +453,10 @@ func (t *topology) additionalMachineOps(hwtopo C.hwloc_topology_t) []Object {
 	nbobj = C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_OS_DEVICE)
 	for j := range int(nbobj) {
 		hwobj := C.hwloc_get_obj_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_OS_DEVICE, C.uint(j))
-		obj := convertObject(hwobj)
-		out = append(out, obj)
+		obj, skip, err := convertObject(hwobj)
+		if err == nil && !skip {
+			out = append(out, obj)
+		}
 	}
 	return out
 }
@@ -430,8 +489,11 @@ func (t *topology) additionalNumaOps(hwtopo C.hwloc_topology_t, numaObj Object) 
 	nbobj := C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_PCI_DEVICE)
 	for j := range int(nbobj) {
 		hwobj := C.hwloc_get_obj_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_PCI_DEVICE, C.uint(j))
-		obj := convertObject(hwobj)
-		if skipPciDevice(obj) {
+		obj, skip, err := convertObject(hwobj)
+		if skip || skipPciDevice(obj) {
+			continue
+		}
+		if err != nil {
 			continue
 		}
 		numa_file := filepath.Join("/sys/bus/pci/devices", obj.Infos["pci_address"], "numa_node")
@@ -458,10 +520,20 @@ func (t *topology) additionalNumaOps(hwtopo C.hwloc_topology_t, numaObj Object) 
 }
 
 func (t *topology) traverseObject(hwtopo C.hwloc_topology_t, hwloc_obj C.hwloc_obj_t) Object {
-	obj := convertObject(hwloc_obj)
+	obj, skip, err := convertObject(hwloc_obj)
+	if skip || skipPciDevice(obj) || err != nil {
+		return Object{Type: HWLOC_TYPE_MAX}
+	}
+
 	for i := range int(hwloc_obj.arity) {
 		obj.Children = append(obj.Children, t.traverseObject(hwtopo, C._hwloc_get_child(hwloc_obj, C.uint(i))))
 	}
+	for i := range int(hwloc_obj.memory_arity) {
+		obj.MemoryChildren = append(obj.MemoryChildren, t.traverseObject(hwtopo, C._hwloc_get_memory_child(hwloc_obj, C.uint(i))))
+	}
+	// for i := range int(hwloc_obj.io_arity) {
+	// 	obj.IOChildren = append(obj.IOChildren, t.traverseObject(hwtopo, C._hwloc_get_io_child(hwloc_obj, C.uint(i))))
+	// }
 	switch obj.Type {
 	case HWLOC_TYPE_MACHINE:
 		obj.Children = append(obj.Children, t.additionalMachineOps(hwtopo)...)
@@ -498,10 +570,19 @@ func (t *topology) init() error {
 	return nil
 }
 
+var _ccTopology_local_topo *topology = nil
+
 func LocalTopology() (Topology, error) {
-	t := new(topology)
-	err := t.init()
-	return t, err
+	if _ccTopology_local_topo == nil {
+		t := new(topology)
+		err := t.init()
+		if err == nil {
+			_ccTopology_local_topo = t
+		}
+		return t, err
+	} else {
+		return _ccTopology_local_topo, nil
+	}
 }
 
 func RemoteTopology(topologyJson json.RawMessage) (Topology, error) {
@@ -603,7 +684,7 @@ func (t *topology) GetMemoryDomainStrings() []string {
 func (t *topology) GetPciDevices() []uint {
 	out := make([]uint, 0)
 	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_NUMANODE {
+		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_DIE || o.Type == HWLOC_TYPE_NUMANODE {
 			for _, c := range o.Children {
 				if c.Type == HWLOC_TYPE_PCI_DEVICE {
 					out = append(out, c.ID)
@@ -617,7 +698,7 @@ func (t *topology) GetPciDevices() []uint {
 func (t *topology) GetPciDeviceStrings() []string {
 	out := make([]string, 0)
 	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_NUMANODE {
+		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_DIE || o.Type == HWLOC_TYPE_NUMANODE {
 			for _, c := range o.Children {
 				if c.Type == HWLOC_TYPE_PCI_DEVICE {
 					if addr, ok := c.Infos["pci_address"]; ok {
@@ -653,16 +734,16 @@ func (t *topology) GetHwthreadStringsOfSocket(socket uint) []string {
 func (t *topology) GetHwthreadsOfMemoryDomain(memoryDomain uint) []uint {
 	out := make([]uint, 0)
 	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_DIE {
-			for _, c := range o.Children {
-				if c.Type == HWLOC_TYPE_NUMANODE && c.ID == memoryDomain {
-					getChildrenIdsOfType(*o, HWLOC_TYPE_PU, &out)
+		if o.Type == HWLOC_TYPE_NUMANODE {
+			numHWthreads := C._hwloc_cpuset_size(o.HwlocObject.cpuset)
+			for _, hwo := range t.objects {
+				if hwo.Type == HWLOC_TYPE_PU && C._hwloc_cpuset_isset(o.HwlocObject.cpuset, C.unsigned(hwo.ID)) == 1 {
+					out = append(out, hwo.ID)
+				}
+				if len(out) == int(numHWthreads) {
 					break
 				}
 			}
-		}
-		if len(out) > 0 {
-			break
 		}
 	}
 	return out
@@ -671,16 +752,16 @@ func (t *topology) GetHwthreadsOfMemoryDomain(memoryDomain uint) []uint {
 func (t *topology) GetHwthreadStringsOfMemoryDomain(memoryDomain uint) []string {
 	out := make([]string, 0)
 	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_MACHINE || o.Type == HWLOC_TYPE_PACKAGE || o.Type == HWLOC_TYPE_DIE {
-			for _, c := range o.Children {
-				if c.Type == HWLOC_TYPE_NUMANODE && c.ID == memoryDomain {
-					getChildrenIdStringsOfType(*o, HWLOC_TYPE_PU, &out)
+		if o.Type == HWLOC_TYPE_NUMANODE {
+			numHWthreads := C._hwloc_cpuset_size(o.HwlocObject.cpuset)
+			for _, hwo := range t.objects {
+				if hwo.Type == HWLOC_TYPE_PU && C._hwloc_cpuset_isset(o.HwlocObject.cpuset, C.unsigned(hwo.ID)) == 1 {
+					out = append(out, fmt.Sprintf("%d", hwo.ID))
+				}
+				if len(out) == int(numHWthreads) {
 					break
 				}
 			}
-		}
-		if len(out) > 0 {
-			break
 		}
 	}
 	return out

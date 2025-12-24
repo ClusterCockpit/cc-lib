@@ -28,8 +28,8 @@ func TestNewQuery(t *testing.T) {
 		t.Error("Expected IsQuery() to return true")
 	}
 
-	if msg.GetQueryValue() != queryString {
-		t.Errorf("Expected GetQueryValue() to return '%s', got '%s'", queryString, msg.GetQueryValue())
+	if value, ok := msg.GetQueryValue(); !ok || value != queryString {
+		t.Errorf("Expected GetQueryValue() to return '%s', got '%s' (ok=%v)", queryString, value, ok)
 	}
 }
 
@@ -43,8 +43,8 @@ func TestNewQuery_EmptyQuery(t *testing.T) {
 		t.Error("Expected IsQuery() to return true even with empty query")
 	}
 
-	if msg.GetQueryValue() != "" {
-		t.Errorf("Expected empty string, got '%s'", msg.GetQueryValue())
+	if value, ok := msg.GetQueryValue(); !ok || value != "" {
+		t.Errorf("Expected empty string, got '%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -67,8 +67,8 @@ func TestIsQuery_WithoutQueryField(t *testing.T) {
 func TestGetQueryValue_NonQuery(t *testing.T) {
 	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
 
-	if value := msg.GetQueryValue(); value != "" {
-		t.Errorf("Expected empty string for non-query, got '%s'", value)
+	if value, ok := msg.GetQueryValue(); ok {
+		t.Errorf("Expected ok=false for non-query, got value='%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestNewQuery_ComplexQuery(t *testing.T) {
 		t.Fatalf("NewQuery with complex query failed: %v", err)
 	}
 
-	if msg.GetQueryValue() != complexQuery {
-		t.Error("Expected complex query to be preserved")
+	if value, ok := msg.GetQueryValue(); !ok || value != complexQuery {
+		t.Errorf("Expected complex query to be preserved, got ok=%v", ok)
 	}
 }

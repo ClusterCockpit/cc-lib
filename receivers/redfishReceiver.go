@@ -6,6 +6,7 @@
 // license that can be found in the LICENSE file.
 // additional authors:
 // Holger Obermaier (NHR@KIT)
+
 package receivers
 
 import (
@@ -199,7 +200,7 @@ func (r *RedfishReceiver) readSensors(
 		// Get sensor information for this chassis
 		sensors, err := chassis.Sensors()
 		if err != nil {
-			return fmt.Errorf("readSensors: chassis.Sensors() failed: %v", err)
+			return fmt.Errorf("readSensors: chassis.Sensors() failed: %w", err)
 		}
 
 		// Skip empty sensors information
@@ -302,7 +303,7 @@ func (r *RedfishReceiver) readThermalMetrics(
 	// Get thermal information for each chassis
 	thermal, err := chassis.Thermal()
 	if err != nil {
-		return fmt.Errorf("readMetrics: chassis.Thermal() failed: %v", err)
+		return fmt.Errorf("readMetrics: chassis.Thermal() failed: %w", err)
 	}
 
 	// Skip empty thermal information
@@ -412,7 +413,7 @@ func (r *RedfishReceiver) readPowerMetrics(
 	// Get power information for each chassis
 	power, err := chassis.Power()
 	if err != nil {
-		return fmt.Errorf("readMetrics: chassis.Power() failed: %v", err)
+		return fmt.Errorf("readMetrics: chassis.Power() failed: %w", err)
 	}
 
 	// Skip empty power information
@@ -591,8 +592,10 @@ func (r *RedfishReceiver) readProcessorMetrics(
 	return nil
 }
 
-// readMetrics reads redfish thermal, power and processor metrics from the redfish device
-// configured in clientConfig
+// readMetrics connects to a Redfish service and collects thermal, power, and processor metrics.
+// It establishes a session, retrieves chassis and system lists, then calls specialized
+// read functions (readSensors, readThermalMetrics, readPowerMetrics, readProcessorMetrics)
+// based on the client configuration. Handles session management and cleanup via defer.
 func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig) error {
 	// Connect to redfish service
 	c, err := gofish.Connect(clientConfig.gofish)
@@ -624,7 +627,7 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 	if isChassisListRequired {
 		chassisList, err = c.Service.Chassis()
 		if err != nil {
-			return fmt.Errorf("readMetrics: c.Service.Chassis() failed: %v", err)
+			return fmt.Errorf("readMetrics: c.Service.Chassis() failed: %w", err)
 		}
 	}
 
@@ -634,7 +637,7 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 	if isComputerSystemListRequired {
 		computerSystemList, err = c.Service.Systems()
 		if err != nil {
-			return fmt.Errorf("readMetrics: c.Service.Systems() failed: %v", err)
+			return fmt.Errorf("readMetrics: c.Service.Systems() failed: %w", err)
 		}
 	}
 
@@ -676,7 +679,7 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 			// loop for all processors
 			processors, err := system.Processors()
 			if err != nil {
-				return fmt.Errorf("readMetrics: system.Processors() failed: %v", err)
+				return fmt.Errorf("readMetrics: system.Processors() failed: %w", err)
 			}
 			for _, processor := range processors {
 				err := r.readProcessorMetrics(clientConfig, processor)
@@ -860,13 +863,13 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	r.mp = p
 	if len(r.config.MessageProcessor) > 0 {
 		err = r.mp.FromConfigJSON(r.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 

@@ -6,7 +6,6 @@
 package ccmessage
 
 import (
-	"reflect"
 	"time"
 )
 
@@ -31,19 +30,14 @@ func NewLog(name string,
 }
 
 func (m *ccMessage) IsLog() bool {
-	if v, ok := m.GetField("log"); ok {
-		if reflect.TypeOf(v) == reflect.TypeOf("string") {
-			return true
-		}
-	}
-	return false
+	return m.hasStringField("log")
 }
 
-func (m *ccMessage) GetLogValue() string {
+func (m *ccMessage) GetLogValue() (string, bool) {
 	if m.IsLog() {
 		if v, ok := m.GetField("log"); ok {
-			return v.(string)
+			return v.(string), true
 		}
 	}
-	return ""
+	return "", false
 }

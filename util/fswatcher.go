@@ -3,6 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+// Package util provides common utility functions and types for ClusterCockpit applications.
+// This file implements a file system watcher for monitoring file changes.
 package util
 
 import (

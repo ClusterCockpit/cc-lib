@@ -28,8 +28,8 @@ func TestNewEvent(t *testing.T) {
 		t.Error("Expected IsEvent() to return true")
 	}
 
-	if msg.GetEventValue() != eventPayload {
-		t.Errorf("Expected GetEventValue() to return '%s', got '%s'", eventPayload, msg.GetEventValue())
+	if value, ok := msg.GetEventValue(); !ok || value != eventPayload {
+		t.Errorf("Expected GetEventValue() to return '%s', got '%s' (ok=%v)", eventPayload, value, ok)
 	}
 }
 
@@ -43,8 +43,8 @@ func TestNewEvent_EmptyPayload(t *testing.T) {
 		t.Error("Expected IsEvent() to return true even with empty payload")
 	}
 
-	if msg.GetEventValue() != "" {
-		t.Errorf("Expected empty string, got '%s'", msg.GetEventValue())
+	if value, ok := msg.GetEventValue(); !ok || value != "" {
+		t.Errorf("Expected empty string, got '%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -67,8 +67,8 @@ func TestIsEvent_WithoutEventField(t *testing.T) {
 func TestGetEventValue_NonEvent(t *testing.T) {
 	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
 
-	if value := msg.GetEventValue(); value != "" {
-		t.Errorf("Expected empty string for non-event, got '%s'", value)
+	if value, ok := msg.GetEventValue(); ok {
+		t.Errorf("Expected ok=false for non-event, got value='%s' (ok=%v)", value, ok)
 	}
 }
 
@@ -79,7 +79,7 @@ func TestNewEvent_WithJSONPayload(t *testing.T) {
 		t.Fatalf("NewEvent with JSON payload failed: %v", err)
 	}
 
-	if msg.GetEventValue() != jsonPayload {
-		t.Errorf("Expected JSON payload to be preserved, got '%s'", msg.GetEventValue())
+	if value, ok := msg.GetEventValue(); !ok || value != jsonPayload {
+		t.Errorf("Expected JSON payload to be preserved, got '%s' (ok=%v)", value, ok)
 	}
 }
