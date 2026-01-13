@@ -34,6 +34,7 @@ type Job struct {
 	Project            string                   `json:"project" db:"project" example:"abcd200"`
 	User               string                   `json:"user" db:"hpc_user" example:"abcd100h"`
 	Shared             string                   `json:"shared" db:"shared" enums:"none,single_user,multi_user"`
+	Exclusive          int32                    `json:"exclusive" db:"exclusive" example:"1" minimum:"0" maximum:"2"` // for backwards compatibility
 	State              JobState                 `json:"jobState" db:"job_state" example:"completed" enums:"boot_fail,cancelled,completed,deadline,failed,node_fail,out-of-memory,pending,preempted,running,suspended,timeout"`
 	Tags               []*Tag                   `json:"tags,omitempty"`
 	RawEnergyFootprint []byte                   `json:"-" db:"energy_footprint"`
