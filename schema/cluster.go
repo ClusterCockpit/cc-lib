@@ -47,19 +47,19 @@ type MetricValue struct {
 // SubCluster represents a homogeneous partition of a cluster with identical hardware.
 // A cluster may contain multiple subclusters with different processor types or configurations.
 type SubCluster struct {
-	Name            string         `json:"name"`                      // Name of the subcluster (e.g., "main", "gpu", "bigmem")
-	Nodes           string         `json:"nodes"`                     // Node list in condensed format (e.g., "node[001-100]")
-	ProcessorType   string         `json:"processorType"`             // CPU model (e.g., "Intel Xeon Gold 6148")
-	Topology        Topology       `json:"topology"`                  // Hardware topology of nodes in this subcluster
-	FlopRateScalar  MetricValue    `json:"flopRateScalar"`            // Theoretical scalar FLOP rate per node
-	FlopRateSimd    MetricValue    `json:"flopRateSimd"`              // Theoretical SIMD FLOP rate per node
-	MemoryBandwidth MetricValue    `json:"memoryBandwidth"`           // Theoretical memory bandwidth per node
-	MetricConfig    []MetricConfig `json:"metricConfig,omitempty"`    // Subcluster-specific metric configurations
-	Footprint       []string       `json:"footprint,omitempty"`       // Default footprint metrics for jobs
-	EnergyFootprint []string       `json:"energyFootprint,omitempty"` // Energy-related footprint metrics
-	SocketsPerNode  int            `json:"socketsPerNode"`            // Number of CPU sockets per node
-	CoresPerSocket  int            `json:"coresPerSocket"`            // Number of cores per CPU socket
-	ThreadsPerCore  int            `json:"threadsPerCore"`            // Number of hardware threads per core (SMT level)
+	Name            string          `json:"name"`                      // Name of the subcluster (e.g., "main", "gpu", "bigmem")
+	Nodes           string          `json:"nodes"`                     // Node list in condensed format (e.g., "node[001-100]")
+	ProcessorType   string          `json:"processorType"`             // CPU model (e.g., "Intel Xeon Gold 6148")
+	Topology        Topology        `json:"topology"`                  // Hardware topology of nodes in this subcluster
+	FlopRateScalar  MetricValue     `json:"flopRateScalar"`            // Theoretical scalar FLOP rate per node
+	FlopRateSimd    MetricValue     `json:"flopRateSimd"`              // Theoretical SIMD FLOP rate per node
+	MemoryBandwidth MetricValue     `json:"memoryBandwidth"`           // Theoretical memory bandwidth per node
+	MetricConfig    []*MetricConfig `json:"metricConfig,omitempty"`    // Subcluster-specific metric configurations
+	Footprint       []string        `json:"footprint,omitempty"`       // Default footprint metrics for jobs
+	EnergyFootprint []string        `json:"energyFootprint,omitempty"` // Energy-related footprint metrics
+	SocketsPerNode  int             `json:"socketsPerNode"`            // Number of CPU sockets per node
+	CoresPerSocket  int             `json:"coresPerSocket"`            // Number of cores per CPU socket
+	ThreadsPerCore  int             `json:"threadsPerCore"`            // Number of hardware threads per core (SMT level)
 }
 
 // Metric defines thresholds for a performance metric used in job classification and alerts.
