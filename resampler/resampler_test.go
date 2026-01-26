@@ -116,6 +116,10 @@ func TestCalculateAverageDataPoint(t *testing.T) {
 
 // TestSimpleResampler tests the SimpleResampler function
 func TestSimpleResampler(t *testing.T) {
+	// Set minimum required points to 100 for testing
+	SetMinimumRequiredPoints(100)
+	defer SetMinimumRequiredPoints(1000) // Restore default after test
+
 	tests := []struct {
 		name         string
 		data         []schema.Float
@@ -237,6 +241,10 @@ func TestSimpleResampler(t *testing.T) {
 
 // TestLargestTriangleThreeBucket tests the LTTB algorithm
 func TestLargestTriangleThreeBucket(t *testing.T) {
+	// Set minimum required points to 100 for testing
+	SetMinimumRequiredPoints(100)
+	defer SetMinimumRequiredPoints(1000) // Restore default after test
+
 	tests := []struct {
 		name         string
 		data         []schema.Float
@@ -376,6 +384,10 @@ func TestLargestTriangleThreeBucket(t *testing.T) {
 
 // TestLTTBPreservesFeatures tests that LTTB preserves important features better than simple resampling
 func TestLTTBPreservesFeatures(t *testing.T) {
+	// Set minimum required points to 100 for testing
+	SetMinimumRequiredPoints(100)
+	defer SetMinimumRequiredPoints(1000) // Restore default after test
+
 	// Create a dataset with a spike
 	data := make([]schema.Float, 200)
 	for i := range data {
