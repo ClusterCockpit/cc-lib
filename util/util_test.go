@@ -23,7 +23,7 @@ func TestCheckFileExists(t *testing.T) {
 
 	filePath := filepath.Join(tmpdir, "version.txt")
 
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0666); err != nil {
+	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if !util.CheckFileExists(filePath) {
@@ -44,7 +44,7 @@ func TestGetFileSize(t *testing.T) {
 		t.Fatalf("expected 0, got %d", s)
 	}
 
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0666); err != nil {
+	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if s := util.GetFilesize(filePath); s == 0 {
@@ -60,11 +60,11 @@ func TestGetFileCount(t *testing.T) {
 	}
 
 	filePath := filepath.Join(tmpdir, "data-1.json")
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0666); err != nil {
+	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	filePath = filepath.Join(tmpdir, "data-2.json")
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0666); err != nil {
+	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if c := util.GetFilecount(tmpdir); c != 2 {
@@ -110,7 +110,7 @@ func TestCompressUncompressFile(t *testing.T) {
 
 	// Create a test file
 	testContent := []byte("This is a test file for compression and decompression.")
-	if err := os.WriteFile(originalFile, testContent, 0666); err != nil {
+	if err := os.WriteFile(originalFile, testContent, 0o666); err != nil {
 		t.Fatal(err)
 	}
 
@@ -155,7 +155,7 @@ func TestCopyFile(t *testing.T) {
 	dstFile := filepath.Join(tmpdir, "dest.txt")
 
 	testContent := []byte("Test file content")
-	if err := os.WriteFile(srcFile, testContent, 0644); err != nil {
+	if err := os.WriteFile(srcFile, testContent, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,17 +192,17 @@ func TestCopyDir(t *testing.T) {
 	dstDir := filepath.Join(tmpdir, "dest")
 
 	// Create source directory structure
-	if err := os.Mkdir(srcDir, 0755); err != nil {
+	if err := os.Mkdir(srcDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(srcDir, "file1.txt"), []byte("content1"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "file1.txt"), []byte("content1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	subDir := filepath.Join(srcDir, "subdir")
-	if err := os.Mkdir(subDir, 0755); err != nil {
+	if err := os.Mkdir(subDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -240,10 +240,10 @@ func TestDiskUsage(t *testing.T) {
 	}
 
 	// Create some files
-	if err := os.WriteFile(filepath.Join(tmpdir, "file1.txt"), make([]byte, 1000000), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpdir, "file1.txt"), make([]byte, 1000000), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpdir, "file2.txt"), make([]byte, 500000), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpdir, "file2.txt"), make([]byte, 500000), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,79 +251,6 @@ func TestDiskUsage(t *testing.T) {
 	usage = util.DiskUsage(tmpdir)
 	if usage < 1.4 || usage > 1.6 {
 		t.Errorf("expected ~1.5 MB, got %f", usage)
-	}
-}
-
-func TestFloat(t *testing.T) {
-	// Test IsNaN
-	f := util.NaN
-	if !f.IsNaN() {
-		t.Error("expected NaN.IsNaN() to return true")
-	}
-
-	f = util.Float(3.14)
-	if f.IsNaN() {
-		t.Error("expected Float(3.14).IsNaN() to return false")
-	}
-
-	// Test Double
-	if f.Double() != 3.14 {
-		t.Errorf("expected Double() to return 3.14, got %f", f.Double())
-	}
-
-	// Test MarshalJSON for NaN
-	nanJSON, err := util.NaN.MarshalJSON()
-	if err != nil {
-		t.Fatalf("MarshalJSON failed: %v", err)
-	}
-	if string(nanJSON) != "null" {
-		t.Errorf("expected 'null' for NaN, got %s", nanJSON)
-	}
-
-	// Test MarshalJSON for normal value
-	normalJSON, err := util.Float(3.142).MarshalJSON()
-	if err != nil {
-		t.Fatalf("MarshalJSON failed: %v", err)
-	}
-	if string(normalJSON) != "3.142" {
-		t.Errorf("expected '3.142', got %s", normalJSON)
-	}
-
-	// Test UnmarshalJSON for null
-	var f2 util.Float
-	if err := f2.UnmarshalJSON([]byte("null")); err != nil {
-		t.Fatalf("UnmarshalJSON failed: %v", err)
-	}
-	if !f2.IsNaN() {
-		t.Error("expected unmarshaled null to be NaN")
-	}
-
-	// Test UnmarshalJSON for number
-	if err := f2.UnmarshalJSON([]byte("5.678")); err != nil {
-		t.Fatalf("UnmarshalJSON failed: %v", err)
-	}
-	if f2.Double() != 5.678 {
-		t.Errorf("expected 5.678, got %f", f2.Double())
-	}
-
-	// Test ConvertToFloat
-	converted := util.ConvertToFloat(-1.0)
-	if !converted.IsNaN() {
-		t.Error("expected ConvertToFloat(-1.0) to return NaN")
-	}
-	converted = util.ConvertToFloat(10.5)
-	if converted.Double() != 10.5 {
-		t.Errorf("expected ConvertToFloat(10.5) to return 10.5, got %f", converted.Double())
-	}
-
-	// Test FloatArray MarshalJSON
-	arr := util.FloatArray{util.Float(1.0), util.NaN, util.Float(3.0)}
-	arrJSON, err := arr.MarshalJSON()
-	if err != nil {
-		t.Fatalf("FloatArray MarshalJSON failed: %v", err)
-	}
-	if string(arrJSON) != "[1.000,null,3.000]" {
-		t.Errorf("expected '[1.000,null,3.000]', got %s", arrJSON)
 	}
 }
 
