@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package schema
 
 import (
@@ -163,4 +164,24 @@ func GetFloat64ToFloat(s []float64) []Float {
 	}
 
 	return fp
+}
+
+// MarshalJSON implements json.Marshaler for FloatArray.
+// It efficiently marshals a slice of Float values, converting NaN to null.
+func (fa FloatArray) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 0, 2+len(fa)*8)
+	buf = append(buf, '[')
+	for i := range fa {
+		if i != 0 {
+			buf = append(buf, ',')
+		}
+
+		if fa[i].IsNaN() {
+			buf = append(buf, `null`...)
+		} else {
+			buf = strconv.AppendFloat(buf, float64(fa[i]), 'f', 3, 64)
+		}
+	}
+	buf = append(buf, ']')
+	return buf, nil
 }
