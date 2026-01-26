@@ -29,8 +29,8 @@ import (
 	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
-// Default number of points required to trigger resampling.
-// Otherwise, time series of original timestep will be returned without resampling
+// MinimumRequiredPoints is the default number of points required to trigger resampling.
+// If the data has fewer points, the original time series will be returned without resampling.
 var MinimumRequiredPoints int = 1000
 
 // calculateTriangleArea computes the area of a triangle defined by three points.
@@ -108,29 +108,31 @@ func calculateAverageDataPoint(points []schema.Float, xStart int64) (avgX schema
 //	// Returns: [1.0, 3.0, 5.0], 2, nil
 func SimpleResampler(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error) {
 	// checks if the frequencies are valid or not.
-	newDataLength, step := validateFrequency(len(data), oldFrequency, newFrequency)
+	newDataLength, step, err := validateFrequency(len(data), oldFrequency, newFrequency)
+	if err != nil {
+		return nil, 0, err
+	}
 	if newDataLength == -1 {
 		return data, oldFrequency, nil
 	}
 
 	newData := make([]schema.Float, newDataLength)
-	for i := 0; i < newDataLength; i++ {
+	for i := range newDataLength {
 		newData[i] = data[i*step]
 	}
 
 	return newData, newFrequency, nil
 }
 
-func validateFrequency(lenData int, oldFrequency, newFrequency int64) (int, int) {
+func validateFrequency(lenData int, oldFrequency, newFrequency int64) (int, int, error) {
 	// Validate inputs and check if downsampling is needed
 	if oldFrequency == 0 || newFrequency == 0 || newFrequency <= oldFrequency {
-		return -1, 0
+		return -1, 0, nil
 	}
 
 	// Ensure new frequency is a multiple of old frequency
 	if newFrequency%oldFrequency != 0 {
-		fmt.Printf("new sampling frequency (%d) must be a multiple of old frequency (%d)", newFrequency, oldFrequency)
-		return -1, 0
+		return -1, 0, fmt.Errorf("new sampling frequency (%d) must be a multiple of old frequency (%d)", newFrequency, oldFrequency)
 	}
 
 	step := int(newFrequency / oldFrequency)
@@ -138,10 +140,10 @@ func validateFrequency(lenData int, oldFrequency, newFrequency int64) (int, int)
 
 	// Don't downsample if result would be trivial or counterproductive
 	if (newDataLength == 0) || (lenData < MinimumRequiredPoints) || (newDataLength >= lenData) {
-		return -1, 0
+		return -1, 0, nil
 	}
 
-	return newDataLength, step
+	return newDataLength, step, nil
 }
 
 // LargestTriangleThreeBucket (LTTB) performs perceptually-aware downsampling.
@@ -192,7 +194,10 @@ func validateFrequency(lenData int, oldFrequency, newFrequency int64) (int, int)
 //   - Adapted from: https://github.com/haoel/downsampling/blob/master/core/lttb.go
 func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error) {
 	// checks if the frequencies are valid or not.
-	newDataLength, _ := validateFrequency(len(data), oldFrequency, newFrequency)
+	newDataLength, _, err := validateFrequency(len(data), oldFrequency, newFrequency)
+	if err != nil {
+		return nil, 0, err
+	}
 	if newDataLength == -1 {
 		return data, oldFrequency, nil
 	}
