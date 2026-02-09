@@ -12,6 +12,7 @@ import (
 
 // TestExpand validates the Expand function with various input patterns.
 // It tests:
+//   - Single node without index
 //   - Single nodes and duplicates
 //   - Zero-padded ranges
 //   - Nodes with suffixes
@@ -20,6 +21,7 @@ import (
 //   - Whitespace handling
 //   - Error conditions (invalid characters, malformed ranges, decreasing ranges)
 func TestExpand(t *testing.T) {
+
 	// Compare two slices of strings
 	equal := func(a, b []string) bool {
 		if len(a) != len(b) {
@@ -41,8 +43,20 @@ func TestExpand(t *testing.T) {
 
 	expandTests := []testDefinition{
 		{
+			// Single node without index
+			input:          "na",
+			resultExpected: []string{"na"},
+			errorExpected:  false,
+		},
+		{
 			// Single node
 			input:          "n1",
+			resultExpected: []string{"n1"},
+			errorExpected:  false,
+		},
+		{
+			// Single node with delimiters
+			input:          " , n1",
 			resultExpected: []string{"n1"},
 			errorExpected:  false,
 		},
@@ -65,9 +79,51 @@ func TestExpand(t *testing.T) {
 			errorExpected:  false,
 		},
 		{
+			// Multiple nodes without a index
+			input:          "na,nb",
+			resultExpected: []string{"na", "nb"},
+			errorExpected:  false,
+		},
+		{
+			// Multiple nodes without a range
+			input:          "n1,n2",
+			resultExpected: []string{"n1", "n2"},
+			errorExpected:  false,
+		},
+		{
 			// Multiple nodes with a single range
 			input:          "n[1-2]",
 			resultExpected: []string{"n1", "n2"},
+			errorExpected:  false,
+		},
+		{
+			// Multiple nodes with a single range with same padding
+			input:          "n[001-002]",
+			resultExpected: []string{"n001", "n002"},
+			errorExpected:  false,
+		},
+		{
+			// Multiple nodes with a single range with different padding
+			input:          "n[1-002]",
+			resultExpected: []string{},
+			errorExpected:  true,
+		},
+		{
+			// Multiple nodes without a range and multiple index
+			input:          "n[1,2]",
+			resultExpected: []string{"n1", "n2"},
+			errorExpected:  false,
+		},
+		{
+			// Multiple nodes without a range and multiple index with same padding
+			input:          "n[001,002]",
+			resultExpected: []string{"n001", "n002"},
+			errorExpected:  false,
+		},
+		{
+			// Multiple nodes without a range and multiple index with different padding
+			input:          "n[1,002]",
+			resultExpected: []string{"n002", "n1"},
 			errorExpected:  false,
 		},
 		{

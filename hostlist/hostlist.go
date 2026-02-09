@@ -21,10 +21,43 @@ package hostlist
 import (
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+var regexPrecompiled struct {
+	hl *regexp.Regexp
+	indexPrefix,
+	indexRange,
+	indexSuffix int
+}
+
+// init initializes repeatedly used regular expressions
+func init() {
+	// Create ranges regular expression
+	regexNumber := "[[:digit:]]+"
+	regexRange := regexNumber + "-" + regexNumber
+	regexOptionalNumberOrRange := "(" + regexNumber + ",|" + regexRange + ",)*"
+	regexNumberOrRange := "(" + regexNumber + "|" + regexRange + ")"
+	regexBraceLeft := "[[]"
+	regexBraceRight := "[]]"
+	regexRanges := regexBraceLeft +
+		regexOptionalNumberOrRange +
+		regexNumberOrRange +
+		regexBraceRight
+
+	// Create host list regular expression
+	regexLeadingDelimiters := "^[,[:space:]]*"
+	regexDNSChars := "[a-zA-Z0-9-]+"
+	regePrefix := "(?P<prefix>" + regexDNSChars + ")"
+	regexOptionalRange := "(?P<range>" + regexRanges + ")?"
+	regexOptionalSuffix := "(?P<suffix>" + regexDNSChars + ")?"
+	regexPrecompiled.hl = regexp.MustCompile(regexLeadingDelimiters + regePrefix + regexOptionalRange + regexOptionalSuffix)
+	regexPrecompiled.indexPrefix = regexPrecompiled.hl.SubexpIndex("prefix")
+	regexPrecompiled.indexRange = regexPrecompiled.hl.SubexpIndex("range")
+	regexPrecompiled.indexSuffix = regexPrecompiled.hl.SubexpIndex("suffix")
+}
 
 // Expand converts a compact hostlist specification into a slice of individual host names.
 //
@@ -87,54 +120,18 @@ import (
 //   - Decreasing ranges (e.g., "[5-1]")
 //   - Invalid bracket nesting or missing brackets
 func Expand(in string) (result []string, err error) {
-	// Create ranges regular expression
-	// Matches patterns like: [1], [1-5], [1,2], [1-3,5-7], etc.
-	// reStNumber: one or more digits
-	reStNumber := "[[:digit:]]+"
-	// reStRange: two numbers separated by hyphen (e.g., "1-5")
-	reStRange := reStNumber + "-" + reStNumber
-	// reStOptionalNumberOrRange: zero or more comma-separated numbers or ranges
-	reStOptionalNumberOrRange := "(" + reStNumber + ",|" + reStRange + ",)*"
-	// reStNumberOrRange: a single number or range (required at end)
-	reStNumberOrRange := "(" + reStNumber + "|" + reStRange + ")"
-	// Bracket characters (escaped for regex)
-	reStBraceLeft := "[[]"
-	reStBraceRight := "[]]"
-	// Complete range pattern: [optional_items,required_item]
-	reStRanges := reStBraceLeft +
-		reStOptionalNumberOrRange +
-		reStNumberOrRange +
-		reStBraceRight
-	reRanges := regexp.MustCompile(reStRanges)
-
-	// Create host list regular expression
-	// Matches patterns like: prefix[ranges]suffix, where ranges and suffix are optional
-	// Valid DNS characters: letters, digits, and hyphens
-	reStDNSChars := "[a-zA-Z0-9-]+"
-	// Prefix is required and must start at beginning of string
-	reStPrefix := "^(" + reStDNSChars + ")"
-	// Suffix is optional (e.g., for "-ib" in "node[1-2]-ib")
-	reStOptionalSuffix := "(" + reStDNSChars + ")?"
-	// Complete pattern: prefix + optional[ranges] + optional_suffix
-	re := regexp.MustCompile(reStPrefix + "([[][0-9,-]+[]])?" + reStOptionalSuffix)
-
-	// Remove all delimiters from the input
-	in = strings.TrimLeft(in, ", ")
 
 	for len(in) > 0 {
-		if v := re.FindStringSubmatch(in); v != nil {
+		if v := regexPrecompiled.hl.FindStringSubmatch(in); v != nil {
 
 			// Remove matched part from the input
 			lenPrefix := len(v[0])
 			in = in[lenPrefix:]
 
-			// Remove all delimiters from the input
-			in = strings.TrimLeft(in, ", ")
-
 			// matched prefix, range and suffix
-			hlPrefix := v[1]
-			hlRanges := v[2]
-			hlSuffix := v[3]
+			hlPrefix := v[regexPrecompiled.indexPrefix]
+			hlRanges := v[regexPrecompiled.indexRange]
+			hlSuffix := v[regexPrecompiled.indexSuffix]
 
 			// Single node without ranges
 			if hlRanges == "" {
@@ -143,7 +140,7 @@ func Expand(in string) (result []string, err error) {
 			}
 
 			// Node with ranges
-			if v := reRanges.FindStringSubmatch(hlRanges); v != nil {
+			if len(hlRanges) > 0 {
 
 				// Remove braces
 				hlRanges = hlRanges[1 : len(hlRanges)-1]
@@ -161,16 +158,21 @@ func Expand(in string) (result []string, err error) {
 					}
 
 					// Range has a start and an end
-					widthRangeStart := len(RangeStartEnd[0])
-					widthRangeEnd := len(RangeStartEnd[1])
-					iStart, _ := strconv.ParseUint(RangeStartEnd[0], 10, 64)
-					iEnd, _ := strconv.ParseUint(RangeStartEnd[1], 10, 64)
+					rangeStart := RangeStartEnd[0]
+					rangeEnd := RangeStartEnd[1]
+					widthRangeStart := len(rangeStart)
+					widthRangeEnd := len(rangeEnd)
+					iStart, _ := strconv.ParseUint(rangeStart, 10, 64)
+					iEnd, _ := strconv.ParseUint(rangeEnd, 10, 64)
 					if iStart > iEnd {
 						return nil, fmt.Errorf("single range start is greater than end: %s", hlRange)
 					}
 
 					// Create print format string for range numbers
 					doPadding := widthRangeStart == widthRangeEnd
+					if !doPadding && (rangeStart[:1] == "0" || rangeEnd[:1] == "0") {
+						return nil, fmt.Errorf("single range without padding is used but start or end use padding: %s", hlRange)
+					}
 					widthPadding := widthRangeStart
 					var formatString string
 					if doPadding {
@@ -185,8 +187,6 @@ func Expand(in string) (result []string, err error) {
 						result = append(result, fmt.Sprintf(formatString, i))
 					}
 				}
-			} else {
-				return nil, fmt.Errorf("not at hostlist range: %s", hlRanges)
 			}
 		} else {
 			return nil, fmt.Errorf("not a hostlist: %s", in)
@@ -194,22 +194,9 @@ func Expand(in string) (result []string, err error) {
 	}
 
 	if result != nil {
-		// Sort results alphabetically for consistent output
-		sort.Strings(result)
-
-		// Remove duplicates using in-place deduplication algorithm
-		// This is more efficient than using a map for large result sets
-		previous := 1
-		for current := 1; current < len(result); current++ {
-			if result[current-1] != result[current] {
-				// Found a unique element, copy it to the next position
-				if previous != current {
-					result[previous] = result[current]
-				}
-				previous++
-			}
-		}
-		result = result[:previous]
+		// Sort and uniq
+		slices.Sort(result)
+		result = slices.Compact(result)
 	}
 
 	return
