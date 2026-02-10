@@ -58,7 +58,9 @@ func ConvertToFloat(input float64) Float {
 	}
 }
 
-// NaN will be serialized to `null`.
+// MarshalJSON implements the json.Marshaler interface for Float.
+// NaN values are serialized as JSON null. Regular float values are
+// formatted with 2 decimal places using fixed-point notation.
 func (f Float) MarshalJSON() ([]byte, error) {
 	if f.IsNaN() {
 		return nullAsBytes, nil
@@ -67,7 +69,9 @@ func (f Float) MarshalJSON() ([]byte, error) {
 	return strconv.AppendFloat(make([]byte, 0, 10), float64(f), 'f', 2, 64), nil
 }
 
-// `null` will be unserialized to NaN.
+// UnmarshalJSON implements the json.Unmarshaler interface for Float.
+// JSON null is deserialized as NaN. Numeric strings are parsed as float64
+// values. Returns an error if the input is neither null nor a valid number.
 func (f *Float) UnmarshalJSON(input []byte) error {
 	s := string(input)
 	if s == "null" {
@@ -105,18 +109,18 @@ func (f Float) MarshalGQL(w io.Writer) {
 	}
 }
 
-// Only used via REST-API, not via GraphQL.
-// This uses a lot less allocations per series,
-// but it turns out that the performance increase
-// from using this is not that big.
+// MarshalJSON implements the json.Marshaler interface for Series.
+// It manually builds the JSON output to reduce allocations compared to
+// encoding/json. NaN data points are serialized as null. Only used via
+// REST-API, not via GraphQL.
 func (s *Series) MarshalJSON() ([]byte, error) {
 	buf := make([]byte, 0, 512+len(s.Data)*8)
 	buf = append(buf, `{"hostname":"`...)
 	buf = append(buf, s.Hostname...)
 	buf = append(buf, '"')
-	if s.Id != nil {
+	if s.ID != nil {
 		buf = append(buf, `,"id":"`...)
-		buf = append(buf, *s.Id...)
+		buf = append(buf, *s.ID...)
 		buf = append(buf, '"')
 	}
 	buf = append(buf, `,"statistics":{"min":`...)

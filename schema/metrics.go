@@ -45,7 +45,7 @@ type JobMetric struct {
 // Each series corresponds to one source (e.g., one node, one core) identified by Hostname and optional ID.
 // The Data field contains the time-ordered measurements, and Statistics provides min/avg/max summaries.
 type Series struct {
-	Id         *string          `json:"id,omitempty"` // Optional ID (e.g., core ID, GPU ID)
+	ID         *string          `json:"id,omitempty"` // Optional ID (e.g., core ID, GPU ID)
 	Hostname   string           `json:"hostname"`     // Source hostname
 	Data       []Float          `json:"data"`         // Time series measurements
 	Statistics MetricStatistics `json:"statistics"`   // Statistical summary (min/avg/max)
@@ -55,7 +55,7 @@ type Series struct {
 // Used when full time series data isn't needed, only the aggregated statistics.
 type ScopedStats struct {
 	Hostname string            `json:"hostname"`     // Source hostname
-	Id       *string           `json:"id,omitempty"` // Optional scope ID
+	ID       *string           `json:"id,omitempty"` // Optional scope ID
 	Data     *MetricStatistics `json:"data"`         // Statistical summary
 }
 

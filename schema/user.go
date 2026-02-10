@@ -2,6 +2,7 @@
 // All rights reserved. This file is part of cc-lib.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package schema
 
 import (
@@ -16,7 +17,7 @@ type Role int
 
 const (
 	RoleAnonymous Role = iota // Unauthenticated or guest access
-	RoleApi                   // API access (programmatic/service accounts)
+	RoleAPI                   // API access (programmatic/service accounts)
 	RoleUser                  // Regular user (can view own jobs)
 	RoleManager               // Project manager (can view project jobs)
 	RoleSupport               // Support staff (can view all jobs, limited admin)
@@ -58,10 +59,12 @@ type User struct {
 	AuthSource AuthSource `json:"authSource"` // Which system authenticated the user
 }
 
+// HasProject reports whether the user is authorized for the given project name.
 func (u *User) HasProject(project string) bool {
 	return slices.Contains(u.Projects, project)
 }
 
+// GetRoleString returns the lowercase string representation of a Role enum value.
 func GetRoleString(roleInt Role) string {
 	return [6]string{"anonymous", "api", "user", "manager", "support", "admin"}[roleInt]
 }
@@ -77,7 +80,7 @@ func getRoleEnum(roleStr string) Role {
 	case "user":
 		return RoleUser
 	case "api":
-		return RoleApi
+		return RoleAPI
 	case "anonymous":
 		return RoleAnonymous
 	default:
@@ -85,11 +88,13 @@ func getRoleEnum(roleStr string) Role {
 	}
 }
 
+// IsValidRole reports whether the given string corresponds to a known role name.
 func IsValidRole(role string) bool {
 	return getRoleEnum(role) != RoleError
 }
 
-// Check if User has SPECIFIED role AND role is VALID
+// HasValidRole checks whether the user has the specified role and whether the role string is valid.
+// Returns hasRole=true if the user has the role, and isValid=true if the role name is recognized.
 func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 	if IsValidRole(role) {
 		if slices.Contains(u.Roles, role) {
@@ -100,12 +105,12 @@ func (u *User) HasValidRole(role string) (hasRole bool, isValid bool) {
 	return false, false
 }
 
-// Check if User has SPECIFIED role
+// HasRole reports whether the user has the specified role.
 func (u *User) HasRole(role Role) bool {
 	return slices.Contains(u.Roles, GetRoleString(role))
 }
 
-// Check if User has ANY of the listed roles
+// HasAnyRole reports whether the user has at least one of the given roles.
 func (u *User) HasAnyRole(queryroles []Role) bool {
 	for _, ur := range u.Roles {
 		for _, qr := range queryroles {
@@ -117,7 +122,7 @@ func (u *User) HasAnyRole(queryroles []Role) bool {
 	return false
 }
 
-// Check if User has ALL of the listed roles
+// HasAllRoles reports whether the user has every one of the given roles.
 func (u *User) HasAllRoles(queryroles []Role) bool {
 	target := len(queryroles)
 	matches := 0
@@ -137,7 +142,7 @@ func (u *User) HasAllRoles(queryroles []Role) bool {
 	}
 }
 
-// Check if User has NONE of the listed roles
+// HasNotRoles reports whether the user has none of the given roles.
 func (u *User) HasNotRoles(queryroles []Role) bool {
 	matches := 0
 	for _, ur := range u.Roles {
@@ -156,11 +161,12 @@ func (u *User) HasNotRoles(queryroles []Role) bool {
 	}
 }
 
-// Called by API endpoint '/roles/' from frontend: Only required for admin config -> Check Admin Role
+// GetValidRoles returns the list of assignable role names. Only admins may call this;
+// returns an error if the user does not have the Admin role.
 func GetValidRoles(user *User) ([]string, error) {
 	var vals []string
 	if user.HasRole(RoleAdmin) {
-		for i := RoleApi; i < RoleError; i++ {
+		for i := RoleAPI; i < RoleError; i++ {
 			vals = append(vals, GetRoleString(i))
 		}
 		return vals, nil
@@ -169,11 +175,12 @@ func GetValidRoles(user *User) ([]string, error) {
 	return vals, fmt.Errorf("%s: only admins are allowed to fetch a list of roles", user.Username)
 }
 
-// Called by routerConfig web.page setup in backend: Only requires known user
+// GetValidRolesMap returns a map of role names to Role enum values. Requires any
+// authenticated (non-anonymous) user; returns an error for anonymous users.
 func GetValidRolesMap(user *User) (map[string]Role, error) {
 	named := make(map[string]Role)
 	if user.HasNotRoles([]Role{RoleAnonymous}) {
-		for i := RoleApi; i < RoleError; i++ {
+		for i := RoleAPI; i < RoleError; i++ {
 			named[GetRoleString(i)] = i
 		}
 		return named, nil
@@ -181,7 +188,8 @@ func GetValidRolesMap(user *User) (map[string]Role, error) {
 	return named, fmt.Errorf("only known users are allowed to fetch a list of roles")
 }
 
-// Find highest role
+// GetAuthLevel returns the user's highest-privilege role.
+// Returns RoleError if the user has no recognized roles.
 func (u *User) GetAuthLevel() Role {
 	if u.HasRole(RoleAdmin) {
 		return RoleAdmin
@@ -191,8 +199,8 @@ func (u *User) GetAuthLevel() Role {
 		return RoleManager
 	} else if u.HasRole(RoleUser) {
 		return RoleUser
-	} else if u.HasRole(RoleApi) {
-		return RoleApi
+	} else if u.HasRole(RoleAPI) {
+		return RoleAPI
 	} else if u.HasRole(RoleAnonymous) {
 		return RoleAnonymous
 	} else {
