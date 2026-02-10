@@ -13,24 +13,6 @@
       "description": "Measurement interval in seconds",
       "type": "integer"
     },
-    "thresholds": {
-      "description": "Metric thresholds for specific system",
-      "type": "object",
-      "properties": {
-        "peak": {
-          "type": "number"
-        },
-        "normal": {
-          "type": "number"
-        },
-        "caution": {
-          "type": "number"
-        },
-        "alert": {
-          "type": "number"
-        }
-      }
-    },
     "statisticsSeries": {
       "type": "object",
       "description": "Statistics series across topology",
@@ -52,6 +34,14 @@
           "minItems": 3
         },
         "mean": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 3
+        },
+        "median": {
           "type": "array",
           "items": {
             "type": "number",

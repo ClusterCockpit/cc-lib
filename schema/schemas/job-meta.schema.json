@@ -48,11 +48,10 @@
       "type": "integer",
       "exclusiveMinimum": 0
     },
-    "exclusive": {
-      "description": "Specifies how nodes are shared. 0 - Shared among multiple jobs of multiple users, 1 - Job exclusive, 2 - Shared among multiple jobs of same user",
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 2
+    "shared": {
+      "description": "Specifies how nodes are shared: none - Job exclusive, single_user - Shared among multiple jobs of same user, multi_user - Shared among multiple jobs of multiple users",
+      "type": "string",
+      "enum": ["none", "single_user", "multi_user"]
     },
     "monitoringStatus": {
       "description": "State of monitoring system during job run",
@@ -70,7 +69,7 @@
     "jobState": {
       "description": "Final state of job",
       "type": "string",
-      "enum": ["completed", "failed", "stopped", "out_of_memory", "timeout"]
+      "enum": ["boot_fail", "cancelled", "completed", "deadline", "failed", "node_fail", "out_of_memory", "pending", "preempted", "running", "suspended", "timeout"]
     },
     "startTime": {
       "description": "Start epoch time stamp in seconds",
@@ -143,11 +142,73 @@
           },
           "type": {
             "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
           }
         },
         "required": ["name", "type"]
       },
       "uniqueItems": true
+    },
+    "id": {
+      "description": "Database ID of job",
+      "type": "integer"
+    },
+    "submitTime": {
+      "description": "Submit epoch time stamp in seconds",
+      "type": "integer"
+    },
+    "requestedMemory": {
+      "description": "Requested memory in MB",
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "energy": {
+      "description": "Total energy consumed by job in joules",
+      "type": "number"
+    },
+    "energyFootprint": {
+      "description": "Energy footprint data",
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "footprint": {
+      "description": "Job footprint data",
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "concurrentJobs": {
+      "description": "List of concurrent jobs",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "jobId": {
+                "type": "integer"
+              }
+            },
+            "required": ["id", "jobId"]
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": ["items", "count"]
     },
     "statistics": {
       "description": "Job statistic data",
@@ -173,10 +234,6 @@
           "description": "Total fast interconnect network bandwidth (required)",
           "$ref": "embedfs://job-metric-statistics.schema.json"
         },
-        "file_bw": {
-          "description": "Total file IO bandwidth (required)",
-          "$ref": "embedfs://job-metric-statistics.schema.json"
-        },
         "ipc": {
           "description": "Instructions executed per cycle",
           "$ref": "embedfs://job-metric-statistics.schema.json"
@@ -193,11 +250,19 @@
           "description": "Single precision flops rate",
           "$ref": "embedfs://job-metric-statistics.schema.json"
         },
-        "rapl_power": {
+        "vectorization_ratio": {
+          "description": "Fraction of arithmetic instructions using SIMD instructions",
+          "$ref": "embedfs://job-metric-statistics.schema.json"
+        },
+        "cpu_power": {
           "description": "CPU power consumption",
           "$ref": "embedfs://job-metric-statistics.schema.json"
         },
-        "acc_used": {
+        "mem_power": {
+          "description": "Memory power consumption",
+          "$ref": "embedfs://job-metric-statistics.schema.json"
+        },
+        "acc_utilization": {
           "description": "GPU utilization",
           "$ref": "embedfs://job-metric-statistics.schema.json"
         },
@@ -318,7 +383,7 @@
     "cluster",
     "subCluster",
     "numNodes",
-    "exclusive",
+    "shared",
     "startTime",
     "jobState",
     "duration",

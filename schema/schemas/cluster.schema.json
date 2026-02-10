@@ -68,6 +68,10 @@
             "description": "Is lower better.",
             "type": "boolean"
           },
+          "restrict": {
+            "description": "Restrict visibility to non user roles",
+            "type": "boolean"
+          },
           "peak": {
             "description": "Metric peak threshold (Upper metric limit)",
             "type": "number"
@@ -133,6 +137,10 @@
                 },
                 "remove": {
                   "description": "Remove this metric for this subcluster",
+                  "type": "boolean"
+                },
+                "restrict": {
+                  "description": "Restrict visibility to non user roles",
                   "type": "boolean"
                 }
               },
@@ -224,6 +232,27 @@
           "nodes": {
             "description": "Node list expression",
             "type": "string"
+          },
+          "metricConfig": {
+            "description": "Subcluster-specific metric configurations",
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/metricConfig/items"
+            }
+          },
+          "footprint": {
+            "description": "Default footprint metrics for jobs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "energyFootprint": {
+            "description": "Energy-related footprint metrics",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "topology": {
             "description": "Node topology",
