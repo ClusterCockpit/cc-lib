@@ -73,6 +73,7 @@ type NodeStateDB struct {
 	TimeStamp       int64           `json:"timeStamp" db:"time_stamp" example:"1649723812"`                                                                     // Unix timestamp
 	NodeState       SchedulerState  `json:"nodeState" db:"node_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"`     // Scheduler state
 	HealthState     MonitoringState `json:"healthState" db:"health_state" example:"completed" enums:"completed,failed,cancelled,stopped,timeout,out_of_memory"` // Monitoring health
+	HealthMetrics   string          `json:"healthMetrics" db:"health_metrics"`                                                                                  // JSON: {"missing":[...],"degraded":[...]}
 	CpusAllocated   int             `json:"cpusAllocated" db:"cpus_allocated"`                                                                                  // Allocated CPUs
 	MemoryAllocated int64           `json:"memoryAllocated" db:"memory_allocated"`                                                                              // Allocated memory (MB)
 	GpusAllocated   int             `json:"gpusAllocated" db:"gpus_allocated"`                                                                                  // Allocated GPUs
