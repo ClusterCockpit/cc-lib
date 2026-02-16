@@ -61,8 +61,7 @@ import (
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	write "github.com/influxdata/influxdb-client-go/v2/api/write"
-	lp1 "github.com/influxdata/line-protocol" // MIT license
+	write "github.com/influxdata/influxdb-client-go/v2/api/write" // MIT license
 	lp2 "github.com/influxdata/line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/maps"
 
@@ -467,28 +466,6 @@ func EmptyMessage() CCMessage {
 		fields: make(map[string]any),
 		tm:     time.Time{},
 	}
-}
-
-// FromInfluxMetric creates a CCMessage from an InfluxDB line protocol v1 metric.
-//
-// Deprecated: This function depends on the deprecated line-protocol v1 library.
-// Use FromBytes() instead for parsing line protocol data with the v2 library.
-func FromInfluxMetric(other lp1.Metric) CCMessage {
-	m := &ccMessage{
-		name:   other.Name(),
-		tags:   make(map[string]string),
-		meta:   make(map[string]string),
-		fields: make(map[string]any),
-		tm:     other.Time(),
-	}
-
-	for _, otherTag := range other.TagList() {
-		m.tags[otherTag.Key] = otherTag.Value
-	}
-	for _, otherField := range other.FieldList() {
-		m.fields[otherField.Key] = otherField.Value
-	}
-	return m
 }
 
 // FromJSON creates a CCMessage from a JSON representation.
