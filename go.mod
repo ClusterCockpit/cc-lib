@@ -14,7 +14,7 @@ require (
 	github.com/nats-io/nats.go v1.47.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/stmcginnis/gofish v0.20.0
+	github.com/stmcginnis/gofish v0.21.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 )
 
