@@ -20,8 +20,10 @@ var natsReceiverTestConfig json.RawMessage = json.RawMessage(`{
 	"subject" : "test"
 }`)
 
-var serverReady = make(chan bool)
-var sendDone = make(chan bool)
+var (
+	serverReady = make(chan bool)
+	sendDone    = make(chan bool)
+)
 
 func TestNatsReceiver(t *testing.T) {
 	numMessage := 10
@@ -37,7 +39,6 @@ func TestNatsReceiver(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-
 		t.Logf("starting nats server for %s", uri)
 		ns, err := server.NewServer(opts)
 		if err != nil {
@@ -118,5 +119,4 @@ func TestNatsReceiver(t *testing.T) {
 
 	serverDone <- true
 	wg.Wait()
-
 }

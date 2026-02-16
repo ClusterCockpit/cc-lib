@@ -202,7 +202,7 @@ func Loglevel() string {
 //	// Now warn, info, and debug logs write to the file
 //	// Error and critical logs still go to their default writers (stderr)
 func SetOutputFile(lvl string, logfile string) {
-	logFile, err := os.OpenFile(logfile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile(logfile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		log.Panic(err)
 	}

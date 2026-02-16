@@ -75,7 +75,7 @@ func NewStdoutSink(name string, config json.RawMessage) (Sink, error) {
 		case "stderr":
 			s.output = os.Stderr
 		default:
-			f, err := os.OpenFile(s.config.Output, os.O_CREATE|os.O_WRONLY, os.FileMode(0600))
+			f, err := os.OpenFile(s.config.Output, os.O_CREATE|os.O_WRONLY, os.FileMode(0o600))
 			if err != nil {
 				return nil, err
 			}

@@ -9,10 +9,12 @@ import (
 	"time"
 )
 
-var benchmarkResult any
-var benchmarkStringResult string
-var benchmarkBoolResult bool
-var benchmarkBytesResult []byte
+var (
+	benchmarkResult       any
+	benchmarkStringResult string
+	benchmarkBoolResult   bool
+	benchmarkBytesResult  []byte
+)
 
 func BenchmarkConvertField_Float64(b *testing.B) {
 	var r any

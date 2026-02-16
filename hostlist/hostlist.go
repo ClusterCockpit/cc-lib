@@ -120,7 +120,6 @@ func init() {
 //   - Decreasing ranges (e.g., "[5-1]")
 //   - Invalid bracket nesting or missing brackets
 func Expand(in string) (result []string, err error) {
-
 	for len(in) > 0 {
 		if v := regexPrecompiled.hl.FindStringSubmatch(in); v != nil {
 

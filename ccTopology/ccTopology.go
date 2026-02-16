@@ -325,8 +325,8 @@ func addObject(o Object, objects *[]*Object) {
 	for _, c := range o.IOChildren {
 		addObject(c, objects)
 	}
-
 }
+
 func (t *topology) UnmarshalJSON(in []byte) error {
 	err := json.Unmarshal(in, &t.root)
 	if err != nil {

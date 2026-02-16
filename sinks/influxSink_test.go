@@ -68,7 +68,6 @@ func InfluxPing(w http.ResponseWriter, r *http.Request) {
 }
 
 func InfluxReceiver(w http.ResponseWriter, r *http.Request) {
-
 	if r.Body != nil {
 
 		buf, err := io.ReadAll(r.Body)
@@ -151,5 +150,4 @@ func TestInfluxSink(t *testing.T) {
 			t.Errorf("message %d invalid: '%s' vs '%s'", i, ms, receivedInfluxMessages[i])
 		}
 	}
-
 }
