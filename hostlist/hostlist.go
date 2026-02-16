@@ -145,7 +145,7 @@ func Expand(in string) (result []string, err error) {
 				hlRanges = hlRanges[1 : len(hlRanges)-1]
 
 				// Split host ranges at ,
-				for _, hlRange := range strings.Split(hlRanges, ",") {
+				for hlRange := range strings.SplitSeq(hlRanges, ",") {
 
 					// Split host range at -
 					RangeStartEnd := strings.Split(hlRange, "-")
