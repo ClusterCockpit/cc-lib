@@ -394,7 +394,6 @@ func TestRenameDropOrder(t *testing.T) {
 	}
 	`
 	err = mp.FromConfigJSON(json.RawMessage(config))
-
 	if err != nil {
 		t.Error(err.Error())
 		return

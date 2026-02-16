@@ -98,5 +98,4 @@ func TestHttpSink(t *testing.T) {
 			t.Errorf("message %d invalid: '%s' vs '%s'", i, ms, receivedHttpMessages[i])
 		}
 	}
-
 }

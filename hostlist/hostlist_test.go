@@ -21,7 +21,6 @@ import (
 //   - Whitespace handling
 //   - Error conditions (invalid characters, malformed ranges, decreasing ranges)
 func TestExpand(t *testing.T) {
-
 	// Compare two slices of strings
 	equal := func(a, b []string) bool {
 		if len(a) != len(b) {

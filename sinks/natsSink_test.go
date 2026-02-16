@@ -104,5 +104,4 @@ func TestNatsSink(t *testing.T) {
 			t.Errorf("message %d invalid: '%s' vs '%s'", i, ms, receivedMessages[i])
 		}
 	}
-
 }
