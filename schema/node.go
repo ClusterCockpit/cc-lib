@@ -33,16 +33,17 @@ const (
 // Combines scheduler state with monitoring health and current resource allocation.
 // Used for displaying node status in dashboards and tracking node utilization.
 type Node struct {
-	Hostname        string            `json:"hostname"`        // Node hostname
-	Cluster         string            `json:"cluster"`         // Cluster name
-	SubCluster      string            `json:"subCluster"`      // Subcluster name
-	MetaData        map[string]string `json:"metaData"`        // Additional metadata
-	NodeState       SchedulerState    `json:"nodeState"`       // Scheduler/resource manager state
-	HealthState     MonitoringState   `json:"healthState"`     // Monitoring system health
-	CpusAllocated   int               `json:"cpusAllocated"`   // Number of allocated CPUs
-	MemoryAllocated int               `json:"memoryAllocated"` // Allocated memory in MB
-	GpusAllocated   int               `json:"gpusAllocated"`   // Number of allocated GPUs
-	JobsRunning     int               `json:"jobsRunning"`     // Number of jobs running on this node
+	Hostname        string              `json:"hostname"`        // Node hostname
+	Cluster         string              `json:"cluster"`         // Cluster name
+	SubCluster      string              `json:"subCluster"`      // Subcluster name
+	MetaData        map[string]string   `json:"metaData"`        // Additional metadata
+	HealthData      map[string][]string `json:"healthData"`      // Details about available metrics per node
+	NodeState       SchedulerState      `json:"nodeState"`       // Scheduler/resource manager state
+	HealthState     MonitoringState     `json:"healthState"`     // Monitoring system health
+	CpusAllocated   int                 `json:"cpusAllocated"`   // Number of allocated CPUs
+	MemoryAllocated int                 `json:"memoryAllocated"` // Allocated memory in MB
+	GpusAllocated   int                 `json:"gpusAllocated"`   // Number of allocated GPUs
+	JobsRunning     int                 `json:"jobsRunning"`     // Number of jobs running on this node
 }
 
 // NodePayload is the request body format for the node state REST API.
