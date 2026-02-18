@@ -89,8 +89,9 @@ func CCStartup(config json.RawMessage) error {
 				if err != nil {
 					err = fmt.Errorf("failed to send topology to %s: %s", conf.HttpEndpoint.URL, err.Error())
 					cclog.ComponentError("CCStartup", err.Error())
+				} else {
+					defer resp.Body.Close()
 				}
-				defer resp.Body.Close()
 			}
 		}
 		if len(conf.NatsEndpoint.URL) > 0 {
