@@ -64,7 +64,7 @@ func TestNewMetric_Uint(t *testing.T) {
 
 func TestIsMetric_WithStringValue(t *testing.T) {
 	// Metrics should not have string values according to IsMetric logic
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": "string_value"}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": "string_value"}, time.Now())
 
 	if msg.IsMetric() {
 		t.Error("Expected IsMetric() to return false for string value")
@@ -72,7 +72,7 @@ func TestIsMetric_WithStringValue(t *testing.T) {
 }
 
 func TestIsMetric_WithoutValueField(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"event": "test"}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"event": "test"}, time.Now())
 
 	if msg.IsMetric() {
 		t.Error("Expected IsMetric() to return false when value field is missing")
@@ -80,7 +80,7 @@ func TestIsMetric_WithoutValueField(t *testing.T) {
 }
 
 func TestGetMetricValue_NonMetric(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"event": "test"}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"event": "test"}, time.Now())
 
 	if value, ok := msg.GetMetricValue(); ok {
 		t.Errorf("Expected ok=false for non-metric, got value='%v' (ok=%v)", value, ok)

@@ -12,7 +12,7 @@ func gen_messages(numMessage int) ([]lp.CCMessage, error) {
 	tags := map[string]string{
 		"type": "node",
 	}
-	for i := 0; i < numMessage; i++ {
+	for i := range numMessage {
 		x, err := lp.NewMetric(fmt.Sprintf("testmetric%d", i), tags, nil, 42+(0.66*float64(i)), time.Now())
 		if err == nil {
 			out = append(out, x)

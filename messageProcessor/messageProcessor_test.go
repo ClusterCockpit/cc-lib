@@ -16,9 +16,9 @@ import (
 
 func generate_message_lists(num_lists, num_entries int) ([][]lp.CCMessage, error) {
 	mlist := make([][]lp.CCMessage, 0)
-	for j := 0; j < num_lists; j++ {
+	for range num_lists {
 		out := make([]lp.CCMessage, 0)
-		for i := 0; i < num_entries; i++ {
+		for i := range num_entries {
 			var x lp.CCMessage
 			var err error = nil
 			switch i % 4 {

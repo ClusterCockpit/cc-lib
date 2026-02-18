@@ -48,8 +48,8 @@ func TestStdoutSink(t *testing.T) {
 
 	t.Logf("reading messages from %s", f.Name())
 	data, err := os.ReadFile(f.Name())
-	lines := strings.Split(string(data), "\n")
-	for _, l := range lines {
+	lines := strings.SplitSeq(string(data), "\n")
+	for l := range lines {
 		if len(l) > 0 {
 			receivedStdoutMessages = append(receivedStdoutMessages, l)
 		}

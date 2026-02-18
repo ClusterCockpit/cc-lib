@@ -23,7 +23,7 @@ func TestCheckFileExists(t *testing.T) {
 
 	filePath := filepath.Join(tmpdir, "version.txt")
 
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
+	if err := os.WriteFile(filePath, fmt.Appendf(nil, "%d", 1), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if !util.CheckFileExists(filePath) {
@@ -44,7 +44,7 @@ func TestGetFileSize(t *testing.T) {
 		t.Fatalf("expected 0, got %d", s)
 	}
 
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
+	if err := os.WriteFile(filePath, fmt.Appendf(nil, "%d", 1), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if s := util.GetFilesize(filePath); s == 0 {
@@ -60,11 +60,11 @@ func TestGetFileCount(t *testing.T) {
 	}
 
 	filePath := filepath.Join(tmpdir, "data-1.json")
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
+	if err := os.WriteFile(filePath, fmt.Appendf(nil, "%d", 1), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	filePath = filepath.Join(tmpdir, "data-2.json")
-	if err := os.WriteFile(filePath, []byte(fmt.Sprintf("%d", 1)), 0o666); err != nil {
+	if err := os.WriteFile(filePath, fmt.Appendf(nil, "%d", 1), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	if c := util.GetFilecount(tmpdir); c != 2 {

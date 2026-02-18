@@ -17,7 +17,7 @@ import (
 func TestBasics(t *testing.T) {
 	cache := New(123)
 
-	value1 := cache.Get("foo", func() (interface{}, time.Duration, int) {
+	value1 := cache.Get("foo", func() (any, time.Duration, int) {
 		return "bar", 1 * time.Second, 0
 	})
 
@@ -25,7 +25,7 @@ func TestBasics(t *testing.T) {
 		t.Error("cache returned wrong value")
 	}
 
-	value2 := cache.Get("foo", func() (interface{}, time.Duration, int) {
+	value2 := cache.Get("foo", func() (any, time.Duration, int) {
 		t.Error("value should be cached")
 		return "", 0, 0
 	})
@@ -39,7 +39,7 @@ func TestBasics(t *testing.T) {
 		t.Error("delete did not work as expected")
 	}
 
-	value3 := cache.Get("foo", func() (interface{}, time.Duration, int) {
+	value3 := cache.Get("foo", func() (any, time.Duration, int) {
 		return "baz", 1 * time.Second, 0
 	})
 
@@ -47,7 +47,7 @@ func TestBasics(t *testing.T) {
 		t.Error("cache returned wrong value")
 	}
 
-	cache.Keys(func(key string, value interface{}) {
+	cache.Keys(func(key string, value any) {
 		if key != "foo" || value.(string) != "baz" {
 			t.Error("cache corrupted")
 		}
@@ -60,15 +60,15 @@ func TestBasics(t *testing.T) {
 func TestExpiration(t *testing.T) {
 	cache := New(123)
 
-	failIfCalled := func() (interface{}, time.Duration, int) {
+	failIfCalled := func() (any, time.Duration, int) {
 		t.Error("Value should be cached!")
 		return "", 0, 0
 	}
 
-	val1 := cache.Get("foo", func() (interface{}, time.Duration, int) {
+	val1 := cache.Get("foo", func() (any, time.Duration, int) {
 		return "bar", 5 * time.Millisecond, 0
 	})
-	val2 := cache.Get("bar", func() (interface{}, time.Duration, int) {
+	val2 := cache.Get("bar", func() (any, time.Duration, int) {
 		return "foo", 20 * time.Millisecond, 0
 	})
 
@@ -81,7 +81,7 @@ func TestExpiration(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	val5 := cache.Get("foo", func() (interface{}, time.Duration, int) {
+	val5 := cache.Get("foo", func() (any, time.Duration, int) {
 		return "baz", 0, 0
 	})
 	val6 := cache.Get("bar", failIfCalled)
@@ -90,14 +90,14 @@ func TestExpiration(t *testing.T) {
 		t.Error("unexpected values")
 	}
 
-	cache.Keys(func(key string, val interface{}) {
+	cache.Keys(func(key string, val any) {
 		if key != "bar" || val.(string) != "foo" {
 			t.Error("wrong value expired")
 		}
 	})
 
 	time.Sleep(15 * time.Millisecond)
-	cache.Keys(func(key string, val interface{}) {
+	cache.Keys(func(key string, val any) {
 		t.Error("cache should be empty now")
 	})
 }
@@ -107,16 +107,16 @@ func TestExpiration(t *testing.T) {
 // and that the least recently used entries are evicted first.
 func TestEviction(t *testing.T) {
 	c := New(100)
-	failIfCalled := func() (interface{}, time.Duration, int) {
+	failIfCalled := func() (any, time.Duration, int) {
 		t.Error("Value should be cached!")
 		return "", 0, 0
 	}
 
-	v1 := c.Get("foo", func() (interface{}, time.Duration, int) {
+	v1 := c.Get("foo", func() (any, time.Duration, int) {
 		return "bar", 1 * time.Second, 1000
 	})
 
-	v2 := c.Get("foo", func() (interface{}, time.Duration, int) {
+	v2 := c.Get("foo", func() (any, time.Duration, int) {
 		return "baz", 1 * time.Second, 1000
 	})
 
@@ -124,28 +124,28 @@ func TestEviction(t *testing.T) {
 		t.Error("wrong values returned")
 	}
 
-	c.Keys(func(key string, val interface{}) {
+	c.Keys(func(key string, val any) {
 		t.Error("cache should be empty now")
 	})
 
-	_ = c.Get("A", func() (interface{}, time.Duration, int) {
+	_ = c.Get("A", func() (any, time.Duration, int) {
 		return "a", 1 * time.Second, 50
 	})
 
-	_ = c.Get("B", func() (interface{}, time.Duration, int) {
+	_ = c.Get("B", func() (any, time.Duration, int) {
 		return "b", 1 * time.Second, 50
 	})
 
 	_ = c.Get("A", failIfCalled)
 	_ = c.Get("B", failIfCalled)
-	_ = c.Get("C", func() (interface{}, time.Duration, int) {
+	_ = c.Get("C", func() (any, time.Duration, int) {
 		return "c", 1 * time.Second, 50
 	})
 
 	_ = c.Get("B", failIfCalled)
 	_ = c.Get("C", failIfCalled)
 
-	v4 := c.Get("A", func() (interface{}, time.Duration, int) {
+	v4 := c.Get("A", func() (any, time.Duration, int) {
 		return "evicted", 1 * time.Second, 25
 	})
 
@@ -153,7 +153,7 @@ func TestEviction(t *testing.T) {
 		t.Error("value should have been evicted")
 	}
 
-	c.Keys(func(key string, val interface{}) {
+	c.Keys(func(key string, val any) {
 		if key != "A" && key != "C" {
 			t.Errorf("'%s' was not expected", key)
 		}
@@ -175,10 +175,10 @@ func TestConcurrency(t *testing.T) {
 
 	var concurrentModifications int32 = 0
 
-	for i := 0; i < numThreads; i++ {
+	for range numThreads {
 		go func() {
-			for j := 0; j < numActions; j++ {
-				_ = c.Get("key", func() (interface{}, time.Duration, int) {
+			for range numActions {
+				_ = c.Get("key", func() (any, time.Duration, int) {
 					m := atomic.AddInt32(&concurrentModifications, 1)
 					if m != 1 {
 						t.Error("only one goroutine at a time should calculate a value for the same key")
@@ -196,7 +196,7 @@ func TestConcurrency(t *testing.T) {
 
 	wg.Wait()
 
-	c.Keys(func(key string, val interface{}) {})
+	c.Keys(func(key string, val any) {})
 }
 
 // TestPanic validates that panics in the compute function are handled correctly.
@@ -216,7 +216,7 @@ func TestPanic(t *testing.T) {
 			}
 		}()
 
-		_ = c.Get("foo", func() (value interface{}, ttl time.Duration, size int) {
+		_ = c.Get("foo", func() (value any, ttl time.Duration, size int) {
 			panic("oops")
 		})
 
@@ -225,7 +225,7 @@ func TestPanic(t *testing.T) {
 
 	testpanic()
 
-	v := c.Get("bar", func() (value interface{}, ttl time.Duration, size int) {
+	v := c.Get("bar", func() (value any, ttl time.Duration, size int) {
 		t.Fatal("should not be called!")
 		return nil, 0, 0
 	})

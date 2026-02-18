@@ -81,9 +81,7 @@ func (sm *sinkManager) Init(wg *sync.WaitGroup, sinkConfig json.RawMessage) erro
 // Start starts the sink managers background task, which
 // distributes received metrics to the sinks
 func (sm *sinkManager) Start() {
-	sm.wg.Add(1)
-	go func() {
-		defer sm.wg.Done()
+	sm.wg.Go(func() {
 
 		// Sink manager is done
 		done := func() {
@@ -119,7 +117,7 @@ func (sm *sinkManager) Start() {
 				}
 			}
 		}
-	}()
+	})
 
 	// Sink manager is started
 	cclog.ComponentDebug("SinkManager", "STARTED")

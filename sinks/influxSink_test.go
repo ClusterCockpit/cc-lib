@@ -72,8 +72,8 @@ func InfluxReceiver(w http.ResponseWriter, r *http.Request) {
 
 		buf, err := io.ReadAll(r.Body)
 		if err == nil {
-			lines := strings.Split(string(buf), "\n")
-			for _, l := range lines {
+			lines := strings.SplitSeq(string(buf), "\n")
+			for l := range lines {
 				if len(l) > 0 {
 					receivedInfluxMessages = append(receivedInfluxMessages, l)
 				}
@@ -103,16 +103,14 @@ func TestInfluxSink(t *testing.T) {
 	serv.HandleFunc("/ping", InfluxPing)
 
 	t.Logf("starting http server listening at %s", httpserver.Addr)
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := httpserver.ListenAndServe()
 		if err != nil && err.Error() != "http: Server closed" {
 			t.Errorf("failed to listen and serve at %s:%s", testInfluxConfig.Host, testInfluxConfig.Port)
 			wg.Done()
 			return
 		}
-		wg.Done()
-	}()
+	})
 	time.Sleep(500 * time.Millisecond)
 	t.Logf("setup influx sink to %s:%s organization %s database %s", testInfluxConfig.Host, testInfluxConfig.Port, testInfluxConfig.Organization, testInfluxConfig.Database)
 	s, err := NewInfluxSink("testsink", jsonConfig)

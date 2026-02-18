@@ -32,7 +32,7 @@ func TestEecptReceiver(t *testing.T) {
 	r.Start()
 	t.Log("Receiver started")
 	i := 0
-	for _, m := range strings.Split(test_metrics, "\n") {
+	for m := range strings.SplitSeq(test_metrics, "\n") {
 		if i == 0 {
 			t.Log("Send 4 metrics")
 		}

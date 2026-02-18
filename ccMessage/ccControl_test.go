@@ -64,7 +64,7 @@ func TestNewPutControl(t *testing.T) {
 }
 
 func TestIsControl_WithoutMethodTag(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"control": "value"}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"control": "value"}, time.Now())
 
 	if msg.IsControl() {
 		t.Error("Expected IsControl() to return false when method tag is missing")
@@ -72,7 +72,7 @@ func TestIsControl_WithoutMethodTag(t *testing.T) {
 }
 
 func TestIsControl_WithInvalidMethod(t *testing.T) {
-	msg, _ := NewMessage("test", map[string]string{"method": "DELETE"}, nil, map[string]interface{}{"control": "value"}, time.Now())
+	msg, _ := NewMessage("test", map[string]string{"method": "DELETE"}, nil, map[string]any{"control": "value"}, time.Now())
 
 	if msg.IsControl() {
 		t.Error("Expected IsControl() to return false for invalid method")
@@ -80,7 +80,7 @@ func TestIsControl_WithInvalidMethod(t *testing.T) {
 }
 
 func TestIsControl_WithNonStringValue(t *testing.T) {
-	msg, _ := NewMessage("test", map[string]string{"method": "PUT"}, nil, map[string]interface{}{"control": 123}, time.Now())
+	msg, _ := NewMessage("test", map[string]string{"method": "PUT"}, nil, map[string]any{"control": 123}, time.Now())
 
 	if msg.IsControl() {
 		t.Error("Expected IsControl() to return false for non-string control value")

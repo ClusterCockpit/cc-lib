@@ -44,7 +44,7 @@ type PrometheusSink struct {
 	promServer   *http.Server
 }
 
-func intToFloat64(input interface{}) (float64, error) {
+func intToFloat64(input any) (float64, error) {
 	switch value := input.(type) {
 	case float64:
 		return value, nil
@@ -209,8 +209,7 @@ func NewPrometheusSink(name string, config json.RawMessage) (Sink, error) {
 	}
 	s.labelMetrics = make(map[string]*prometheus.GaugeVec)
 	s.nodeMetrics = make(map[string]prometheus.Gauge)
-	s.promWg.Add(1)
-	go func() {
+	s.promWg.Go(func() {
 		router := mux.NewRouter()
 		// Prometheus endpoint
 		router.Path("/" + s.config.Path).Handler(promhttp.Handler())
@@ -222,7 +221,6 @@ func NewPrometheusSink(name string, config json.RawMessage) (Sink, error) {
 		if err != nil && err.Error() != "http: Server closed" {
 			cclog.ComponentError(s.name, err.Error())
 		}
-		s.promWg.Done()
-	}()
+	})
 	return s, nil
 }

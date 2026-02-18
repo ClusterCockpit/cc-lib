@@ -78,12 +78,12 @@ func (u *unit) GetUnitDenominator() Measure {
 
 // GetPrefixPrefixFactor creates the default conversion function between two prefixes.
 // It returns a conversation function for the value.
-func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value interface{}) interface{} {
+func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value any) any {
 	factor := 1.0
 	in_prefix := float64(in)
 	out_prefix := float64(out)
 	factor = in_prefix / out_prefix
-	conv := func(value interface{}) interface{} {
+	conv := func(value any) any {
 		switch v := value.(type) {
 		case float64:
 			return v * factor
@@ -108,7 +108,7 @@ func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value interface{}) interf
 }
 
 // This is the conversion function between temperatures in Celsius to Fahrenheit
-func convertTempC2TempF(value interface{}) interface{} {
+func convertTempC2TempF(value any) any {
 	switch v := value.(type) {
 	case float64:
 		return (v * 1.8) + 32
@@ -131,7 +131,7 @@ func convertTempC2TempF(value interface{}) interface{} {
 }
 
 // This is the conversion function between temperatures in Fahrenheit to Celsius
-func convertTempF2TempC(value interface{}) interface{} {
+func convertTempF2TempC(value any) any {
 	switch v := value.(type) {
 	case float64:
 		return (v - 32) / 1.8
@@ -155,7 +155,7 @@ func convertTempF2TempC(value interface{}) interface{} {
 
 // GetPrefixStringPrefixStringFactor is a wrapper for GetPrefixPrefixFactor with string inputs instead
 // of prefixes. It also returns a conversation function for the value.
-func GetPrefixStringPrefixStringFactor(in string, out string) func(value interface{}) interface{} {
+func GetPrefixStringPrefixStringFactor(in string, out string) func(value any) any {
 	var i Prefix = NewPrefix(in)
 	var o Prefix = NewPrefix(out)
 	return GetPrefixPrefixFactor(i, o)
@@ -164,7 +164,7 @@ func GetPrefixStringPrefixStringFactor(in string, out string) func(value interfa
 // GetUnitPrefixFactor gets the conversion function and resulting unit for a unit and a prefix. This is
 // the most common case where you have some input unit and want to convert it to the same unit but with
 // a different prefix. The returned unit represents the value after conversation.
-func GetUnitPrefixFactor(in Unit, out Prefix) (func(value interface{}) interface{}, Unit) {
+func GetUnitPrefixFactor(in Unit, out Prefix) (func(value any) any, Unit) {
 	outUnit := NewUnit(in.Short())
 	if outUnit.Valid() {
 		outUnit.SetPrefix(out)
@@ -176,14 +176,14 @@ func GetUnitPrefixFactor(in Unit, out Prefix) (func(value interface{}) interface
 
 // GetUnitPrefixStringFactor gets the conversion function and resulting unit for a unit and a prefix as string.
 // It is a wrapper for GetUnitPrefixFactor
-func GetUnitPrefixStringFactor(in Unit, out string) (func(value interface{}) interface{}, Unit) {
+func GetUnitPrefixStringFactor(in Unit, out string) (func(value any) any, Unit) {
 	var o Prefix = NewPrefix(out)
 	return GetUnitPrefixFactor(in, o)
 }
 
 // GetUnitStringPrefixStringFactor gets the conversion function and resulting unit for a unit and a prefix when both are only string representations.
 // This is just a wrapper for GetUnitPrefixFactor with the given input unit and the desired output prefix.
-func GetUnitStringPrefixStringFactor(in string, out string) (func(value interface{}) interface{}, Unit) {
+func GetUnitStringPrefixStringFactor(in string, out string) (func(value any) any, Unit) {
 	i := NewUnit(in)
 	return GetUnitPrefixStringFactor(i, out)
 }
@@ -191,13 +191,13 @@ func GetUnitStringPrefixStringFactor(in string, out string) (func(value interfac
 // GetUnitUnitFactor gets the conversion function and (maybe) error for unit to unit conversion.
 // It is basically a wrapper for GetPrefixPrefixFactor with some special cases for temperature
 // conversion between Fahrenheit and Celsius.
-func GetUnitUnitFactor(in Unit, out Unit) (func(value interface{}) interface{}, error) {
+func GetUnitUnitFactor(in Unit, out Unit) (func(value any) any, error) {
 	if in.GetMeasure() == TemperatureC && out.GetMeasure() == TemperatureF {
 		return convertTempC2TempF, nil
 	} else if in.GetMeasure() == TemperatureF && out.GetMeasure() == TemperatureC {
 		return convertTempF2TempC, nil
 	} else if in.GetMeasure() != out.GetMeasure() || in.GetUnitDenominator() != out.GetUnitDenominator() {
-		return func(value interface{}) interface{} { return 1.0 }, fmt.Errorf("invalid measures in in and out Unit")
+		return func(value any) any { return 1.0 }, fmt.Errorf("invalid measures in in and out Unit")
 	}
 	return GetPrefixPrefixFactor(in.GetPrefix(), out.GetPrefix()), nil
 }

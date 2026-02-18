@@ -51,14 +51,12 @@ type HttpReceiver struct {
 
 func (r *HttpReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
-	r.wg.Add(1)
-	go func() {
+	r.wg.Go(func() {
 		err := r.server.ListenAndServe()
 		if err != nil && err.Error() != "http: Server closed" {
 			cclog.ComponentError(r.name, err.Error())
 		}
-		r.wg.Done()
-	}()
+	})
 }
 
 func (r *HttpReceiver) ServerHttp(w http.ResponseWriter, req *http.Request) {

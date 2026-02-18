@@ -7,6 +7,7 @@ package messageprocessor
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -45,7 +46,7 @@ type messageProcessorConfig struct {
 	MoveMetaToField  []messageProcessorTagConfig `json:"move_meta_to_field_if"`
 	MoveFieldToTag   []messageProcessorTagConfig `json:"move_field_to_tag_if"`
 	MoveFieldToMeta  []messageProcessorTagConfig `json:"move_field_to_meta_if"`
-	AddBaseEnv       map[string]interface{}      `json:"add_base_env"`
+	AddBaseEnv       map[string]any              `json:"add_base_env"`
 }
 
 type messageProcessor struct {
@@ -84,7 +85,7 @@ type MessageProcessor interface {
 	SetStages([]string) error
 	DefaultStages() []string
 	// Function to add variables to the base evaluation environment
-	AddBaseEnv(env map[string]interface{}) error
+	AddBaseEnv(env map[string]any) error
 	// Functions to add and remove rules
 	AddDropMessagesByName(name string) error
 	RemoveDropMessagesByName(name string)
@@ -172,7 +173,7 @@ var StageNames = []string{
 
 var paramMapPool = sync.Pool{
 	New: func() any {
-		return make(map[string]interface{})
+		return make(map[string]any)
 	},
 }
 
@@ -180,15 +181,15 @@ func sanitizeExprString(key string) string {
 	return strings.ReplaceAll(key, "type-id", "typeid")
 }
 
-func getParamMap(point lp.CCMessage) map[string]interface{} {
-	params := paramMapPool.Get().(map[string]interface{})
+func getParamMap(point lp.CCMessage) map[string]any {
+	params := paramMapPool.Get().(map[string]any)
 	params["message"] = point
 	params["msg"] = point
 	params["name"] = point.Name()
 	params["timestamp"] = point.Time().Unix()
 	params["time"] = params["timestamp"]
 
-	fields := paramMapPool.Get().(map[string]interface{})
+	fields := paramMapPool.Get().(map[string]any)
 	for key, value := range point.Fields() {
 		fields[key] = value
 		switch key {
@@ -212,13 +213,13 @@ func getParamMap(point lp.CCMessage) map[string]interface{} {
 	params["msgtype"] = params["messagetype"]
 	params["fields"] = fields
 	params["field"] = fields
-	tags := paramMapPool.Get().(map[string]interface{})
+	tags := paramMapPool.Get().(map[string]any)
 	for key, value := range point.Tags() {
 		tags[sanitizeExprString(key)] = value
 	}
 	params["tags"] = tags
 	params["tag"] = tags
-	meta := paramMapPool.Get().(map[string]interface{})
+	meta := paramMapPool.Get().(map[string]any)
 	for key, value := range point.Meta() {
 		meta[sanitizeExprString(key)] = value
 	}
@@ -226,11 +227,11 @@ func getParamMap(point lp.CCMessage) map[string]interface{} {
 	return params
 }
 
-var baseenv = map[string]interface{}{
+var baseenv = map[string]any{
 	"name":        "",
 	"messagetype": "unknown",
 	"msgtype":     "unknown",
-	"tag": map[string]interface{}{
+	"tag": map[string]any{
 		"type":     "unknown",
 		"typeid":   "0",
 		"stype":    "unknown",
@@ -238,7 +239,7 @@ var baseenv = map[string]interface{}{
 		"hostname": "localhost",
 		"cluster":  "nocluster",
 	},
-	"tags": map[string]interface{}{
+	"tags": map[string]any{
 		"type":     "unknown",
 		"typeid":   "0",
 		"stype":    "unknown",
@@ -246,17 +247,17 @@ var baseenv = map[string]interface{}{
 		"hostname": "localhost",
 		"cluster":  "nocluster",
 	},
-	"meta": map[string]interface{}{
+	"meta": map[string]any{
 		"unit":   "invalid",
 		"source": "unknown",
 	},
-	"fields": map[string]interface{}{
+	"fields": map[string]any{
 		"value":   0,
 		"event":   "",
 		"control": "",
 		"log":     "",
 	},
-	"field": map[string]interface{}{
+	"field": map[string]any{
 		"value":   0,
 		"event":   "",
 		"control": "",
@@ -267,13 +268,13 @@ var baseenv = map[string]interface{}{
 	"message":   lp.EmptyMessage(),
 }
 
-func addBaseEnvWalker(values map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{})
+func addBaseEnvWalker(values map[string]any) map[string]any {
+	out := make(map[string]any)
 	for k, v := range values {
 		switch value := v.(type) {
 		case int, int32, int64, uint, uint32, uint64, string, float32, float64:
 			out[k] = value
-		case map[string]interface{}:
+		case map[string]any:
 			if _, ok := baseenv[k]; !ok {
 				out[k] = addBaseEnvWalker(value)
 			}
@@ -282,12 +283,12 @@ func addBaseEnvWalker(values map[string]interface{}) map[string]interface{} {
 	return out
 }
 
-func (mp *messageProcessor) AddBaseEnv(env map[string]interface{}) error {
+func (mp *messageProcessor) AddBaseEnv(env map[string]any) error {
 	for k, v := range env {
 		switch value := v.(type) {
 		case int, int32, int64, uint, uint32, uint64, string, float32, float64:
 			baseenv[k] = value
-		case map[string]interface{}:
+		case map[string]any:
 			if _, ok := baseenv[k]; !ok {
 				baseenv[k] = addBaseEnvWalker(value)
 			}
@@ -338,13 +339,7 @@ func (mp *messageProcessor) RemoveDropMessagesByName(name string) {
 
 func (mp *messageProcessor) AddDropMessagesByType(typestring string) error {
 	valid := []string{"metric", "event", "control", "log"}
-	isValid := false
-	for _, t := range valid {
-		if t == typestring {
-			isValid = true
-			break
-		}
-	}
+	isValid := slices.Contains(valid, typestring)
 	if isValid {
 		mp.mutex.Lock()
 		if _, ok := mp.dropTypes[typestring]; !ok {
@@ -820,7 +815,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 					params["name"] = newname
 					// cclog.ComponentDebug("MessageProcessor", "Add old name as 'oldname' to meta", name)
 					out.AddMeta("oldname", oldname)
-					params["meta"].(map[string]interface{})["oldname"] = oldname
+					params["meta"].(map[string]any)["oldname"] = oldname
 				}
 			}
 		case STAGENAME_RENAME_IF:

@@ -6,6 +6,7 @@ package lrucache
 
 import (
 	"bytes"
+	"maps"
 	"net/http"
 	"strconv"
 	"time"
@@ -124,7 +125,7 @@ func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cr := h.cache.Get(h.CacheKey(r), func() (interface{}, time.Duration, int) {
+	cr := h.cache.Get(h.CacheKey(r), func() (any, time.Duration, int) {
 		crw := &cachedResponseWriter{
 			w:          rw,
 			statusCode: 200,
@@ -153,9 +154,7 @@ func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return cr, ttl, len(cr.data)
 	}).(*cachedResponse)
 
-	for key, val := range cr.headers {
-		rw.Header()[key] = val
-	}
+	maps.Copy(rw.Header(), cr.headers)
 
 	cr.headers.Set("Age", strconv.Itoa(int(time.Since(cr.fetched).Seconds())))
 
