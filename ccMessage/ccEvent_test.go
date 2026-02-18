@@ -49,7 +49,7 @@ func TestNewEvent_EmptyPayload(t *testing.T) {
 }
 
 func TestIsEvent_WithNonStringValue(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"event": 123}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"event": 123}, time.Now())
 
 	if msg.IsEvent() {
 		t.Error("Expected IsEvent() to return false for non-string event value")
@@ -57,7 +57,7 @@ func TestIsEvent_WithNonStringValue(t *testing.T) {
 }
 
 func TestIsEvent_WithoutEventField(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if msg.IsEvent() {
 		t.Error("Expected IsEvent() to return false when event field is missing")
@@ -65,7 +65,7 @@ func TestIsEvent_WithoutEventField(t *testing.T) {
 }
 
 func TestGetEventValue_NonEvent(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if value, ok := msg.GetEventValue(); ok {
 		t.Errorf("Expected ok=false for non-event, got value='%s' (ok=%v)", value, ok)

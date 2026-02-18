@@ -59,8 +59,7 @@ func TestHttp(t *testing.T) {
 	}
 	http.HandleFunc("/", httpReceiver)
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		t.Logf("starting HTTP server on: %s", "localhost:8082")
 		err := httpserver.ListenAndServe()
 		if err != nil && err.Error() != "http: Server closed" {
@@ -68,8 +67,7 @@ func TestHttp(t *testing.T) {
 			wg.Done()
 			return
 		}
-		wg.Done()
-	}()
+	})
 	t.Log("running CCStartup")
 	err := CCStartup(json.RawMessage(startupConfig))
 	if err != nil {

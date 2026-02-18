@@ -73,15 +73,15 @@ func (r *PrometheusReceiver) Start() {
 					name := lineSplit[0]
 					if sindex := strings.Index(name, "{"); sindex >= 0 {
 						eindex := strings.Index(name, "}")
-						for _, kv := range strings.Split(name[sindex+1:eindex], ",") {
-							eq := strings.Index(kv, "=")
-							tags[kv[0:eq]] = strings.Trim(kv[eq+1:], "\"")
+						for kv := range strings.SplitSeq(name[sindex+1:eindex], ",") {
+							before, after, _ := strings.Cut(kv, "=")
+							tags[before] = strings.Trim(after, "\"")
 						}
 						name = lineSplit[0][0:sindex]
 					}
 					value, err := strconv.ParseFloat(lineSplit[1], 64)
 					if err == nil {
-						y, err := lp.NewMessage(name, tags, r.meta, map[string]interface{}{"value": value}, t)
+						y, err := lp.NewMessage(name, tags, r.meta, map[string]any{"value": value}, t)
 						if err == nil {
 							r.sink <- y
 						}

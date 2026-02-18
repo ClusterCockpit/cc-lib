@@ -37,8 +37,7 @@ func TestNatsReceiver(t *testing.T) {
 	}
 	uri := fmt.Sprintf("nats://%s:%d", opts.Host, opts.Port)
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		t.Logf("starting nats server for %s", uri)
 		ns, err := server.NewServer(opts)
 		if err != nil {
@@ -56,8 +55,7 @@ func TestNatsReceiver(t *testing.T) {
 
 		t.Log("Closing nats server")
 		ns.Shutdown()
-		wg.Done()
-	}()
+	})
 
 	<-serverReady
 	t.Log("nats server started")
@@ -73,8 +71,7 @@ func TestNatsReceiver(t *testing.T) {
 
 	msgs := gen_messages(numMessage)
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		t.Logf("connecting nats client to %s", uri)
 		c, err := nats.Connect(uri, nil)
 		if err != nil {
@@ -96,18 +93,17 @@ func TestNatsReceiver(t *testing.T) {
 
 		t.Log("Closing nats client")
 		c.Close()
-		wg.Done()
-	}()
+	})
 
 	recvm := make([]lp.CCMessage, 0, numMessage)
 	<-sendDone
-	for i := 0; i < numMessage; i++ {
+	for range numMessage {
 		recvm = append(recvm, <-sink)
 	}
 	if len(recvm) != len(msgs) {
 		t.Errorf("received only %d metrics", len(recvm))
 	} else {
-		for i := 0; i < numMessage; i++ {
+		for i := range numMessage {
 			if msgs[i].ToLineProtocol(nil) != recvm[i].ToLineProtocol(nil) {
 				t.Errorf("metrics do no match '%s' vs '%s'", msgs[i].ToLineProtocol(nil), recvm[i].ToLineProtocol(nil))
 			}

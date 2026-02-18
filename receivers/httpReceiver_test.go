@@ -19,7 +19,7 @@ var httpReceiverTestConfig json.RawMessage = json.RawMessage(`{
 
 func gen_messages(numMessages int) []lp.CCMessage {
 	out := make([]lp.CCMessage, 0, numMessages)
-	for i := 0; i < numMessages; i++ {
+	for i := range numMessages {
 		x, err := lp.NewMetric("testmetric", map[string]string{"type": "node"}, nil, 42.7*(0.6*float64(i)), time.Now())
 		if err == nil {
 			out = append(out, x)
@@ -53,13 +53,13 @@ func TestHttpReceiver(t *testing.T) {
 	}
 
 	recvm := make([]lp.CCMessage, 0, numMessage)
-	for i := 0; i < numMessage; i++ {
+	for range numMessage {
 		recvm = append(recvm, <-sink)
 	}
 	if len(recvm) != len(msgs) {
 		t.Errorf("received only %d metrics", len(recvm))
 	}
-	for i := 0; i < numMessage; i++ {
+	for i := range numMessage {
 		if msgs[i].ToLineProtocol(nil) != recvm[i].ToLineProtocol(nil) {
 			t.Errorf("metrics do no match '%s' vs '%s'", msgs[i].ToLineProtocol(nil), recvm[i].ToLineProtocol(nil))
 		}

@@ -56,8 +56,8 @@ func TestNatsSink(t *testing.T) {
 	sub, err := c.Subscribe("testsubject", func(msg *nats.Msg) {
 		if err == nil {
 			t.Log(string(msg.Data))
-			lines := strings.Split(string(msg.Data), "\n")
-			for _, l := range lines {
+			lines := strings.SplitSeq(string(msg.Data), "\n")
+			for l := range lines {
 				if len(l) > 0 {
 					receivedMessages = append(receivedMessages, l)
 				}

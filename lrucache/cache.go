@@ -62,13 +62,13 @@ import (
 //	    data := fetchFromDatabase() // Expensive operation
 //	    return data, 5 * time.Minute, len(data)
 //	}
-type ComputeValue func() (value interface{}, ttl time.Duration, size int)
+type ComputeValue func() (value any, ttl time.Duration, size int)
 
 // cacheEntry represents a single entry in the LRU cache.
 // It is part of a doubly-linked list for LRU tracking.
 type cacheEntry struct {
-	key   string      // Cache key
-	value interface{} // Cached value
+	key   string // Cache key
+	value any    // Cached value
 
 	// expiration is the time when this entry expires.
 	// A zero value indicates the value is currently being computed.
@@ -186,7 +186,7 @@ func New(maxmemory int) *Cache {
 //	    data := expensiveComputation()
 //	    return data, 1 * time.Hour, len(data) * 8 // Approximate bytes
 //	})
-func (c *Cache) Get(key string, computeValue ComputeValue) interface{} {
+func (c *Cache) Get(key string, computeValue ComputeValue) any {
 	now := time.Now()
 
 	c.mutex.Lock()
@@ -294,7 +294,7 @@ func (c *Cache) Get(key string, computeValue ComputeValue) interface{} {
 // Example:
 //
 //	cache.Put("config", configData, len(configData), 1 * time.Hour)
-func (c *Cache) Put(key string, value interface{}, size int, ttl time.Duration) {
+func (c *Cache) Put(key string, value any, size int, ttl time.Duration) {
 	now := time.Now()
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -368,7 +368,7 @@ func (c *Cache) Del(key string) bool {
 //	cache.Keys(func(key string, val interface{}) {
 //	    fmt.Printf("Key: %s, Value: %v\n", key, val)
 //	})
-func (c *Cache) Keys(f func(key string, val interface{})) {
+func (c *Cache) Keys(f func(key string, val any)) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 

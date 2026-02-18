@@ -49,7 +49,7 @@ func TestNewLog_EmptyMessage(t *testing.T) {
 }
 
 func TestIsLog_WithNonStringValue(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"log": 123}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"log": 123}, time.Now())
 
 	if msg.IsLog() {
 		t.Error("Expected IsLog() to return false for non-string log value")
@@ -57,7 +57,7 @@ func TestIsLog_WithNonStringValue(t *testing.T) {
 }
 
 func TestIsLog_WithoutLogField(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if msg.IsLog() {
 		t.Error("Expected IsLog() to return false when log field is missing")
@@ -65,7 +65,7 @@ func TestIsLog_WithoutLogField(t *testing.T) {
 }
 
 func TestGetLogValue_NonLog(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if value, ok := msg.GetLogValue(); ok {
 		t.Errorf("Expected ok=false for non-log, got value='%s' (ok=%v)", value, ok)

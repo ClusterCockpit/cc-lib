@@ -49,7 +49,7 @@ func TestNewQuery_EmptyQuery(t *testing.T) {
 }
 
 func TestIsQuery_WithNonStringValue(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"query": 123}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"query": 123}, time.Now())
 
 	if msg.IsQuery() {
 		t.Error("Expected IsQuery() to return false for non-string query value")
@@ -57,7 +57,7 @@ func TestIsQuery_WithNonStringValue(t *testing.T) {
 }
 
 func TestIsQuery_WithoutQueryField(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if msg.IsQuery() {
 		t.Error("Expected IsQuery() to return false when query field is missing")
@@ -65,7 +65,7 @@ func TestIsQuery_WithoutQueryField(t *testing.T) {
 }
 
 func TestGetQueryValue_NonQuery(t *testing.T) {
-	msg, _ := NewMessage("test", nil, nil, map[string]interface{}{"value": 1.0}, time.Now())
+	msg, _ := NewMessage("test", nil, nil, map[string]any{"value": 1.0}, time.Now())
 
 	if value, ok := msg.GetQueryValue(); ok {
 		t.Errorf("Expected ok=false for non-query, got value='%s' (ok=%v)", value, ok)

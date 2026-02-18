@@ -386,9 +386,7 @@ func (s *InfluxSink) Flush() error {
 	cclog.ComponentDebug(s.name, "Flush(): Flushing", numRecordsInBuf, "metrics")
 
 	// Asynchron send of encoder metrics
-	s.sendWaitGroup.Add(1)
-	go func() {
-		defer s.sendWaitGroup.Done()
+	s.sendWaitGroup.Go(func() {
 		startTime := time.Now()
 		err := s.writeApi.WriteRecord(context.Background(), string(buf))
 		if err != nil {
@@ -403,7 +401,7 @@ func (s *InfluxSink) Flush() error {
 			)
 			return
 		}
-	}()
+	})
 
 	return nil
 }

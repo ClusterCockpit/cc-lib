@@ -213,14 +213,12 @@ func (task *EECPTReceiverTask) Reset() {
 
 func (r *EECPTReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
-	r.wg.Add(1)
-	go func() {
+	r.wg.Go(func() {
 		err := r.server.ListenAndServe()
 		if err != nil && err.Error() != "http: Server closed" {
 			cclog.ComponentError(r.name, err.Error())
 		}
-		r.wg.Done()
-	}()
+	})
 	r.analysisTicker = time.NewTicker(r.config.analysisInterval)
 	r.wg.Add(1)
 	go func(myr **EECPTReceiver) {
@@ -253,7 +251,7 @@ func (r *EECPTReceiver) Start() {
 	}(&r)
 }
 
-func fieldToFloat64(input interface{}) float64 {
+func fieldToFloat64(input any) float64 {
 	switch in := input.(type) {
 	case int:
 		return float64(in)
