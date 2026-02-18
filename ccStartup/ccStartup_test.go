@@ -68,6 +68,7 @@ func TestHttp(t *testing.T) {
 			return
 		}
 	})
+	time.Sleep(100 * time.Millisecond)
 	t.Log("running CCStartup")
 	err := CCStartup(json.RawMessage(startupConfig))
 	if err != nil {
