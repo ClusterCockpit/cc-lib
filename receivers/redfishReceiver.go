@@ -29,8 +29,7 @@ import (
 
 	// See: https://pkg.go.dev/github.com/stmcginnis/gofish
 	"github.com/stmcginnis/gofish"
-	"github.com/stmcginnis/gofish/common"
-	"github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 type RedfishReceiverClientConfig struct {
@@ -111,9 +110,12 @@ func (r *RedfishReceiver) sendMetric(mp mp.MessageProcessor, name string, tags m
 // Redfish URI: /redfish/v1/Chassis/{ChassisId}/Sensors/{SensorId}
 func (r *RedfishReceiver) readSensors(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis,
+	chassis *schemas.Chassis,
 ) error {
-	writeTemperatureSensor := func(sensor *redfish.Sensor) {
+	writeTemperatureSensor := func(sensor *schemas.Sensor) {
+		if sensor.Reading == nil {
+			return
+		}
 		tags := map[string]string{
 			"hostname": clientConfig.Hostname,
 			"type":     "node",
@@ -136,10 +138,13 @@ func (r *RedfishReceiver) readSensors(
 			"unit":   "degC",
 		}
 
-		r.sendMetric(clientConfig.mp, "temperature", tags, meta, sensor.Reading, time.Now())
+		r.sendMetric(clientConfig.mp, "temperature", tags, meta, *sensor.Reading, time.Now())
 	}
 
-	writeFanSpeedSensor := func(sensor *redfish.Sensor) {
+	writeFanSpeedSensor := func(sensor *schemas.Sensor) {
+		if sensor.Reading == nil {
+			return
+		}
 		tags := map[string]string{
 			"hostname": clientConfig.Hostname,
 			"type":     "node",
@@ -162,10 +167,13 @@ func (r *RedfishReceiver) readSensors(
 			"unit":   string(sensor.ReadingUnits),
 		}
 
-		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, sensor.Reading, time.Now())
+		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, *sensor.Reading, time.Now())
 	}
 
-	writePowerSensor := func(sensor *redfish.Sensor) {
+	writePowerSensor := func(sensor *schemas.Sensor) {
+		if sensor.Reading == nil {
+			return
+		}
 		// Set tags
 		tags := map[string]string{
 			"hostname": clientConfig.Hostname,
@@ -189,7 +197,7 @@ func (r *RedfishReceiver) readSensors(
 			"unit":   "watts",
 		}
 
-		r.sendMetric(clientConfig.mp, "power", tags, meta, sensor.Reading, time.Now())
+		r.sendMetric(clientConfig.mp, "power", tags, meta, *sensor.Reading, time.Now())
 	}
 
 	if _, ok := clientConfig.readSensorURLs[chassis.ID]; !ok {
@@ -211,7 +219,7 @@ func (r *RedfishReceiver) readSensors(
 		for _, sensor := range sensors {
 
 			// Skip all sensors which are not in enabled state or which are unhealthy
-			if sensor.Status.State != common.EnabledState || sensor.Status.Health != common.OKHealth {
+			if sensor.Status.State != schemas.EnabledState || sensor.Status.Health != schemas.OKHealth {
 				continue
 			}
 
@@ -221,8 +229,8 @@ func (r *RedfishReceiver) readSensors(
 			}
 
 			// Power readings
-			if (sensor.ReadingType == redfish.PowerReadingType && sensor.ReadingUnits == "Watts") ||
-				(sensor.ReadingType == redfish.CurrentReadingType && sensor.ReadingUnits == "Watts") {
+			if (sensor.ReadingType == schemas.PowerReadingType && sensor.ReadingUnits == "Watts") ||
+				(sensor.ReadingType == schemas.CurrentReadingType && sensor.ReadingUnits == "Watts") {
 				if clientConfig.isExcluded["power"] {
 					continue
 				}
@@ -233,8 +241,8 @@ func (r *RedfishReceiver) readSensors(
 			}
 
 			// Fan speed readings
-			if (sensor.ReadingType == redfish.AirFlowReadingType && sensor.ReadingUnits == "RPM") ||
-				(sensor.ReadingType == redfish.AirFlowReadingType && sensor.ReadingUnits == "Percent") {
+			if (sensor.ReadingType == schemas.AirFlowReadingType && sensor.ReadingUnits == "RPM") ||
+				(sensor.ReadingType == schemas.AirFlowReadingType && sensor.ReadingUnits == "Percent") {
 				// Skip, when fan_speed metric is excluded
 				if clientConfig.isExcluded["fan_speed"] {
 					continue
@@ -245,7 +253,7 @@ func (r *RedfishReceiver) readSensors(
 			}
 
 			// Temperature readings
-			if sensor.ReadingType == redfish.TemperatureReadingType && sensor.ReadingUnits == "C" {
+			if sensor.ReadingType == schemas.TemperatureReadingType && sensor.ReadingUnits == "C" {
 				if clientConfig.isExcluded["temperature"] {
 					continue
 				}
@@ -256,31 +264,31 @@ func (r *RedfishReceiver) readSensors(
 			}
 		}
 	} else {
-		common.CollectCollection(
+		schemas.CollectCollection(
 			func(uri string) {
-				sensor, err := redfish.GetSensor(chassis.GetClient(), uri)
+				sensor, err := schemas.GetSensor(chassis.GetClient(), uri)
 				if err != nil {
-					cclog.ComponentError(r.name, "redfish.GetSensor() for uri '", uri, "' failed")
+					cclog.ComponentError(r.name, "schemas.GetSensor() for uri '", uri, "' failed")
 				}
 
 				// Power readings
-				if (sensor.ReadingType == redfish.PowerReadingType && sensor.ReadingUnits == "Watts") ||
-					(sensor.ReadingType == redfish.CurrentReadingType && sensor.ReadingUnits == "Watts") {
+				if (sensor.ReadingType == schemas.PowerReadingType && sensor.ReadingUnits == "Watts") ||
+					(sensor.ReadingType == schemas.CurrentReadingType && sensor.ReadingUnits == "Watts") {
 
 					writePowerSensor(sensor)
 					return
 				}
 
 				// Fan speed readings
-				if (sensor.ReadingType == redfish.AirFlowReadingType && sensor.ReadingUnits == "RPM") ||
-					(sensor.ReadingType == redfish.AirFlowReadingType && sensor.ReadingUnits == "Percent") {
+				if (sensor.ReadingType == schemas.AirFlowReadingType && sensor.ReadingUnits == "RPM") ||
+					(sensor.ReadingType == schemas.AirFlowReadingType && sensor.ReadingUnits == "Percent") {
 
 					writeFanSpeedSensor(sensor)
 					return
 				}
 
 				// Temperature readings
-				if sensor.ReadingType == redfish.TemperatureReadingType && sensor.ReadingUnits == "C" {
+				if sensor.ReadingType == schemas.TemperatureReadingType && sensor.ReadingUnits == "C" {
 
 					writeTemperatureSensor(sensor)
 					return
@@ -298,7 +306,7 @@ func (r *RedfishReceiver) readSensors(
 // -> on Lenovo servers /redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics links to /redfish/v1/Chassis/{ChassisId}/Sensors/{SensorId}
 func (r *RedfishReceiver) readThermalMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis,
+	chassis *schemas.Chassis,
 ) error {
 	// Get thermal information for each chassis
 	thermal, err := chassis.Thermal()
@@ -321,7 +329,7 @@ func (r *RedfishReceiver) readThermalMetrics(
 		}
 
 		// Skip all temperatures which are not in enabled state
-		if temperature.Status.State != "" && temperature.Status.State != common.EnabledState {
+		if temperature.Status.State != "" && temperature.Status.State != schemas.EnabledState {
 			continue
 		}
 
@@ -353,7 +361,10 @@ func (r *RedfishReceiver) readThermalMetrics(
 		}
 
 		// ReadingCelsius shall be the current value of the temperature sensor's reading.
-		value := temperature.ReadingCelsius
+		if temperature.ReadingCelsius == nil {
+			continue
+		}
+		value := *temperature.ReadingCelsius
 
 		r.sendMetric(clientConfig.mp, "temperature", tags, meta, value, timestamp)
 	}
@@ -365,7 +376,7 @@ func (r *RedfishReceiver) readThermalMetrics(
 		}
 
 		// Skip all fans which are not in enabled state
-		if fan.Status.State != common.EnabledState {
+		if fan.Status.State != schemas.EnabledState {
 			continue
 		}
 
@@ -396,7 +407,10 @@ func (r *RedfishReceiver) readThermalMetrics(
 			"unit":   string(fan.ReadingUnits),
 		}
 
-		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, fan.Reading, timestamp)
+		if fan.Reading == nil {
+			continue
+		}
+		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, *fan.Reading, timestamp)
 	}
 
 	return nil
@@ -408,7 +422,7 @@ func (r *RedfishReceiver) readThermalMetrics(
 // -> deprecated in favor of the PowerSubsystem schema
 func (r *RedfishReceiver) readPowerMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	chassis *redfish.Chassis,
+	chassis *schemas.Chassis,
 ) error {
 	// Get power information for each chassis
 	power, err := chassis.Power()
@@ -427,7 +441,7 @@ func (r *RedfishReceiver) readPowerMetrics(
 	for _, pc := range power.PowerControl {
 
 		// Skip all power controls which are not in enabled state
-		if pc.Status.State != "" && pc.Status.State != common.EnabledState {
+		if pc.Status.State != "" && pc.Status.State != schemas.EnabledState {
 			continue
 		}
 
@@ -436,32 +450,33 @@ func (r *RedfishReceiver) readPowerMetrics(
 
 		// PowerConsumedWatts shall represent the actual power being consumed (in
 		// Watts) by the chassis
-		if !clientConfig.isExcluded["consumed_watts"] {
-			metrics["consumed_watts"] = pc.PowerConsumedWatts
+		if !clientConfig.isExcluded["consumed_watts"] && pc.PowerConsumedWatts != nil {
+			metrics["consumed_watts"] = *pc.PowerConsumedWatts
 		}
 		// AverageConsumedWatts shall represent the
 		// average power level that occurred averaged over the last IntervalInMin
 		// minutes.
-		if !clientConfig.isExcluded["average_consumed_watts"] {
-			metrics["average_consumed_watts"] = pc.PowerMetrics.AverageConsumedWatts
+		if !clientConfig.isExcluded["average_consumed_watts"] && pc.PowerMetrics.AverageConsumedWatts != nil {
+			metrics["average_consumed_watts"] = *pc.PowerMetrics.AverageConsumedWatts
 		}
 		// MinConsumedWatts shall represent the
 		// minimum power level in watts that occurred within the last
 		// IntervalInMin minutes.
-		if !clientConfig.isExcluded["min_consumed_watts"] {
-			metrics["min_consumed_watts"] = pc.PowerMetrics.MinConsumedWatts
+		if !clientConfig.isExcluded["min_consumed_watts"] && pc.PowerMetrics.MinConsumedWatts != nil {
+			metrics["min_consumed_watts"] = *pc.PowerMetrics.MinConsumedWatts
 		}
 		// MaxConsumedWatts shall represent the
 		// maximum power level in watts that occurred within the last
 		// IntervalInMin minutes
-		if !clientConfig.isExcluded["max_consumed_watts"] {
-			metrics["max_consumed_watts"] = pc.PowerMetrics.MaxConsumedWatts
+		if !clientConfig.isExcluded["max_consumed_watts"] && pc.PowerMetrics.MaxConsumedWatts != nil {
+			metrics["max_consumed_watts"] = *pc.PowerMetrics.MaxConsumedWatts
 		}
 		// IntervalInMin shall represent the time interval (or window), in minutes,
 		// in which the PowerMetrics properties are measured over.
-		// Should be an integer, but some Dell implementations return as a float
-		intervalInMin := strconv.FormatFloat(
-			float64(pc.PowerMetrics.IntervalInMin), 'f', -1, 32)
+		var intervalInMin string
+		if pc.PowerMetrics.IntervalInMin != nil {
+			intervalInMin = strconv.FormatUint(uint64(*pc.PowerMetrics.IntervalInMin), 10)
+		}
 
 		// Set tags
 		tags := map[string]string{
@@ -505,7 +520,7 @@ func (r *RedfishReceiver) readPowerMetrics(
 // Redfish URI: /redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/ProcessorMetrics
 func (r *RedfishReceiver) readProcessorMetrics(
 	clientConfig *RedfishReceiverClientConfig,
-	processor *redfish.Processor,
+	processor *schemas.Processor,
 ) error {
 	timestamp := time.Now()
 
@@ -520,7 +535,7 @@ func (r *RedfishReceiver) readProcessorMetrics(
 	resp, err := processor.GetClient().Get(URL)
 	if err != nil {
 		// Skip non existing URLs
-		if statusCode := err.(*common.Error).HTTPReturnedStatusCode; statusCode == http.StatusNotFound {
+		if statusCode := err.(*schemas.Error).HTTPReturnedStatusCode; statusCode == http.StatusNotFound {
 			clientConfig.skipProcessorMetricsURL[URL] = true
 			return nil
 		}
@@ -529,7 +544,7 @@ func (r *RedfishReceiver) readProcessorMetrics(
 	}
 
 	var processorMetrics struct {
-		common.Entity
+		schemas.Entity
 		ODataType   string `json:"@odata.type"`
 		ODataEtag   string `json:"@odata.etag"`
 		Description string `json:"Description"`
@@ -623,7 +638,7 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 	isChassisListRequired := clientConfig.doSensors ||
 		clientConfig.doThermalMetrics ||
 		clientConfig.doPowerMetric
-	var chassisList []*redfish.Chassis
+	var chassisList []*schemas.Chassis
 	if isChassisListRequired {
 		chassisList, err = c.Service.Chassis()
 		if err != nil {
@@ -633,7 +648,7 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 
 	// Get all computer systems managed by this service
 	isComputerSystemListRequired := clientConfig.doProcessorMetrics
-	var computerSystemList []*redfish.ComputerSystem
+	var computerSystemList []*schemas.ComputerSystem
 	if isComputerSystemListRequired {
 		computerSystemList, err = c.Service.Systems()
 		if err != nil {
