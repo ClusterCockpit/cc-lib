@@ -35,6 +35,14 @@ type Topology struct {
 	Die          [][]*int       `json:"die,omitempty"`          // Hardware threads grouped by die (optional)
 	Core         [][]int        `json:"core"`                   // Hardware threads grouped by core
 	Accelerators []*Accelerator `json:"accelerators,omitempty"` // Attached accelerators (GPUs, etc.)
+
+	// Cache maps for faster lookups
+	hwthreadToSocket       map[int][]int
+	hwthreadToCore         map[int][]int
+	hwthreadToMemoryDomain map[int][]int
+	coreToSocket           map[int][]int
+	memoryDomainToSocket   map[int]int
+	coresPerSocket         map[int]int
 }
 
 // MetricValue represents a single metric measurement with its associated unit.
@@ -123,33 +131,91 @@ type GlobalMetricListItem struct {
 	Availability []ClusterSupport `json:"availability"`        // Where this metric is available
 }
 
+// InitTopologyMaps initializes the topology mapping caches
+func (topo *Topology) InitTopologyMaps() {
+	topo.hwthreadToSocket = make(map[int][]int)
+	topo.hwthreadToCore = make(map[int][]int)
+	topo.hwthreadToMemoryDomain = make(map[int][]int)
+	topo.coreToSocket = make(map[int][]int)
+	topo.memoryDomainToSocket = make(map[int]int)
+	topo.coresPerSocket = make(map[int]int)
+
+	// Build hwthread to socket mapping
+	for socketID, hwthreads := range topo.Socket {
+		for _, hwthread := range hwthreads {
+			topo.hwthreadToSocket[hwthread] = append(topo.hwthreadToSocket[hwthread], socketID)
+		}
+	}
+
+	// Build hwthread to core mapping
+	for coreID, hwthreads := range topo.Core {
+		for _, hwthread := range hwthreads {
+			topo.hwthreadToCore[hwthread] = append(topo.hwthreadToCore[hwthread], coreID)
+		}
+	}
+
+	// Build hwthread to memory domain mapping
+	for memDomID, hwthreads := range topo.MemoryDomain {
+		for _, hwthread := range hwthreads {
+			topo.hwthreadToMemoryDomain[hwthread] = append(topo.hwthreadToMemoryDomain[hwthread], memDomID)
+		}
+	}
+
+	// Build core to socket mapping and count cores per socket
+	for coreID, hwthreads := range topo.Core {
+		socketSet := make(map[int]struct{})
+		for _, hwthread := range hwthreads {
+			for _, socketID := range topo.hwthreadToSocket[hwthread] {
+				socketSet[socketID] = struct{}{}
+			}
+		}
+		topo.coreToSocket[coreID] = make([]int, 0, len(socketSet))
+		for socketID := range socketSet {
+			topo.coreToSocket[coreID] = append(topo.coreToSocket[coreID], socketID)
+			topo.coresPerSocket[socketID]++
+		}
+	}
+
+	// Build memory domain to socket mapping
+	for memDomID, hwthreads := range topo.MemoryDomain {
+		if len(hwthreads) > 0 {
+			// Use the first hwthread to determine the socket
+			if socketIDs, ok := topo.hwthreadToSocket[hwthreads[0]]; ok && len(socketIDs) > 0 {
+				topo.memoryDomainToSocket[memDomID] = socketIDs[0]
+			}
+		}
+	}
+}
+
+// EnsureTopologyMaps ensures that the topology maps are initialized
+func (topo *Topology) EnsureTopologyMaps() {
+	if topo.hwthreadToSocket == nil {
+		topo.InitTopologyMaps()
+	}
+}
+
 // GetSocketsFromHWThreads returns socket IDs that contain any of the given hardware threads.
 // The exclusive return value is true if all hardware threads in the returned sockets
 // are present in the input list (i.e., the job has exclusive access to those sockets).
 func (topo *Topology) GetSocketsFromHWThreads(
 	hwthreads []int,
 ) (sockets []int, exclusive bool) {
-	// Build hwthread -> socket lookup map
-	hwthreadToSocket := make(map[int]int, len(topo.Node))
-	for socket, hwthreadsInSocket := range topo.Socket {
-		for _, hwt := range hwthreadsInSocket {
-			hwthreadToSocket[hwt] = socket
-		}
-	}
+	topo.EnsureTopologyMaps()
+
 	// Count hwthreads per socket from input
 	socketsMap := make(map[int]int)
 	for _, hwt := range hwthreads {
-		if socket, ok := hwthreadToSocket[hwt]; ok {
-			socketsMap[socket]++
+		for _, socketID := range topo.hwthreadToSocket[hwt] {
+			socketsMap[socketID]++
 		}
 	}
+
 	// Build result and check exclusivity
 	exclusive = true
-	hwthreadsPerSocket := len(topo.Node) / len(topo.Socket)
 	sockets = make([]int, 0, len(socketsMap))
 	for socket, count := range socketsMap {
 		sockets = append(sockets, socket)
-		exclusive = exclusive && count == hwthreadsPerSocket
+		exclusive = exclusive && count == len(topo.Socket[socket])
 	}
 	return sockets, exclusive
 }
@@ -160,29 +226,21 @@ func (topo *Topology) GetSocketsFromHWThreads(
 func (topo *Topology) GetSocketsFromCores(
 	cores []int,
 ) (sockets []int, exclusive bool) {
-	// Build hwthread -> socket lookup map
-	hwthreadToSocket := make(map[int]int, len(topo.Node))
-	for socket, hwthreadsInSocket := range topo.Socket {
-		for _, hwt := range hwthreadsInSocket {
-			hwthreadToSocket[hwt] = socket
-		}
-	}
-	// Count hwthreads per socket from input cores
+	topo.EnsureTopologyMaps()
+
 	socketsMap := make(map[int]int)
 	for _, core := range cores {
-		for _, hwt := range topo.Core[core] {
-			if socket, ok := hwthreadToSocket[hwt]; ok {
-				socketsMap[socket]++
-			}
+		for _, socketID := range topo.coreToSocket[core] {
+			socketsMap[socketID]++
 		}
 	}
+
 	// Build result and check exclusivity
 	exclusive = true
-	hwthreadsPerSocket := len(topo.Node) / len(topo.Socket)
 	sockets = make([]int, 0, len(socketsMap))
 	for socket, count := range socketsMap {
 		sockets = append(sockets, socket)
-		exclusive = exclusive && count == hwthreadsPerSocket
+		exclusive = exclusive && count == topo.coresPerSocket[socket]
 	}
 	return sockets, exclusive
 }
@@ -193,27 +251,22 @@ func (topo *Topology) GetSocketsFromCores(
 func (topo *Topology) GetCoresFromHWThreads(
 	hwthreads []int,
 ) (cores []int, exclusive bool) {
-	// Build hwthread -> core lookup map
-	hwthreadToCore := make(map[int]int, len(topo.Node))
-	for core, hwthreadsInCore := range topo.Core {
-		for _, hwt := range hwthreadsInCore {
-			hwthreadToCore[hwt] = core
-		}
-	}
-	// Count hwthreads per core from input
+	topo.EnsureTopologyMaps()
+
 	coresMap := make(map[int]int)
 	for _, hwt := range hwthreads {
-		if core, ok := hwthreadToCore[hwt]; ok {
-			coresMap[core]++
+		for _, coreID := range topo.hwthreadToCore[hwt] {
+			coresMap[coreID]++
 		}
 	}
+
 	// Build result and check exclusivity
 	exclusive = true
-	hwthreadsPerCore := len(topo.Node) / len(topo.Core)
 	cores = make([]int, 0, len(coresMap))
 	for core, count := range coresMap {
 		cores = append(cores, core)
-		exclusive = exclusive && count == hwthreadsPerCore
+		// Check if all hwthreads in this core are in our input list
+		exclusive = exclusive && count == len(topo.Core[core])
 	}
 	return cores, exclusive
 }
@@ -224,29 +277,46 @@ func (topo *Topology) GetCoresFromHWThreads(
 func (topo *Topology) GetMemoryDomainsFromHWThreads(
 	hwthreads []int,
 ) (memDoms []int, exclusive bool) {
-	// Build hwthread -> memory domain lookup map
-	hwthreadToMemDom := make(map[int]int, len(topo.Node))
-	for memDom, hwthreadsInMemDom := range topo.MemoryDomain {
-		for _, hwt := range hwthreadsInMemDom {
-			hwthreadToMemDom[hwt] = memDom
-		}
-	}
-	// Count hwthreads per memory domain from input
+	topo.EnsureTopologyMaps()
+
 	memDomsMap := make(map[int]int)
 	for _, hwt := range hwthreads {
-		if memDom, ok := hwthreadToMemDom[hwt]; ok {
-			memDomsMap[memDom]++
+		for _, memDomID := range topo.hwthreadToMemoryDomain[hwt] {
+			memDomsMap[memDomID]++
 		}
 	}
+
 	// Build result and check exclusivity
 	exclusive = true
-	hwthreadsPerMemDom := len(topo.Node) / len(topo.MemoryDomain)
 	memDoms = make([]int, 0, len(memDomsMap))
 	for memDom, count := range memDomsMap {
 		memDoms = append(memDoms, memDom)
-		exclusive = exclusive && count == hwthreadsPerMemDom
+		// Check if all hwthreads in this memory domain are in our input list
+		exclusive = exclusive && count == len(topo.MemoryDomain[memDom])
 	}
 	return memDoms, exclusive
+}
+
+// GetMemoryDomainsBySocket groups the given memory domain IDs by their parent socket.
+// Returns a map from socket ID to the list of memory domain IDs belonging to that socket.
+func (topo *Topology) GetMemoryDomainsBySocket(domainIDs []int) (map[int][]int, error) {
+	topo.EnsureTopologyMaps()
+
+	socketToDomains := make(map[int][]int)
+	for _, domainID := range domainIDs {
+		if domainID < 0 || domainID >= len(topo.MemoryDomain) || len(topo.MemoryDomain[domainID]) == 0 {
+			return nil, fmt.Errorf("MemoryDomain %d is invalid or empty", domainID)
+		}
+
+		socketID, ok := topo.memoryDomainToSocket[domainID]
+		if !ok {
+			return nil, fmt.Errorf("MemoryDomain %d could not be assigned to any socket", domainID)
+		}
+
+		socketToDomains[socketID] = append(socketToDomains[socketID], domainID)
+	}
+
+	return socketToDomains, nil
 }
 
 // GetAcceleratorID converts an integer accelerator index to its string ID.
@@ -262,10 +332,11 @@ func (topo *Topology) GetAcceleratorID(id int) (string, error) {
 }
 
 // GetAcceleratorIDs returns a list of all accelerator IDs as strings.
+// Capacity is pre-allocated to improve efficiency.
 func (topo *Topology) GetAcceleratorIDs() []string {
-	accels := make([]string, 0, len(topo.Accelerators))
-	for _, accel := range topo.Accelerators {
-		accels = append(accels, accel.ID)
+	accels := make([]string, len(topo.Accelerators))
+	for i, accel := range topo.Accelerators {
+		accels[i] = accel.ID
 	}
 	return accels
 }
@@ -273,14 +344,15 @@ func (topo *Topology) GetAcceleratorIDs() []string {
 // GetAcceleratorIDsAsInt attempts to convert all accelerator IDs to integers.
 // Returns an error if any accelerator ID is not a valid integer.
 // This method assumes accelerator IDs are numeric strings.
+// Capacity is pre-allocated to improve efficiency.
 func (topo *Topology) GetAcceleratorIDsAsInt() ([]int, error) {
-	accels := make([]int, 0, len(topo.Accelerators))
-	for _, accel := range topo.Accelerators {
+	accels := make([]int, len(topo.Accelerators))
+	for i, accel := range topo.Accelerators {
 		id, err := strconv.Atoi(accel.ID)
 		if err != nil {
 			return nil, fmt.Errorf("accelerator ID %q is not a valid integer: %w", accel.ID, err)
 		}
-		accels = append(accels, id)
+		accels[i] = id
 	}
 	return accels, nil
 }
