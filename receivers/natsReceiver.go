@@ -15,7 +15,7 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
-	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
+	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	nats "github.com/nats-io/nats.go"
 )
 

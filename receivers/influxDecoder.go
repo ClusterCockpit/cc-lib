@@ -14,7 +14,7 @@ import (
 	"time"
 
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
-	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
+	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 )
 
 // DecodeInfluxMessage decodes a single InfluxDB line protocol message from the decoder

@@ -11,7 +11,7 @@ import (
 
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
-	influx "github.com/influxdata/line-protocol/v2/lineprotocol"
+	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/slices"
 )
 

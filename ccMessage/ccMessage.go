@@ -60,9 +60,9 @@ import (
 	"strings"
 	"time"
 
+	lp2 "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	write "github.com/influxdata/influxdb-client-go/v2/api/write" // MIT license
-	lp2 "github.com/influxdata/line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/maps"
 
 	"github.com/ClusterCockpit/cc-lib/v2/schema"
