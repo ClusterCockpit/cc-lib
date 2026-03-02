@@ -13,6 +13,7 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
+	"golang.org/x/exp/maps"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -183,6 +184,7 @@ func sanitizeExprString(key string) string {
 
 func getParamMap(point lp.CCMessage) map[string]any {
 	params := paramMapPool.Get().(map[string]any)
+	maps.Clear(params)
 	params["message"] = point
 	params["msg"] = point
 	params["name"] = point.Name()
@@ -190,6 +192,7 @@ func getParamMap(point lp.CCMessage) map[string]any {
 	params["time"] = params["timestamp"]
 
 	fields := paramMapPool.Get().(map[string]any)
+	maps.Clear(fields)
 	for key, value := range point.Fields() {
 		fields[key] = value
 		switch key {
@@ -214,12 +217,14 @@ func getParamMap(point lp.CCMessage) map[string]any {
 	params["fields"] = fields
 	params["field"] = fields
 	tags := paramMapPool.Get().(map[string]any)
+	maps.Clear(tags)
 	for key, value := range point.Tags() {
 		tags[sanitizeExprString(key)] = value
 	}
 	params["tags"] = tags
 	params["tag"] = tags
 	meta := paramMapPool.Get().(map[string]any)
+	maps.Clear(meta)
 	for key, value := range point.Meta() {
 		meta[sanitizeExprString(key)] = value
 	}
