@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"strings"
 
-	//	"time"
 	"os/exec"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
@@ -45,8 +44,7 @@ type GangliaSink struct {
 }
 
 func (s *GangliaSink) Write(msg lp.CCMessage) error {
-	var err error = nil
-	// var tagsstr []string
+	var err error
 	var argstr []string
 
 	point, err := s.mp.ProcessMessage(msg)
@@ -70,9 +68,6 @@ func (s *GangliaSink) Write(msg lp.CCMessage) error {
 		if len(s.config.ClusterName) > 0 {
 			argstr = append(argstr, fmt.Sprintf("--cluster=%s", s.config.ClusterName))
 		}
-		// if s.config.AddTagsAsDesc && len(tagsstr) > 0 {
-		// 	argstr = append(argstr, fmt.Sprintf("--desc=%q", strings.Join(tagsstr, ",")))
-		// }
 		if len(s.gmetric_config) > 0 {
 			argstr = append(argstr, fmt.Sprintf("--conf=%s", s.gmetric_config))
 		}

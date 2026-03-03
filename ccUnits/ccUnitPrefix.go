@@ -159,7 +159,7 @@ func (p *Prefix) String() string {
 	return InvalidMeasureLong
 }
 
-// Prefix returns the short string for the prefix like 'K', 'M' or 'G'. Is is recommened to use Prefix() over String().
+// Prefix returns the short string for the prefix like 'K', 'M' or 'G'. Is is recommend to use Prefix() over String().
 func (p *Prefix) Prefix() string {
 	if data, ok := PrefixDataMap[*p]; ok {
 		return data.Short

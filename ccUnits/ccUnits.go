@@ -79,10 +79,7 @@ func (u *unit) GetUnitDenominator() Measure {
 // GetPrefixPrefixFactor creates the default conversion function between two prefixes.
 // It returns a conversation function for the value.
 func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value any) any {
-	factor := 1.0
-	in_prefix := float64(in)
-	out_prefix := float64(out)
-	factor = in_prefix / out_prefix
+	factor := float64(in) / float64(out)
 	conv := func(value any) any {
 		switch v := value.(type) {
 		case float64:
