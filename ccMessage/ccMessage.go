@@ -54,7 +54,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	maps0 "maps"
+	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -63,7 +63,6 @@ import (
 	lp2 "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	write "github.com/influxdata/influxdb-client-go/v2/api/write" // MIT license
-	"maps"
 
 	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
@@ -493,9 +492,9 @@ func (m *ccMessage) UnmarshalJSON(data []byte) error {
 	m.tm = j.Tm
 	m.meta = make(map[string]string)
 	m.tags = make(map[string]string)
-	maps0.Copy(m.tags, j.Tags)
+	maps.Copy(m.tags, j.Tags)
 	m.fields = make(map[string]any)
-	maps0.Copy(m.fields, j.Fields)
+	maps.Copy(m.fields, j.Fields)
 	return nil
 }
 
