@@ -43,7 +43,7 @@ func TestHttp(t *testing.T) {
 					t.Errorf("received topology not valid: %s", err.Error())
 					t.Error(string(buf))
 				} else {
-					t.Logf("received valid topology of sytem with %d hwthreads", len(topol.GetHwthreads()))
+					t.Logf("received valid topology of system with %d hwthreads", len(topol.GetHwthreads()))
 					t.Log(string(buf))
 				}
 			}
@@ -111,7 +111,7 @@ func TestNats(t *testing.T) {
 			t.Errorf("received topology not valid: %s", err.Error())
 			t.Error(string(msg.Data))
 		} else {
-			t.Logf("received valid topology of sytem with %d hwthreads", len(topol.GetHwthreads()))
+			t.Logf("received valid topology of system with %d hwthreads", len(topol.GetHwthreads()))
 			t.Log(string(msg.Data))
 		}
 	})

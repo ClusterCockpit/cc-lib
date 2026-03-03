@@ -23,7 +23,7 @@ func generate_message_lists(num_lists, num_entries int) ([][]lp.CCMessage, error
 			var err error = nil
 			switch i % 4 {
 			case 0:
-				x, err = lp.NewEvent("myevent", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{}, "nothing happend", time.Now())
+				x, err = lp.NewEvent("myevent", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{}, "nothing happened", time.Now())
 			case 1:
 				x, err = lp.NewMetric("mymetric", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{"unit": "kByte"}, 12.145, time.Now())
 			case 2:

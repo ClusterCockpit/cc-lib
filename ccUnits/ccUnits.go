@@ -44,7 +44,7 @@ func (u *unit) String() string {
 	}
 }
 
-// Short returns the short string for the unit like 'kHz' or 'MByte'. Is is recommened to use Short() over String().
+// Short returns the short string for the unit like 'kHz' or 'MByte'. Is is recommend to use Short() over String().
 func (u *unit) Short() string {
 	if u.divMeasure != InvalidMeasure {
 		return fmt.Sprintf("%s%s/%s", u.prefix.Prefix(), u.measure.Short(), u.divMeasure.Short())
@@ -53,7 +53,7 @@ func (u *unit) Short() string {
 	}
 }
 
-// AddUnitDenominator adds a unit denominator to an exising unit. Can be used if you want to derive e.g. data volume to bandwidths.
+// AddUnitDenominator adds a unit denominator to an existing unit. Can be used if you want to derive e.g. data volume to bandwidths.
 // The data volume is in a Byte unit like 'kByte' and by dividing it by the runtime in seconds, we get the bandwidth. We can use the
 // data volume unit and add 'Second' as unit denominator
 func (u *unit) AddUnitDenominator(div Measure) {

@@ -59,7 +59,7 @@ func Validate(k Kind, r io.Reader) error {
 	case ClusterCfg:
 		s, err = jsonschema.Compile("embedfs://cluster.schema.json")
 	default:
-		return fmt.Errorf("SCHEMA/VALIDATE > unkown schema kind: %#v", k)
+		return fmt.Errorf("SCHEMA/VALIDATE > unknown schema kind: %#v", k)
 	}
 
 	if err != nil {

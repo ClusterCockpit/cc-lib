@@ -221,7 +221,7 @@ func (s *LibgangliaSink) Flush() error {
 }
 
 func (s *LibgangliaSink) Close() {
-	// Destroy Ganglia configration struct
+	// Destroy Ganglia configuration struct
 	// (not done by gmetric, I thought I am more clever but no...)
 	// C.Ganglia_gmond_config_destroy(s.gmond_config)
 	// Destroy Ganglia pool
