@@ -1008,7 +1008,7 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 		for _, host := range hostList {
 
 			// Endpoint of the redfish service
-			endpoint := strings.Replace(endpoint_pattern, "%h", host, -1)
+			endpoint := strings.ReplaceAll(endpoint_pattern, "%h", host)
 
 			r.config.ClientConfigs = append(
 				r.config.ClientConfigs,

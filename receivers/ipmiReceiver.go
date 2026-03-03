@@ -137,9 +137,9 @@ func (r *IPMIReceiver) doReadMetric() {
 
 				metric := strings.ToLower(v2[idxType])
 				name := strings.ToLower(
-					strings.Replace(
+					strings.ReplaceAll(
 						strings.TrimSpace(
-							v2[idxName]), " ", "_", -1))
+							v2[idxName]), " ", "_"))
 				// remove prefix enumeration like 01-...
 				if v := numPrefixRegex.FindStringSubmatch(name); v != nil {
 					name = v[1]
@@ -250,7 +250,7 @@ func (r *IPMIReceiver) doReadMetric() {
 				cclog.ComponentError(
 					r.name,
 					fmt.Sprintf("doReadMetric(): Failed to wait for the end of command \"%s\": %v\n",
-						strings.Replace(command.String(), clientConfig.Password, "<PW>", -1), err),
+						strings.ReplaceAll(command.String(), clientConfig.Password, "<PW>"), err),
 					fmt.Sprintf("doReadMetric(): command stderr: \"%s\"\n", string(errMsg)),
 				)
 			}
@@ -458,7 +458,7 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 			return nil, err
 		}
 		for _, host := range hostList {
-			ipmiHost := strings.Replace(host_pattern, "%h", host, -1)
+			ipmiHost := strings.ReplaceAll(host_pattern, "%h", host)
 			ipmi2HostMapping[ipmiHost] = host
 		}
 
