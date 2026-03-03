@@ -29,7 +29,6 @@ type InfluxSinkConfig struct {
 	// the metrics are sent without further delay.
 	// Default: 1s
 	FlushInterval string `json:"flush_delay,omitempty"`
-	flushDelay    time.Duration
 
 	// Influx client options:
 
