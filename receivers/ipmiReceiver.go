@@ -505,7 +505,7 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 				return nil, err
 			}
 		}
-		cliOptions := make([]string, 0)
+		cliOptions := make([]string, 0, len(clientConfigJSON.CLIOptions))
 		cliOptions = append(cliOptions, clientConfigJSON.CLIOptions...)
 
 		// Is metrics excluded globally or per client

@@ -565,7 +565,7 @@ func (m *ccMessage) Bytes() ([]byte, error) {
 	var encoder lp2.Encoder
 	encoder.SetPrecision(lp2.Nanosecond)
 
-	sortedkeys := make([]string, 0)
+	sortedkeys := make([]string, 0, len(m.Tags()))
 	for k := range m.Tags() {
 		sortedkeys = append(sortedkeys, k)
 	}
