@@ -13,7 +13,6 @@ import (
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
-	"golang.org/x/exp/maps"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -54,7 +53,7 @@ type messageProcessor struct {
 	// For thread-safety
 	mutex sync.RWMutex
 
-	// mapping contains all evalables as strings to gval.Evaluable
+	// mapping contains all evaluables as strings to gval.Evaluable
 	// because it is not possible to get the original string out of
 	// a gval.Evaluable
 	mapping map[string]*vm.Program
@@ -184,15 +183,16 @@ func sanitizeExprString(key string) string {
 
 func getParamMap(point lp.CCMessage) map[string]any {
 	params := paramMapPool.Get().(map[string]any)
-	maps.Clear(params)
+	clear(params)
 	params["message"] = point
 	params["msg"] = point
 	params["name"] = point.Name()
 	params["timestamp"] = point.Time().Unix()
 	params["time"] = params["timestamp"]
 
+	// Put fields into params map
 	fields := paramMapPool.Get().(map[string]any)
-	maps.Clear(fields)
+	clear(fields)
 	for key, value := range point.Fields() {
 		fields[key] = value
 		switch key {
@@ -216,19 +216,24 @@ func getParamMap(point lp.CCMessage) map[string]any {
 	params["msgtype"] = params["messagetype"]
 	params["fields"] = fields
 	params["field"] = fields
+
+	// Put tags into params map
 	tags := paramMapPool.Get().(map[string]any)
-	maps.Clear(tags)
+	clear(tags)
 	for key, value := range point.Tags() {
 		tags[sanitizeExprString(key)] = value
 	}
 	params["tags"] = tags
 	params["tag"] = tags
+
+	// Put meta information into params map
 	meta := paramMapPool.Get().(map[string]any)
-	maps.Clear(meta)
+	clear(meta)
 	for key, value := range point.Meta() {
 		meta[sanitizeExprString(key)] = value
 	}
 	params["meta"] = meta
+
 	return params
 }
 
