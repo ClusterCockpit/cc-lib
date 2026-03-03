@@ -27,7 +27,7 @@ jobs:
     - name: Setup Golang
       uses: actions/setup-go@v5
       with:
-        go-version: '1.23'
+        go-version: '1.25'
         check-latest: true
 
     # Install hwloc but add a softlink back to ccStartup folder for testing
