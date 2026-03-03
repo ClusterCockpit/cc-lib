@@ -764,7 +764,7 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 }
 
 func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error) {
-	var err error = nil
+	var err error
 	out := lp.FromMessage(m)
 
 	if len(mp.stages) == 0 {

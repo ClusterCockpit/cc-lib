@@ -95,11 +95,11 @@ func CCStartup(config json.RawMessage) error {
 			}
 		}
 		if len(conf.NatsEndpoint.URL) > 0 {
-			var client *nats.Conn = nil
 			var uinfo nats.Option = nil
 			if len(conf.NatsEndpoint.NkeyFile) > 0 {
 				uinfo = nats.UserCredentials(conf.NatsEndpoint.NkeyFile)
 			}
+			var client *nats.Conn
 			if uinfo != nil {
 				client, err = nats.Connect(conf.NatsEndpoint.URL, uinfo)
 			} else {
