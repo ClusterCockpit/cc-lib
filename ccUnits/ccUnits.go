@@ -156,8 +156,8 @@ func convertTempF2TempC(value any) any {
 // GetPrefixStringPrefixStringFactor is a wrapper for GetPrefixPrefixFactor with string inputs instead
 // of prefixes. It also returns a conversation function for the value.
 func GetPrefixStringPrefixStringFactor(in string, out string) func(value any) any {
-	var i Prefix = NewPrefix(in)
-	var o Prefix = NewPrefix(out)
+	i := NewPrefix(in)
+	o := NewPrefix(out)
 	return GetPrefixPrefixFactor(i, o)
 }
 
@@ -177,7 +177,7 @@ func GetUnitPrefixFactor(in Unit, out Prefix) (func(value any) any, Unit) {
 // GetUnitPrefixStringFactor gets the conversion function and resulting unit for a unit and a prefix as string.
 // It is a wrapper for GetUnitPrefixFactor
 func GetUnitPrefixStringFactor(in Unit, out string) (func(value any) any, Unit) {
-	var o Prefix = NewPrefix(out)
+	o := NewPrefix(out)
 	return GetUnitPrefixFactor(in, o)
 }
 
