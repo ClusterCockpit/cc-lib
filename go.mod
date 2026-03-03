@@ -14,7 +14,6 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/stmcginnis/gofish v0.21.3
-	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 )
 
 require (

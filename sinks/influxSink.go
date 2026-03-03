@@ -22,7 +22,7 @@ import (
 	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2Api "github.com/influxdata/influxdb-client-go/v2/api"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 type InfluxSink struct {
