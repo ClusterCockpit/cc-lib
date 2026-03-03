@@ -63,7 +63,7 @@ import (
 	lp2 "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	write "github.com/influxdata/influxdb-client-go/v2/api/write" // MIT license
-	"golang.org/x/exp/maps"
+	"maps"
 
 	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
