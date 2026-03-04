@@ -57,7 +57,7 @@ func TestInfluxAsyncSink(t *testing.T) {
 	httpserver := &http.Server{
 		Addr:        "localhost:8082",
 		Handler:     serv, // handler to invoke, http.DefaultServeMux if nil
-		IdleTimeout: time.Duration(10 * time.Second),
+		IdleTimeout: 10 * time.Second,
 	}
 	serv.HandleFunc("/api/v2/write", InfluxAsyncReceiver)
 	serv.HandleFunc("/ping", InfluxPing)
