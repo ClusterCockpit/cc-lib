@@ -718,11 +718,7 @@ func (r *RedfishReceiver) doReadMetric() {
 	// Create worker go routines
 	for i := 0; i < r.config.fanout; i++ {
 		// Increment worker wait group counter
-		workerWaitGroup.Add(1)
-		go func() {
-			// Decrement worker wait group counter
-			defer workerWaitGroup.Done()
-
+		workerWaitGroup.Go(func() {
 			// Read power metrics for each client config
 			for clientConfig := range workerInput {
 				err := r.readMetrics(clientConfig)
@@ -730,7 +726,7 @@ func (r *RedfishReceiver) doReadMetric() {
 					cclog.ComponentError(r.name, err)
 				}
 			}
-		}()
+		})
 	}
 
 	// Distribute client configs to workers
@@ -759,10 +755,7 @@ func (r *RedfishReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
 
 	// Start redfish receiver
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-
+	r.wg.Go(func() {
 		// Create ticker
 		ticker := time.NewTicker(r.config.Interval)
 		defer ticker.Stop()
@@ -784,7 +777,7 @@ func (r *RedfishReceiver) Start() {
 				return
 			}
 		}
-	}()
+	})
 
 	cclog.ComponentDebug(r.name, "STARTED")
 }

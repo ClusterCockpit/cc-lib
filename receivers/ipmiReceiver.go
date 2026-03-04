@@ -262,10 +262,7 @@ func (r *IPMIReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
 
 	// Start IPMI receiver
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-
+	r.wg.Go(func() {
 		// Create ticker
 		ticker := time.NewTicker(r.config.Interval)
 		defer ticker.Stop()
@@ -287,7 +284,7 @@ func (r *IPMIReceiver) Start() {
 				return
 			}
 		}
-	}()
+	})
 
 	cclog.ComponentDebug(r.name, "STARTED")
 }
