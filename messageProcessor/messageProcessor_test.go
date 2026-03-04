@@ -315,7 +315,7 @@ func TestConfigList(t *testing.T) {
 			}
 			if c.pre != nil {
 				if err = c.pre(m); err != nil {
-					t.Errorf("error running pre-test function: %v", err.Error())
+					t.Errorf("error running pre-test function: %s", err.Error())
 					return
 				}
 			}
@@ -346,7 +346,7 @@ func TestConfigList(t *testing.T) {
 
 			if c.check != nil {
 				if err := c.check(out); err != nil {
-					t.Errorf("check failed with %v", err.Error())
+					t.Errorf("check failed with %s", err.Error())
 					t.Log("Rerun with debugging")
 					mp.ProcessMessage(m)
 					return
@@ -441,7 +441,7 @@ func BenchmarkProcessing(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, m := range mlist[i] {
 			if _, err := mp.ProcessMessage(m); err != nil {
-				b.Errorf("failed processing message '%s': %v", m.ToLineProtocol(nil), err.Error())
+				b.Errorf("failed processing message '%s': %s", m.ToLineProtocol(nil), err.Error())
 				return
 			}
 		}

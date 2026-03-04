@@ -82,7 +82,6 @@ func (sm *sinkManager) Init(wg *sync.WaitGroup, sinkConfig json.RawMessage) erro
 // distributes received metrics to the sinks
 func (sm *sinkManager) Start() {
 	sm.wg.Go(func() {
-
 		// Sink manager is done
 		done := func() {
 			for _, s := range sm.sinks {

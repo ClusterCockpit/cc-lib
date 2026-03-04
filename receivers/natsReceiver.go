@@ -100,7 +100,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 	if len(config) > 0 {
 		err := json.Unmarshal(config, &r.config)
 		if err != nil {
-			cclog.ComponentError(r.name, "Error reading config:", err.Error())
+			cclog.ComponentError(r.name, fmt.Sprintf("Error reading config: %s", err.Error()))
 			return nil, err
 		}
 	}
@@ -134,7 +134,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 		if err == nil {
 			uinfo = nats.UserCredentials(r.config.NkeyFile)
 		} else {
-			cclog.ComponentError(r.name, "NKEY file", r.config.NkeyFile, "does not exist: %v", err.Error())
+			cclog.ComponentError(r.name, fmt.Sprintf("NKEY file %s does not exist: %s", r.config.NkeyFile, err.Error()))
 			return nil, err
 		}
 	}
@@ -151,7 +151,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 
 	sub, err := r.nc.Subscribe(r.config.Subject, func(m *nats.Msg) {})
 	if err != nil {
-		err = fmt.Errorf("Failed to test subscribe to subject '%s': %s", r.config.Subject, err.Error())
+		err = fmt.Errorf("Failed to test subscribe to subject '%s': %w", r.config.Subject, err)
 		cclog.ComponentError(r.name, err)
 		return nil, err
 	}

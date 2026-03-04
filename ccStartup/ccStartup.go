@@ -14,19 +14,19 @@ import (
 // func StartupTopology(out chan lp.CCMessage) error {
 // 	topo, err := ccTopology.LocalTopology()
 // 	if err != nil {
-// 		return fmt.Errorf("Failed to get local topology: %v", err.Error())
+// 		return fmt.Errorf("Failed to get local topology: %w", err)
 // 	}
 
 // 	topoJson, err := json.Marshal(topo)
 // 	if err != nil {
-// 		return fmt.Errorf("Failed to marshal topology: %v", err.Error())
+// 		return fmt.Errorf("Failed to marshal topology: %w", err)
 // 	}
 
 // 	msg, err := lp.NewEvent("topology", map[string]string{
 // 		"type": "node",
 // 	}, nil, string(topoJson), time.Now())
 // 	if err != nil {
-// 		return fmt.Errorf("Failed to create event with topology: %v", err.Error())
+// 		return fmt.Errorf("Failed to create event with topology: %w", err)
 // 	}
 
 // 	out <- msg
@@ -52,7 +52,7 @@ func CCStartup(config json.RawMessage) error {
 	}
 	err := json.Unmarshal(config, &conf)
 	if err != nil {
-		err = fmt.Errorf("failed to read ccstartup configuration: %s", err.Error())
+		err = fmt.Errorf("failed to read ccstartup configuration: %w", err)
 		cclog.ComponentError("CCStartup", err.Error())
 		return err
 	}
@@ -61,13 +61,13 @@ func CCStartup(config json.RawMessage) error {
 	if conf.SendTopology {
 		topo, err := ccTopology.LocalTopology()
 		if err != nil {
-			err = fmt.Errorf("Failed to get local topology: %v", err.Error())
+			err = fmt.Errorf("Failed to get local topology: %w", err)
 			cclog.ComponentError("CCStartup", err.Error())
 			return err
 		}
 		topoJson, err := json.Marshal(topo)
 		if err != nil {
-			err = fmt.Errorf("Failed to marshal topology: %v", err.Error())
+			err = fmt.Errorf("Failed to marshal topology: %w", err)
 			cclog.ComponentError("CCStartup", err.Error())
 			return err
 		}
@@ -79,7 +79,7 @@ func CCStartup(config json.RawMessage) error {
 			bodyReader := bytes.NewReader(out)
 			req, err := http.NewRequest(http.MethodPost, conf.HttpEndpoint.URL, bodyReader)
 			if err != nil {
-				err = fmt.Errorf("failed to create HTTP request: %s", err.Error())
+				err = fmt.Errorf("failed to create HTTP request: %w", err)
 				cclog.ComponentError("CCStartup", err.Error())
 			} else {
 				if len(conf.HttpEndpoint.AuthToken) > 0 {
@@ -87,7 +87,7 @@ func CCStartup(config json.RawMessage) error {
 				}
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
-					err = fmt.Errorf("failed to send topology to %s: %s", conf.HttpEndpoint.URL, err.Error())
+					err = fmt.Errorf("failed to send topology to %s: %w", conf.HttpEndpoint.URL, err)
 					cclog.ComponentError("CCStartup", err.Error())
 				} else {
 					defer resp.Body.Close()
@@ -106,12 +106,12 @@ func CCStartup(config json.RawMessage) error {
 				client, err = nats.Connect(conf.NatsEndpoint.URL)
 			}
 			if err != nil {
-				err = fmt.Errorf("failed to connect to NATS URL %s: %s", conf.NatsEndpoint.URL, err.Error())
+				err = fmt.Errorf("failed to connect to NATS URL %s: %w", conf.NatsEndpoint.URL, err)
 				cclog.ComponentError("CCStartup", err.Error())
 			} else {
 				err = client.Publish(conf.NatsEndpoint.Subject, out)
 				if err != nil {
-					err = fmt.Errorf("failed to send topology to %s subject %s: %s", conf.NatsEndpoint.URL, conf.NatsEndpoint.Subject, err.Error())
+					err = fmt.Errorf("failed to send topology to %s subject %s: %w", conf.NatsEndpoint.URL, conf.NatsEndpoint.Subject, err)
 					cclog.ComponentError("CCStartup", err.Error())
 				}
 			}

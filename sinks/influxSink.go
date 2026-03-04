@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2Api "github.com/influxdata/influxdb-client-go/v2/api"
-	"slices"
 )
 
 type InfluxSink struct {
@@ -464,14 +464,14 @@ func NewInfluxSink(name string, config json.RawMessage) (Sink, error) {
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 
 	if len(s.config.MessageProcessor) > 0 {
 		err = p.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	for _, k := range s.config.MetaAsTags {

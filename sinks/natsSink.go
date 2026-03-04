@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	nats "github.com/nats-io/nats.go"
-	"slices"
 )
 
 type NatsSinkConfig struct {
@@ -58,7 +58,7 @@ func (s *NatsSink) connect() error {
 		if _, err := os.Stat(s.config.NkeyFile); err == nil {
 			uinfo = nats.UserCredentials(s.config.NkeyFile)
 		} else {
-			cclog.ComponentError(s.name, "NKEY file", s.config.NkeyFile, "does not exist: %v", err.Error())
+			cclog.ComponentError(s.name, "NKEY file", s.config.NkeyFile, "does not exist: %w", err)
 			return err
 		}
 	}
@@ -183,14 +183,14 @@ func NewNatsSink(name string, config json.RawMessage) (Sink, error) {
 	// Create a new message processor
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 	// Read config related to message processor
 	if len(s.config.MessageProcessor) > 0 {
 		err = s.mp.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	// Add meta_as_tags list to message processor
