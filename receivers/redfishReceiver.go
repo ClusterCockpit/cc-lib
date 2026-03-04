@@ -83,8 +83,8 @@ func deleteEmptyTags(tags map[string]string) {
 }
 
 // setMetricValue sets the value entry in the fields map
-func setMetricValue(value any) map[string]interface{} {
-	return map[string]interface{}{
+func setMetricValue(value any) map[string]any {
+	return map[string]any{
 		"value": value,
 	}
 }
@@ -164,7 +164,7 @@ func (r *RedfishReceiver) readSensors(
 		meta := map[string]string{
 			"source": r.name,
 			"group":  "FanSpeed",
-			"unit":   string(sensor.ReadingUnits),
+			"unit":   sensor.ReadingUnits,
 		}
 
 		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, *sensor.Reading, time.Now())
@@ -718,11 +718,7 @@ func (r *RedfishReceiver) doReadMetric() {
 	// Create worker go routines
 	for i := 0; i < r.config.fanout; i++ {
 		// Increment worker wait group counter
-		workerWaitGroup.Add(1)
-		go func() {
-			// Decrement worker wait group counter
-			defer workerWaitGroup.Done()
-
+		workerWaitGroup.Go(func() {
 			// Read power metrics for each client config
 			for clientConfig := range workerInput {
 				err := r.readMetrics(clientConfig)
@@ -730,7 +726,7 @@ func (r *RedfishReceiver) doReadMetric() {
 					cclog.ComponentError(r.name, err)
 				}
 			}
-		}()
+		})
 	}
 
 	// Distribute client configs to workers
@@ -759,10 +755,7 @@ func (r *RedfishReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
 
 	// Start redfish receiver
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-
+	r.wg.Go(func() {
 		// Create ticker
 		ticker := time.NewTicker(r.config.Interval)
 		defer ticker.Stop()
@@ -784,7 +777,7 @@ func (r *RedfishReceiver) Start() {
 				return
 			}
 		}
-	}()
+	})
 
 	cclog.ComponentDebug(r.name, "STARTED")
 }
@@ -1035,10 +1028,7 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 
 	// Compute parallel fanout to use
 	numClients := len(r.config.ClientConfigs)
-	r.config.fanout = configJSON.Fanout
-	if numClients < r.config.fanout {
-		r.config.fanout = numClients
-	}
+	r.config.fanout = min(numClients, configJSON.Fanout)
 
 	// Check that at least on client config exists
 	if numClients == 0 {

@@ -27,7 +27,7 @@ func moveInMessage(message lp2.CCMessage, params *map[string]any, checks *map[*v
 	for d, data := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return false, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		// cclog.ComponentDebug("MessageProcessor", "Move from", from, "to", to)
 		if value.(bool) {
@@ -90,7 +90,7 @@ func deleteIf(message lp2.CCMessage, params *map[string]any, checks *map[*vm.Pro
 	for d, data := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return true, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return true, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		if value.(bool) {
 			switch location {
@@ -123,7 +123,7 @@ func addIf(message lp2.CCMessage, params *map[string]any, checks *map[*vm.Progra
 	for d, data := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return true, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return true, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		if value.(bool) {
 			switch location {
@@ -199,7 +199,7 @@ func dropMessagesIf(params *map[string]any, checks *map[*vm.Program]struct{}) (b
 	for d := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return false, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		if value.(bool) {
 			return true, nil
@@ -231,7 +231,7 @@ func changeUnitPrefix(message lp2.CCMessage, params *map[string]any, checks *map
 	for r, n := range *checks {
 		value, err := expr.Run(r, *params)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return false, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		if value.(bool) {
 			newPrefix := units.NewPrefix(n)
@@ -283,7 +283,7 @@ func renameMessagesIf(message lp2.CCMessage, params *map[string]any, checks *map
 	for d, n := range *checks {
 		value, err := expr.Run(d, *params)
 		if err != nil {
-			return true, fmt.Errorf("failed to evaluate: %v", err.Error())
+			return true, fmt.Errorf("failed to evaluate: %w", err)
 		}
 		if value.(bool) {
 			old := message.Name()

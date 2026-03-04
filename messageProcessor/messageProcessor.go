@@ -122,9 +122,9 @@ type MessageProcessor interface {
 	FromConfigJSON(config json.RawMessage) error
 	// Processing functions for legacy CCMetric and current CCMessage
 	ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
-	// EvalToBool(condition string, parameters map[string]interface{}) (bool, error)
-	// EvalToFloat64(condition string, parameters map[string]interface{}) (float64, error)
-	// EvalToString(condition string, parameters map[string]interface{}) (string, error)
+	// EvalToBool(condition string, parameters map[string]any) (bool, error)
+	// EvalToFloat64(condition string, parameters map[string]any) (float64, error)
+	// EvalToString(condition string, parameters map[string]any) (string, error)
 }
 
 const (

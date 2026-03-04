@@ -23,7 +23,7 @@
 //
 //	cache := lrucache.New(1000) // maxmemory in arbitrary units
 //
-//	value := cache.Get("key", func() (interface{}, time.Duration, int) {
+//	value := cache.Get("key", func() (any, time.Duration, int) {
 //	    // This closure is called only if the value is not cached or expired
 //	    result := expensiveComputation()
 //	    return result, 10 * time.Minute, len(result) // value, ttl, size
@@ -58,7 +58,7 @@ import (
 //
 // Example:
 //
-//	computeValue := func() (interface{}, time.Duration, int) {
+//	computeValue := func() (any, time.Duration, int) {
 //	    data := fetchFromDatabase() // Expensive operation
 //	    return data, 5 * time.Minute, len(data)
 //	}
@@ -170,7 +170,7 @@ func New(maxmemory int) *Cache {
 // Examples:
 //
 //	// Basic usage with computation
-//	value := cache.Get("user:123", func() (interface{}, time.Duration, int) {
+//	value := cache.Get("user:123", func() (any, time.Duration, int) {
 //	    user := fetchUserFromDB(123)
 //	    return user, 10 * time.Minute, 1
 //	}).(User)
@@ -182,7 +182,7 @@ func New(maxmemory int) *Cache {
 //	}
 //
 //	// With size calculation
-//	value := cache.Get("data", func() (interface{}, time.Duration, int) {
+//	value := cache.Get("data", func() (any, time.Duration, int) {
 //	    data := expensiveComputation()
 //	    return data, 1 * time.Hour, len(data) * 8 // Approximate bytes
 //	})
@@ -365,7 +365,7 @@ func (c *Cache) Del(key string) bool {
 //
 // Example:
 //
-//	cache.Keys(func(key string, val interface{}) {
+//	cache.Keys(func(key string, val any) {
 //	    fmt.Printf("Key: %s, Value: %v\n", key, val)
 //	})
 func (c *Cache) Keys(f func(key string, val any)) {

@@ -54,7 +54,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	maps0 "maps"
+	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -63,7 +63,6 @@ import (
 	lp2 "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	write "github.com/influxdata/influxdb-client-go/v2/api/write" // MIT license
-	"maps"
 
 	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
@@ -473,7 +472,7 @@ func FromJSON(input json.RawMessage) (CCMessage, error) {
 	var j ccMessageJSON
 	err := json.Unmarshal(input, &j)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON to CCMessage: %v", err.Error())
+		return nil, fmt.Errorf("failed to parse JSON to CCMessage: %w", err)
 	}
 
 	return NewMessage(j.Name, j.Tags, make(map[string]string), j.Fields, j.Tm)
@@ -487,15 +486,15 @@ func (m *ccMessage) UnmarshalJSON(data []byte) error {
 	var j ccMessageJSON
 	err := json.Unmarshal(data, &j)
 	if err != nil {
-		return fmt.Errorf("failed to parse JSON to CCMessage: %v", err.Error())
+		return fmt.Errorf("failed to parse JSON to CCMessage: %w", err)
 	}
 	m.name = j.Name
 	m.tm = j.Tm
 	m.meta = make(map[string]string)
 	m.tags = make(map[string]string)
-	maps0.Copy(m.tags, j.Tags)
+	maps.Copy(m.tags, j.Tags)
 	m.fields = make(map[string]any)
-	maps0.Copy(m.fields, j.Fields)
+	maps.Copy(m.fields, j.Fields)
 	return nil
 }
 
@@ -507,8 +506,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 		// Decode measurement name
 		measurement, err := decoder.Measurement()
 		if err != nil {
-			msg := "ccmessage: Failed to decode measurement: " + err.Error()
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("ccmessage: Failed to decode measurement: %w", err)
 		}
 
 		// Decode tags
@@ -516,8 +514,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 		for {
 			key, value, err := decoder.NextTag()
 			if err != nil {
-				msg := "ccmessage: Failed to decode tag: " + err.Error()
-				return nil, errors.New(msg)
+				return nil, fmt.Errorf("ccmessage: Failed to decode tag: %w", err)
 			}
 			if key == nil {
 				break
@@ -530,8 +527,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 		for {
 			key, value, err := decoder.NextField()
 			if err != nil {
-				msg := "ccmessage: Failed to decode field: " + err.Error()
-				return nil, errors.New(msg)
+				return nil, fmt.Errorf("ccmessage: Failed to decode field: %w", err)
 			}
 			if key == nil {
 				break
@@ -542,8 +538,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 		// Decode time stamp
 		t, err := decoder.Time(lp2.Nanosecond, time.Time{})
 		if err != nil {
-			msg := "ccmessage: Failed to decode time: " + err.Error()
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("ccmessage: Failed to decode time: %w", err)
 		}
 
 		y, err := NewMessage(
@@ -554,8 +549,7 @@ func FromBytes(data []byte) ([]CCMessage, error) {
 			t,
 		)
 		if err != nil {
-			msg := "ccmessage: Failed to create CCMessage: " + err.Error()
-			return nil, errors.New(msg)
+			return nil, fmt.Errorf("ccmessage: Failed to create CCMessage: %w", err)
 		}
 		out = append(out, y)
 	}
@@ -566,7 +560,7 @@ func (m *ccMessage) Bytes() ([]byte, error) {
 	var encoder lp2.Encoder
 	encoder.SetPrecision(lp2.Nanosecond)
 
-	sortedkeys := make([]string, 0)
+	sortedkeys := make([]string, 0, len(m.Tags()))
 	for k := range m.Tags() {
 		sortedkeys = append(sortedkeys, k)
 	}

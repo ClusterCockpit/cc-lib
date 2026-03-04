@@ -250,7 +250,7 @@ func Print(v ...any) {
 }
 
 // Exit logs to STDOUT without string formatting; application exits with error code 0.
-// Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
+// Used for exiting successfully with message after expected outcome, e.g. successful single-call application runs.
 func Exit(v ...any) {
 	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(0)
@@ -349,7 +349,7 @@ func Printf(format string, v ...any) {
 }
 
 // Exitf logs to STDOUT with string formatting; application exits with error code 0.
-// Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
+// Used for exiting successfully with message after expected outcome, e.g. successful single-call application runs.
 func Exitf(format string, v ...any) {
 	fmt.Fprintf(os.Stdout, format, v...)
 	os.Exit(0)

@@ -118,7 +118,7 @@ func (m *Measure) String() string {
 	return InvalidMeasureLong
 }
 
-// Short returns the short string for the measure like 'B' (Bytes), 's' (Time) or 'W' (Watt). Is is recommened to use Short() over String().
+// Short returns the short string for the measure like 'B' (Bytes), 's' (Time) or 'W' (Watt). Is is recommend to use Short() over String().
 func (m *Measure) Short() string {
 	if data, ok := MeasuresMap[*m]; ok {
 		return data.Short
@@ -126,7 +126,7 @@ func (m *Measure) Short() string {
 	return InvalidMeasureShort
 }
 
-// NewMeasure creates a new measure out of a string representing a measure like 'Bytes', 'Flops' and 'precent'.
+// NewMeasure creates a new measure out of a string representing a measure like 'Bytes', 'Flops' and 'percent'.
 // It uses regular expressions for matching.
 func NewMeasure(unit string) Measure {
 	for m, data := range MeasuresMap {

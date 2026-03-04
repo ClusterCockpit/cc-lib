@@ -235,7 +235,7 @@ func (r *IPMIReceiver) doReadMetric() {
 						"group":  "IPMI",
 						"unit":   unit,
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": value,
 					},
 					time.Now())
@@ -262,10 +262,7 @@ func (r *IPMIReceiver) Start() {
 	cclog.ComponentDebug(r.name, "START")
 
 	// Start IPMI receiver
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-
+	r.wg.Go(func() {
 		// Create ticker
 		ticker := time.NewTicker(r.config.Interval)
 		defer ticker.Stop()
@@ -287,7 +284,7 @@ func (r *IPMIReceiver) Start() {
 				return
 			}
 		}
-	}()
+	})
 
 	cclog.ComponentDebug(r.name, "STARTED")
 }
@@ -505,7 +502,7 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 				return nil, err
 			}
 		}
-		cliOptions := make([]string, 0)
+		cliOptions := make([]string, 0, len(clientConfigJSON.CLIOptions))
 		cliOptions = append(cliOptions, clientConfigJSON.CLIOptions...)
 
 		// Is metrics excluded globally or per client
