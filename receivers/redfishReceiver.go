@@ -164,7 +164,7 @@ func (r *RedfishReceiver) readSensors(
 		meta := map[string]string{
 			"source": r.name,
 			"group":  "FanSpeed",
-			"unit":   string(sensor.ReadingUnits),
+			"unit":   sensor.ReadingUnits,
 		}
 
 		r.sendMetric(clientConfig.mp, "fan_speed", tags, meta, *sensor.Reading, time.Now())
