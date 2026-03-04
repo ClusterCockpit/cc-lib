@@ -74,7 +74,7 @@ func Validate(k Kind, r io.Reader) error {
 	}
 
 	if err = s.Validate(v); err != nil {
-		return fmt.Errorf("SCHEMA/VALIDATE > %#v", err)
+		return fmt.Errorf("SCHEMA/VALIDATE > %w", err)
 	}
 
 	return nil

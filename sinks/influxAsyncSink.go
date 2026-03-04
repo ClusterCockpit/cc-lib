@@ -260,7 +260,7 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 	if len(s.config.CustomFlushInterval) > 0 {
 		t, err := time.ParseDuration(s.config.CustomFlushInterval)
 		if err != nil {
-			return nil, fmt.Errorf("invalid duration in 'custom_flush_interval': %v", err)
+			return nil, fmt.Errorf("invalid duration in 'custom_flush_interval': %w", err)
 		}
 		s.customFlushInterval = t
 	}

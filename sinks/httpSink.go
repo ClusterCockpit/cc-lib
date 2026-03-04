@@ -90,7 +90,7 @@ func (s *HttpSink) Write(msg lp.CCMessage) error {
 
 		// Check that encoding worked
 		if err != nil {
-			return fmt.Errorf("encoding failed: %v", err)
+			return fmt.Errorf("encoding failed: %w", err)
 		}
 	}
 
