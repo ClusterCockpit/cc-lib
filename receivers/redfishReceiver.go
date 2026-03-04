@@ -1028,10 +1028,7 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 
 	// Compute parallel fanout to use
 	numClients := len(r.config.ClientConfigs)
-	r.config.fanout = configJSON.Fanout
-	if numClients < r.config.fanout {
-		r.config.fanout = numClients
-	}
+	r.config.fanout = min(numClients, configJSON.Fanout)
 
 	// Check that at least on client config exists
 	if numClients == 0 {
