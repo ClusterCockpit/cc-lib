@@ -83,8 +83,8 @@ func deleteEmptyTags(tags map[string]string) {
 }
 
 // setMetricValue sets the value entry in the fields map
-func setMetricValue(value any) map[string]interface{} {
-	return map[string]interface{}{
+func setMetricValue(value any) map[string]any {
+	return map[string]any{
 		"value": value,
 	}
 }

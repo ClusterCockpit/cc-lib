@@ -235,7 +235,7 @@ func (r *IPMIReceiver) doReadMetric() {
 						"group":  "IPMI",
 						"unit":   unit,
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": value,
 					},
 					time.Now())
