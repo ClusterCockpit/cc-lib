@@ -51,7 +51,7 @@ type NatsSink struct {
 func (s *NatsSink) connect() error {
 	var err error
 	var nc *nats.Conn
-	natsOpts := make([]nats.Options, 0)
+	natsOpts := make([]nats.Option, 0)
 	if len(s.config.User) > 0 && len(s.config.Password) > 0 {
 		natsOpts = append(natsOpts, nats.UserInfo(s.config.User, s.config.Password))
 	} else if len(s.config.NkeyFile) > 0 {
@@ -62,10 +62,11 @@ func (s *NatsSink) connect() error {
 			return err
 		}
 	}
+	natsOpts = append(natsOpts, nats.MaxReconnects(-1), nats.RetryOnFailedConnect(true))
 	uri := fmt.Sprintf("nats://%s:%s", s.config.Host, s.config.Port)
 	cclog.ComponentDebug(s.name, "Connect to", uri)
 	s.client = nil
-	nc, err = nats.Connect(uri, nats.MaxReconnects(-1), nats.RetryOnFailedConnect(true), natsOpts)
+	nc, err = nats.Connect(uri, natsOpts...)
 	if err != nil {
 		cclog.ComponentError(s.name, "Connect to", uri, "failed:", err.Error())
 		return err
