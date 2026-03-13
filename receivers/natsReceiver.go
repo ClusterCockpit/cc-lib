@@ -142,7 +142,7 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 	// Connect to NATS server
 	url := fmt.Sprintf("nats://%s:%s", r.config.Addr, r.config.Port)
 	cclog.ComponentDebug(r.name, "NewNatsReceiver ", url, " Subject ", r.config.Subject)
-	if nc, err := nats.Connect(url, uinfo); err == nil {
+	if nc, err := nats.Connect(url, uinfo, nats.MaxReconnects(-1), nats.RetryOnFailedConnect(true)); err == nil {
 		r.nc = nc
 	} else {
 		r.nc = nil

@@ -50,13 +50,13 @@ type NatsSink struct {
 
 func (s *NatsSink) connect() error {
 	var err error
-	var uinfo nats.Option = nil
 	var nc *nats.Conn
+	natsOpts := make([]nats.Options, 0)
 	if len(s.config.User) > 0 && len(s.config.Password) > 0 {
-		uinfo = nats.UserInfo(s.config.User, s.config.Password)
+		natsOpts = append(natsOpts, nats.UserInfo(s.config.User, s.config.Password))
 	} else if len(s.config.NkeyFile) > 0 {
 		if _, err := os.Stat(s.config.NkeyFile); err == nil {
-			uinfo = nats.UserCredentials(s.config.NkeyFile)
+			natsOpts = append(natsOpts, nats.UserCredentials(s.config.NkeyFile))
 		} else {
 			cclog.ComponentError(s.name, "NKEY file", s.config.NkeyFile, "does not exist: %w", err)
 			return err
@@ -65,11 +65,7 @@ func (s *NatsSink) connect() error {
 	uri := fmt.Sprintf("nats://%s:%s", s.config.Host, s.config.Port)
 	cclog.ComponentDebug(s.name, "Connect to", uri)
 	s.client = nil
-	if uinfo != nil {
-		nc, err = nats.Connect(uri, uinfo)
-	} else {
-		nc, err = nats.Connect(uri)
-	}
+	nc, err = nats.Connect(uri, nats.MaxReconnects(-1), nats.RetryOnFailedConnect(true), natsOpts)
 	if err != nil {
 		cclog.ComponentError(s.name, "Connect to", uri, "failed:", err.Error())
 		return err
