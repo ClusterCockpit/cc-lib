@@ -304,21 +304,21 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 			max = math.Max(max, series.Statistics.Max)
 		}
 
-		n, m := 0, len(jm.Series[0].Data)
-		for _, series := range jm.Series {
-			if len(series.Data) > n {
-				n = len(series.Data)
+		n, m := 0, len(series[0].Data)
+		for _, s := range series {
+			if len(s.Data) > n {
+				n = len(s.Data)
 			}
-			if len(series.Data) < m {
-				m = len(series.Data)
+			if len(s.Data) < m {
+				m = len(s.Data)
 			}
 		}
 
-		i, data := 0, make([]Float, len(series[0].Data))
+		i, data := 0, make([]Float, n)
 		for ; i < m; i++ {
 			x := Float(0.0)
-			for _, series := range jm.Series {
-				x += series.Data[i]
+			for _, s := range series {
+				x += s.Data[i]
 			}
 			data[i] = x
 		}
