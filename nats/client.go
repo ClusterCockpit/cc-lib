@@ -129,8 +129,15 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 		cclog.Infof("NATS reconnected to %s", nc.ConnectedUrl())
 	}))
 
-	opts = append(opts, nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
-		cclog.Errorf("NATS error: %v", err)
+	opts = append(opts, nats.ErrorHandler(func(_ *nats.Conn, sub *nats.Subscription, err error) {
+		if sub != nil {
+			pending, _, _ := sub.Pending()
+			dropped, _ := sub.Dropped()
+			cclog.Errorf("NATS error on subject '%s' (queue: '%s', pending: %d, dropped: %d): %v",
+				sub.Subject, sub.Queue, pending, dropped, err)
+		} else {
+			cclog.Errorf("NATS error: %v", err)
+		}
 	}))
 
 	nc, err := nats.Connect(cfg.Address, opts...)
