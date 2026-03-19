@@ -12,6 +12,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.12.3
 	github.com/nats-io/nats.go v1.49.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/questdb/go-questdb-client/v4 v4.1.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/stmcginnis/gofish v0.21.3
 )
