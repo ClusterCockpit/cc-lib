@@ -450,7 +450,215 @@ func makeTestDataWithNaN(size int) []schema.Float {
 	return data
 }
 
+// TestAverageResampler tests the AverageResampler function
+func TestAverageResampler(t *testing.T) {
+	SetMinimumRequiredPoints(100)
+	defer SetMinimumRequiredPoints(1000)
+
+	tests := []struct {
+		name         string
+		data         []schema.Float
+		oldFrequency int64
+		newFrequency int64
+		expectedLen  int
+		expectedFreq int64
+		expectError  bool
+		checkValues  bool
+		expectedData []schema.Float
+	}{
+		{
+			name:         "Basic averaging step=2",
+			data:         makeTestData(200, 1.0),
+			oldFrequency: 1,
+			newFrequency: 2,
+			expectedLen:  100,
+			expectedFreq: 2,
+		},
+		{
+			name:         "No downsampling needed (new <= old)",
+			data:         makeTestData(200, 1.0),
+			oldFrequency: 2,
+			newFrequency: 1,
+			expectedLen:  200,
+			expectedFreq: 2,
+		},
+		{
+			name:         "Zero old frequency",
+			data:         makeTestData(200, 1.0),
+			oldFrequency: 0,
+			newFrequency: 2,
+			expectedLen:  200,
+			expectedFreq: 0,
+		},
+		{
+			name:         "Zero new frequency",
+			data:         makeTestData(200, 1.0),
+			oldFrequency: 1,
+			newFrequency: 0,
+			expectedLen:  200,
+			expectedFreq: 1,
+		},
+		{
+			name:         "Non-multiple frequency",
+			data:         makeTestData(200, 1.0),
+			oldFrequency: 3,
+			newFrequency: 7,
+			expectError:  true,
+		},
+		{
+			name:         "Small dataset (< 100 points)",
+			data:         makeTestData(50, 1.0),
+			oldFrequency: 1,
+			newFrequency: 2,
+			expectedLen:  50,
+			expectedFreq: 1,
+		},
+		{
+			name:         "Large downsampling factor",
+			data:         makeTestData(1000, 1.0),
+			oldFrequency: 1,
+			newFrequency: 10,
+			expectedLen:  100,
+			expectedFreq: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, freq, err := AverageResampler(tt.data, tt.oldFrequency, tt.newFrequency)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("AverageResampler() expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("AverageResampler() unexpected error: %v", err)
+				return
+			}
+
+			if len(result) != tt.expectedLen {
+				t.Errorf("AverageResampler() result length = %v, want %v", len(result), tt.expectedLen)
+			}
+
+			if freq != tt.expectedFreq {
+				t.Errorf("AverageResampler() frequency = %v, want %v", freq, tt.expectedFreq)
+			}
+
+			if tt.checkValues && tt.expectedData != nil {
+				for i := range result {
+					if math.Abs(float64(result[i]-tt.expectedData[i])) > 1e-10 {
+						t.Errorf("AverageResampler() result[%d] = %v, want %v", i, result[i], tt.expectedData[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestAverageResamplerValues tests exact output values of AverageResampler
+func TestAverageResamplerValues(t *testing.T) {
+	SetMinimumRequiredPoints(3)
+	defer SetMinimumRequiredPoints(1000)
+
+	// [1,2,3,4,5,6] step=2 -> [1.5, 3.5, 5.5]
+	data := []schema.Float{1, 2, 3, 4, 5, 6}
+	result, freq, err := AverageResampler(data, 1, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if freq != 2 {
+		t.Errorf("frequency = %v, want 2", freq)
+	}
+	expected := []schema.Float{1.5, 3.5, 5.5}
+	if len(result) != len(expected) {
+		t.Fatalf("result length = %v, want %v", len(result), len(expected))
+	}
+	for i := range expected {
+		if math.Abs(float64(result[i]-expected[i])) > 1e-10 {
+			t.Errorf("result[%d] = %v, want %v", i, result[i], expected[i])
+		}
+	}
+}
+
+// TestAverageResamplerNaN tests NaN handling in AverageResampler
+func TestAverageResamplerNaN(t *testing.T) {
+	SetMinimumRequiredPoints(3)
+	defer SetMinimumRequiredPoints(1000)
+
+	// NaN skipping: [1, NaN, 3, 4] step=2 -> [1.0, 3.5]
+	data := []schema.Float{1, schema.NaN, 3, 4}
+	result, _, err := AverageResampler(data, 1, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("result length = %v, want 2", len(result))
+	}
+	if math.Abs(float64(result[0]-1.0)) > 1e-10 {
+		t.Errorf("result[0] = %v, want 1.0", result[0])
+	}
+	if math.Abs(float64(result[1]-3.5)) > 1e-10 {
+		t.Errorf("result[1] = %v, want 3.5", result[1])
+	}
+
+	// All-NaN bucket: [NaN, NaN, 3, 4] step=2 -> [NaN, 3.5]
+	data2 := []schema.Float{schema.NaN, schema.NaN, 3, 4}
+	result2, _, err := AverageResampler(data2, 1, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !math.IsNaN(float64(result2[0])) {
+		t.Errorf("result[0] = %v, want NaN", result2[0])
+	}
+	if math.Abs(float64(result2[1]-3.5)) > 1e-10 {
+		t.Errorf("result[1] = %v, want 3.5", result2[1])
+	}
+}
+
+// TestGetResampler tests the GetResampler lookup function
+func TestGetResampler(t *testing.T) {
+	tests := []struct {
+		name      string
+		expectErr bool
+	}{
+		{"", false},
+		{"lttb", false},
+		{"average", false},
+		{"simple", false},
+		{"unknown", true},
+	}
+
+	for _, tt := range tests {
+		t.Run("name="+tt.name, func(t *testing.T) {
+			fn, err := GetResampler(tt.name)
+			if tt.expectErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if fn == nil {
+				t.Error("expected non-nil function")
+			}
+		})
+	}
+}
+
 // Benchmark tests
+
+func BenchmarkAverageResampler(b *testing.B) {
+	data := makeTestData(10000, 1.0)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = AverageResampler(data, 1, 10)
+	}
+}
 
 func BenchmarkSimpleResampler(b *testing.B) {
 	data := makeTestData(10000, 1.0)
