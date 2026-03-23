@@ -231,11 +231,6 @@ func SetOutputFile(lvl string, logfile string) {
 
 /* PRIVATE HELPER */
 
-// Return unformatted string
-func printStr(v ...any) string {
-	return fmt.Sprint(v...)
-}
-
 // FIXME: The printfStr function doesn't make any sense.
 // It is a whopping 2 characters less to write and more ambigious
 // than just writing fmt.Sprintf directly...
@@ -268,79 +263,64 @@ func Abort(v ...any) {
 
 // ComponentPrint logs to INFO writer with a component prefix; application continues.
 func ComponentPrint(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	InfoLog.Output(2, printStr(args...))
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Debug logs to DEBUG writer without string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debug(v ...any) {
-	DebugLog.Output(2, printStr(v...))
+	DebugLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentDebug logs to DEBUG writer with a component prefix; application continues.
 func ComponentDebug(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	DebugLog.Output(2, printStr(args...))
+	DebugLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Info logs to INFO writer without string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Info(v ...any) {
-	InfoLog.Output(2, printStr(v...))
+	InfoLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentInfo logs to INFO writer with a component prefix; application continues.
 func ComponentInfo(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	InfoLog.Output(2, printStr(args...))
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Warn logs to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warn(v ...any) {
-	WarnLog.Output(2, printStr(v...))
+	WarnLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentWarn logs to WARNING writer with a component prefix; application continues.
 func ComponentWarn(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	WarnLog.Output(2, printStr(args...))
+	WarnLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Error logs to ERROR writer without string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Error(v ...any) {
-	ErrLog.Output(2, printStr(v...))
+	ErrLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentError logs to ERROR writer with a component prefix; application continues.
 func ComponentError(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	ErrLog.Output(2, printStr(args...))
+	ErrLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Fatal writes to CRITICAL writer without string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatal(v ...any) {
-	CritLog.Output(2, printStr(v...))
+	CritLog.Output(2, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // Panic logs to PANIC function without string formatting; application exits with panic.
 // Used for terminating on unexpected errors with stacktrace.
 func Panic(v ...any) {
-	panic(printStr(v...))
+	panic(fmt.Sprint(v...))
 }
 
 /* PRINT FORMAT*/
