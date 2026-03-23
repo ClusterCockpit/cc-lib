@@ -236,6 +236,9 @@ func printStr(v ...any) string {
 	return fmt.Sprint(v...)
 }
 
+// FIXME: The printfStr function doesn't make any sense.
+// It is a whopping 2 characters less to write and more ambigious
+// than just writing fmt.Sprintf directly...
 // Return formatted string
 func printfStr(format string, v ...any) string {
 	return fmt.Sprintf(format, v...)
@@ -362,10 +365,20 @@ func Abortf(format string, v ...any) {
 	os.Exit(1)
 }
 
+// ComponentPrint logs to INFO writer with a component prefix and string formatting; application continues.
+func ComponentPrintf(component, format string, v ...any) {
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, printfStr(format, v...)))
+}
+
 // Debugf logs to DEBUG writer with string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debugf(format string, v ...any) {
 	DebugLog.Output(2, printfStr(format, v...))
+}
+
+// ComponentDebug logs to DEBUG writer with a component prefix and string formatting; application continues.
+func ComponentDebugf(component, format string, v ...any) {
+	DebugLog.Output(2, fmt.Sprintf("[%s] %s", component, printfStr(format, v...)))
 }
 
 // Infof log to INFO writer with string formatting; application continues.
@@ -374,16 +387,31 @@ func Infof(format string, v ...any) {
 	InfoLog.Output(2, printfStr(format, v...))
 }
 
+// ComponentInfo logs to INFO writer with a component prefix and string formatting; application continues.
+func ComponentInfof(component, format string, v ...any) {
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, printfStr(format, v...)))
+}
+
 // Warnf logs to WARNING writer with string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warnf(format string, v ...any) {
 	WarnLog.Output(2, printfStr(format, v...))
 }
 
+// ComponentWarn logs to WARNING writer with a component prefix and string formatting; application continues.
+func ComponentWarnf(component, format string, v ...any) {
+	WarnLog.Output(2, fmt.Sprintf("[%s] %s", component, printfStr(format, v...)))
+}
+
 // Errorf logs to ERROR writer with string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Errorf(format string, v ...any) {
 	ErrLog.Output(2, printfStr(format, v...))
+}
+
+// ComponentError logs to ERROR writer with a component prefix and string formatting; application continues.
+func ComponentErrorf(component, format string, v ...any) {
+	ErrLog.Output(2, fmt.Sprintf("[%s] %s", component, printfStr(format, v...)))
 }
 
 // Fatalf logs to CRITICAL writer with string formatting; application exits with error code 1.
