@@ -38,8 +38,10 @@ type QuestDBSinkConfig struct {
 	// Authentication with bearer token in HTTP header
 	BearerToken string `json:"bearer_token,omitempty"`
 	// Auto flush configuration
+	// Interval at which the sender automatically flushes its buffer
 	AutoFlushInterval string `json:"auto_flush_interval,omitempty"`
-	AutoFlushRows     int    `json:"auto_flush_rows,omitempty"`
+	// Number of rows after which the sender automatically flushes its buffer
+	AutoFlushRows int `json:"auto_flush_rows,omitempty"`
 }
 
 type QuestDBSink struct {
