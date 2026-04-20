@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
@@ -25,11 +26,20 @@ type QuestDBSinkConfig struct {
 	// defines JSON tags for 'type' and 'meta_as_tags' (string list)
 	// See: metricSink.go
 	defaultSinkConfig
-	// Additional config options, for QuestDBSink
-	Address     string `json:"address,omitempty"`
-	Username    string `json:"username,omitempty"`
-	Password    string `json:"password,omitempty"`
+
+	// Additional config options, for QuestDBSink:
+
+	// Address to connect to. Should be in the "host:port" format
+	Address string `json:"address,omitempty"`
+	// Authentication options for QuestDB:
+	// Basic authentication with username and password
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	// Authentication with bearer token in HTTP header
 	BearerToken string `json:"bearer_token,omitempty"`
+	// Auto flush configuration
+	AutoFlushInterval string `json:"auto_flush_interval,omitempty"`
+	AutoFlushRows     int    `json:"auto_flush_rows,omitempty"`
 }
 
 type QuestDBSink struct {
@@ -38,19 +48,28 @@ type QuestDBSink struct {
 	sink
 	config QuestDBSinkConfig
 	sender qdb.LineSender
+	ctx    context.Context
 }
 
 // Code to submit a single CCMetric to the sink
 func (s *QuestDBSink) Write(point lp.CCMessage) error {
-	// based on s.meta_as_tags use meta infos as tags
-	// moreover, submit the point to the message processor
-	// to apply drop/modify rules
+	// Submit the point to the message processor to apply rules
 	msg, err := s.mp.ProcessMessage(point)
 	if err == nil && msg != nil {
+
+		// Metric name is used as table name in QuestDB
 		s.sender.Table(msg.Name())
+
+		// Column name cannot contain any of the following characters:
+		// '\n', '\r', '?', '.', ',', ”', '"', '\', '/', ':', ')', '(', '+',
+		// '-', '*' '%%', '~', or a non-printable char.
+
+		// Add tags as symbol columns
 		for k, v := range msg.Tags() {
 			s.sender.Symbol(strings.ReplaceAll(k, "-id", "ID"), v)
 		}
+
+		// Add fields as value columns
 		for k, v := range msg.Fields() {
 			switch v := v.(type) {
 			case float64:
@@ -65,17 +84,16 @@ func (s *QuestDBSink) Write(point lp.CCMessage) error {
 				cclog.ComponentError(s.name, fmt.Sprintf("Unsupported data type %T", v))
 			}
 		}
-		if err := s.sender.At(context.TODO(), msg.Time()); err != nil {
+		if err := s.sender.At(s.ctx, msg.Time()); err != nil {
 			cclog.ComponentError(s.name, fmt.Sprintf("write failed: %v", err))
 		}
-		s.sender.Flush(context.TODO())
 	}
 	return nil
 }
 
 // If the sink uses batched sends internally, you can tell to flush its buffers
 func (s *QuestDBSink) Flush() error {
-	return s.sender.Flush(context.TODO())
+	return s.sender.Flush(s.ctx)
 }
 
 // Close sink: close network connection, close files, close libraries, ...
@@ -83,23 +101,23 @@ func (s *QuestDBSink) Close() {
 	if err := s.Flush(); err != nil {
 		cclog.ComponentError(s.name, fmt.Errorf("flush failed with error: %v", err))
 	}
-	if err := s.sender.Close(context.TODO()); err != nil {
+	if err := s.sender.Close(s.ctx); err != nil {
 		cclog.ComponentError(s.name, fmt.Errorf("close failed with error: %v", err))
 	}
 	cclog.ComponentDebug(s.name, "CLOSE")
 }
 
-// New function to create a new instance of the sink
-// Initialize the sink by giving it a name and reading in the config JSON
+// NewQuestDBSink initializes the QuestDB sink with the given name and configuration.
+// It returns an error if the configuration is invalid or if the connection to the QuestDB server cannot be established.
 func NewQuestDBSink(name string, config json.RawMessage) (Sink, error) {
 	s := new(QuestDBSink)
 
 	// Set name of QuestDBSink
-	// The name should be chosen in such a way that different instances of QuestDBSink can be distinguished
 	s.name = fmt.Sprintf("QuestDBSink(%s)", name) // Always specify a name here
 
 	// Set defaults in s.config
 	s.config.Address = "localhost:9000"
+	s.config.AutoFlushInterval = "5s"
 
 	// Read in the config JSON
 	if len(config) > 0 {
@@ -125,16 +143,31 @@ func NewQuestDBSink(name string, config json.RawMessage) (Sink, error) {
 			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
+
 	// Add rules to move meta information to tag space
-	// Replacing the legacy 'meta_as_tags' configuration
 	for _, k := range s.config.MetaAsTags {
 		s.mp.AddMoveMetaToTags("true", k, k)
 	}
 
-	// Establish connection to the QuestDB server
+	// Configure connection options
 	options := []qdb.LineSenderOption{
 		qdb.WithHttp(),
 		qdb.WithAddress(s.config.Address),
+	}
+	autoFlushInterval, err := time.ParseDuration(s.config.AutoFlushInterval)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing auto flush interval: %w", err)
+	}
+	options = append(options, qdb.WithAutoFlushInterval(autoFlushInterval))
+	if s.config.AutoFlushRows > 0 {
+		options = append(options, qdb.WithAutoFlushRows(s.config.AutoFlushRows))
+	}
+	if (s.config.Username != "" && s.config.Password == "") ||
+		(s.config.Username == "" && s.config.Password != "") {
+		return nil, fmt.Errorf("incomplete basic authentication credentials")
+	}
+	if s.config.Username != "" && s.config.Password != "" && s.config.BearerToken != "" {
+		return nil, fmt.Errorf("conflicting authentication methods: both basic auth and bearer token provided")
 	}
 	if s.config.Username != "" && s.config.Password != "" {
 		options = append(options,
@@ -144,14 +177,15 @@ func NewQuestDBSink(name string, config json.RawMessage) (Sink, error) {
 		options = append(options,
 			qdb.WithBearerToken(s.config.BearerToken))
 	}
-	sender, err := qdb.NewLineSender(
-		context.TODO(),
-		options...)
+
+	s.ctx = context.Background()
+
+	// Connect to QuestDB server
+	sender, err := qdb.NewLineSender(s.ctx, options...)
 	if err != nil {
-		return s, fmt.Errorf("failed creating new line sender: %w", err)
+		return nil, fmt.Errorf("failed creating new line sender: %w", err)
 	}
 	s.sender = sender
 
-	// Return (nil, meaningful error message) in case of errors
 	return s, nil
 }

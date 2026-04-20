@@ -237,11 +237,7 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
-	// Create lookup map to use meta infos as tags in the output metric
-	// s.meta_as_tags = make(map[string]bool)
-	// for _, k := range s.config.MetaAsTags {
-	// 	s.meta_as_tags[k] = true
-	// }
+	// Add rules to move meta information to tag space
 	for _, k := range s.config.MetaAsTags {
 		s.mp.AddMoveMetaToTags("true", k, k)
 	}
