@@ -55,6 +55,14 @@ type QuestDBSink struct {
 	ctx    context.Context
 }
 
+// Column name cannot contain any of the following characters:
+// '\n', '\r', '?', '.', ',', ”', '"', '\', '/', ':', ')', '(', '+',
+// '-', '*' '%%', '~', or a non-printable char.
+var sanitizeKey *strings.Replacer = strings.NewReplacer(
+	"-id", "ID",
+	"-", "_",
+)
+
 // Code to submit a single CCMetric to the sink
 func (s *QuestDBSink) Write(point lp.CCMessage) error {
 	// Submit the point to the message processor to apply rules
@@ -64,17 +72,14 @@ func (s *QuestDBSink) Write(point lp.CCMessage) error {
 		// Metric name is used as table name in QuestDB
 		s.sender.Table(msg.Name())
 
-		// Column name cannot contain any of the following characters:
-		// '\n', '\r', '?', '.', ',', ”', '"', '\', '/', ':', ')', '(', '+',
-		// '-', '*' '%%', '~', or a non-printable char.
-
 		// Add tags as symbol columns
 		for k, v := range msg.Tags() {
-			s.sender.Symbol(strings.ReplaceAll(k, "-id", "ID"), v)
+			s.sender.Symbol(sanitizeKey.Replace(k), v)
 		}
 
 		// Add fields as value columns
 		for k, v := range msg.Fields() {
+			k = sanitizeKey.Replace(k)
 			switch v := v.(type) {
 			case float64:
 				s.sender.Float64Column(k, v)
