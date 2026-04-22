@@ -9,7 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/nats-io/nats-server/v2 v2.12.6
+	github.com/nats-io/nats-server/v2 v2.12.7
 	github.com/nats-io/nats.go v1.51.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/questdb/go-questdb-client/v4 v4.2.0
