@@ -42,6 +42,8 @@ type QuestDBSinkConfig struct {
 	AutoFlushInterval string `json:"auto_flush_interval,omitempty"`
 	// Number of rows after which the sender automatically flushes its buffer
 	AutoFlushRows int `json:"auto_flush_rows,omitempty"`
+	// Enable TLS for secure connections
+	UseTLS bool `json:"use_tls,omitempty"`
 }
 
 type QuestDBSink struct {
@@ -153,8 +155,12 @@ func NewQuestDBSink(name string, config json.RawMessage) (Sink, error) {
 
 	// Configure connection options
 	options := []qdb.LineSenderOption{
-		qdb.WithHttp(),
 		qdb.WithAddress(s.config.Address),
+	}
+	if s.config.UseTLS {
+		options = append(options, qdb.WithTls())
+	} else {
+		options = append(options, qdb.WithHttp())
 	}
 	autoFlushInterval, err := time.ParseDuration(s.config.AutoFlushInterval)
 	if err != nil {
