@@ -25,6 +25,7 @@ The `questdb` sink sends metrics to the timeseries database QuestDB
     "bearer_token": "myBearerToken",
     "auto_flush_interval": "5s",
     "auto_flush_rows": 1000,
+    "use_tls": false,
     "process_messages" : {
       "see" : "docs of message processor for valid fields"
     }
@@ -39,3 +40,4 @@ The `questdb` sink sends metrics to the timeseries database QuestDB
 - `bearer_token`: authentication with bearer token in HTTP header
 - `auto_flush_interval`: interval at which the sender automatically flushes its buffer (default `5s`)
 - `auto_flush_rows`: number of rows after which the sender automatically flushes its buffer
+- `use_tls`: Use https instead of http transport protocol
