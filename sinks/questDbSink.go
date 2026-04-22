@@ -89,7 +89,7 @@ func (s *QuestDBSink) Write(point lp.CCMessage) error {
 			}
 		}
 		if err := s.sender.At(s.ctx, msg.Time()); err != nil {
-			cclog.ComponentError(s.name, fmt.Sprintf("write failed: %v", err))
+			return fmt.Errorf("failed to write point: %w", err)
 		}
 	}
 	return nil
