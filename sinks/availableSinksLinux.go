@@ -17,4 +17,5 @@ var AvailableSinks = map[string]func(name string, config json.RawMessage) (Sink,
 	"influxasync": NewInfluxAsyncSink,
 	"http":        NewHttpSink,
 	"prometheus":  NewPrometheusSink,
+	"questdb":     NewQuestDBSink,
 }
