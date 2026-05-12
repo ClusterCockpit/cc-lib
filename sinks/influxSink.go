@@ -246,74 +246,31 @@ func (s *InfluxSink) connect() error {
 
 // Write sends metric m in influxDB line protocol
 func (s *InfluxSink) Write(msg lp.CCMessage) error {
-	m, err := s.mp.ProcessMessage(msg)
-	if err == nil && m != nil {
-		// Lock for encoder usage
+	useEncoder := func(m lp.CCMessage) error {
+		// Lock and defer unlock for encoder usage
 		s.encoderLock.Lock()
+		defer s.encoderLock.Unlock()
 
-		// Encode measurement name
-		s.encoder.StartLine(m.Name())
-
-		// copy tags and meta data which should be used as tags
-		s.extended_tag_list = s.extended_tag_list[:0]
-		for key, value := range m.Tags() {
-			s.extended_tag_list = append(
-				s.extended_tag_list,
-				key_value_pair{
-					key:   key,
-					value: value,
-				},
-			)
-		}
-
-		// Encode tags (they musts be in lexical order)
-		slices.SortFunc(
-			s.extended_tag_list,
-			func(a key_value_pair, b key_value_pair) int {
-				if a.key < b.key {
-					return -1
-				}
-				if a.key > b.key {
-					return +1
-				}
-				return 0
-			},
-		)
-		for i := range s.extended_tag_list {
-			s.encoder.AddTag(
-				s.extended_tag_list[i].key,
-				s.extended_tag_list[i].value,
-			)
-		}
-
-		// Encode fields
-		for key, value := range m.Fields() {
-			s.encoder.AddField(key, influx.MustNewValue(value))
-		}
-
-		// Encode time stamp
-		s.encoder.EndLine(m.Time())
-
-		// Check for encoder errors
-		if err := s.encoder.Err(); err != nil {
-			// Unlock encoder usage
-			s.encoderLock.Unlock()
-
-			return fmt.Errorf("encoding failed: %v", err)
+		// Encode
+		if err := EncoderAdd(&s.encoder, m); err != nil {
+			return fmt.Errorf("encoding failed: %w", err)
 		}
 		s.numRecordsInEncoder++
+
+		return nil
+	}
+
+	m, err := s.mp.ProcessMessage(msg)
+	if err == nil && m != nil {
+		if err := useEncoder(m); err != nil {
+			return err
+		}
 	}
 
 	if s.config.flushDelay == 0 {
-		// Unlock encoder usage
-		s.encoderLock.Unlock()
-
 		// Directly flush if no flush delay is configured
 		return s.Flush()
 	} else if s.numRecordsInEncoder == s.config.BatchSize {
-		// Unlock encoder usage
-		s.encoderLock.Unlock()
-
 		// Stop flush timer
 		if s.flushTimer != nil {
 			if ok := s.flushTimer.Stop(); ok {
@@ -348,30 +305,30 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 		}
 	}
 
-	// Unlock encoder usage
-	s.encoderLock.Unlock()
 	return nil
 }
 
 // Flush sends all metrics stored in encoder to InfluxDB server
 func (s *InfluxSink) Flush() error {
-	// Lock for encoder usage
-	// Own lock for as short as possible: the time it takes to clone the buffer.
-	s.encoderLock.Lock()
+	useEncoder := func() []byte {
+		// Lock and defer unlock for encoder usage
+		// Own lock for as short as possible: the time it takes to clone the buffer.
+		s.encoderLock.Lock()
+		defer s.encoderLock.Unlock()
 
-	buf := slices.Clone(s.encoder.Bytes())
-	numRecordsInBuf := s.numRecordsInEncoder
-	s.encoder.Reset()
-	s.numRecordsInEncoder = 0
+		buf := slices.Clone(s.encoder.Bytes())
+		s.encoder.Reset()
+		s.numRecordsInEncoder = 0
 
-	// Unlock encoder usage
-	s.encoderLock.Unlock()
+		return buf
+	}
 
+	buf := useEncoder()
 	if len(buf) == 0 {
 		return nil
 	}
 
-	cclog.ComponentDebug(s.name, "Flush(): Flushing", numRecordsInBuf, "metrics")
+	cclog.ComponentDebug(s.name, "Flush(): Flushing")
 
 	// Asynchron send of encoder metrics
 	s.sendWaitGroup.Go(func() {
@@ -380,12 +337,8 @@ func (s *InfluxSink) Flush() error {
 		if err != nil {
 			cclog.ComponentError(
 				s.name,
-				"Flush():",
-				"Flush failed:", err,
-				"(number of records =", numRecordsInBuf,
-				", buffer size =", len(buf),
-				", send duration =", time.Since(startTime),
-				")",
+				"Flush(): Flush failed: ", err,
+				"(buffer size =", len(buf), ", send duration =", time.Since(startTime), ")",
 			)
 			return
 		}
