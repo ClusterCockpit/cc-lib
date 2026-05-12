@@ -290,6 +290,7 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 	// Initial setup of flush timer
 	if s.flushTimer == nil {
 		cclog.ComponentDebug(s.name, "Write(): Starting new flush timer")
+		s.timerLock.Lock()
 		s.flushTimer = time.AfterFunc(
 			s.config.flushDelay,
 			func() {
