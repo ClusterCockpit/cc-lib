@@ -32,8 +32,8 @@ type HttpSinkConfig struct {
 	JWT string `json:"jwt,omitempty"`
 
 	// Basic authentication
-	Username     string `json:"username"`
-	Password     string `json:"password"`
+	Username     string `json:"username,omitempty"`
+	Password     string `json:"password,omitempty"`
 	useBasicAuth bool
 
 	// time limit for requests made by the http client
@@ -50,6 +50,10 @@ type HttpSinkConfig struct {
 	FlushDelay string `json:"flush_delay,omitempty"`
 	flushDelay time.Duration
 
+	// Maximum number of points sent to server in single request.
+	// Default: 1000
+	BatchSize int `json:"batch_size,omitempty"`
+
 	// Maximum number of retries to connect to the http server (default: 3)
 	MaxRetries int `json:"max_retries,omitempty"`
 
@@ -62,6 +66,8 @@ type HttpSink struct {
 	client *http.Client
 	// influx line protocol encoder
 	encoder influx.Encoder
+	// number of records stored in the encoder
+	numRecordsInEncoder int
 
 	// Flush() runs in another goroutine and accesses the influx line protocol encoder,
 	// so this encoderLock has to protect the encoder
@@ -77,48 +83,67 @@ type HttpSink struct {
 
 // Write sends metric m as http message
 func (s *HttpSink) Write(msg lp.CCMessage) error {
+
+	useEncoder := func(m lp.CCMessage) error {
+		// Lock and defer unlock for encoder usage
+		s.encoderLock.Lock()
+		defer s.encoderLock.Unlock()
+
+		// Encode
+		if err := EncoderAdd(&s.encoder, m); err != nil {
+			return fmt.Errorf("encoding failed: %w", err)
+		}
+		s.numRecordsInEncoder++
+
+		return nil
+	}
+
 	// submit m only after applying processing/dropping rules
 	m, err := s.mp.ProcessMessage(msg)
 	if err == nil && m != nil {
-		// Lock for encoder usage
-		s.encoderLock.Lock()
-
-		err = EncoderAdd(&s.encoder, m)
-
-		// Unlock encoder usage
-		s.encoderLock.Unlock()
-
-		// Check that encoding worked
-		if err != nil {
-			return fmt.Errorf("encoding failed: %w", err)
+		if err := useEncoder(m); err != nil {
+			return err
 		}
 	}
 
+	// Directly flush if no flush delay is configured
 	if s.config.flushDelay == 0 {
-		// Directly flush if no flush delay is configured
 		return s.Flush()
-	} else if s.timerLock.TryLock() {
-		// Setup flush timer when flush delay is configured
-		// and no other timer is already running
+	}
+
+	// Flush if maximum batch size is reached
+	if s.numRecordsInEncoder == s.config.BatchSize {
+		// Stop flush timer
 		if s.flushTimer != nil {
-
-			// Restarting existing flush timer
-			cclog.ComponentDebug(s.name, "Write(): Restarting flush timer")
-			s.flushTimer.Reset(s.config.flushDelay)
-		} else {
-
-			// Creating and starting flush timer
-			cclog.ComponentDebug(s.name, "Write(): Starting new flush timer")
-			s.flushTimer = time.AfterFunc(
-				s.config.flushDelay,
-				func() {
-					defer s.timerLock.Unlock()
-					cclog.ComponentDebug(s.name, "Starting flush triggered by flush timer")
-					if err := s.Flush(); err != nil {
-						cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
-					}
-				})
+			if ok := s.flushTimer.Stop(); ok {
+				cclog.ComponentDebug(s.name, "Write(): Stopped flush timer. Batch size limit reached before flush delay")
+				s.timerLock.Unlock()
+			}
 		}
+
+		return s.Flush()
+	}
+
+	// Initial setup of flush timer
+	if s.flushTimer == nil {
+		cclog.ComponentDebug(s.name, "Write(): Starting new flush timer")
+		s.flushTimer = time.AfterFunc(
+			s.config.flushDelay,
+			func() {
+				defer s.timerLock.Unlock()
+				cclog.ComponentDebug(s.name, "Starting flush triggered by flush timer")
+				if err := s.Flush(); err != nil {
+					cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
+				}
+			},
+		)
+	}
+
+	// Check if timer has finished
+	if s.timerLock.TryLock() {
+		// Restarting existing flush timer
+		cclog.ComponentDebug(s.name, "Write(): Restarting flush timer")
+		s.flushTimer.Reset(s.config.flushDelay)
 	}
 
 	return nil
@@ -126,16 +151,21 @@ func (s *HttpSink) Write(msg lp.CCMessage) error {
 
 // Flush sends all metrics stored in encoder to HTTP server
 func (s *HttpSink) Flush() error {
-	// Lock for encoder usage
-	// Own lock for as short as possible: the time it takes to clone the buffer.
-	s.encoderLock.Lock()
 
-	buf := slices.Clone(s.encoder.Bytes())
-	s.encoder.Reset()
+	useEncoder := func() []byte {
+		// Lock and defer unlock for encoder usage
+		// Own lock for as short as possible: the time it takes to clone the buffer.
+		s.encoderLock.Lock()
+		defer s.encoderLock.Unlock()
 
-	// Unlock encoder usage
-	s.encoderLock.Unlock()
+		buf := slices.Clone(s.encoder.Bytes())
+		s.encoder.Reset()
+		s.numRecordsInEncoder = 0
 
+		return buf
+	}
+
+	buf := useEncoder()
 	if len(buf) == 0 {
 		return nil
 	}
@@ -214,6 +244,7 @@ func NewHttpSink(name string, config json.RawMessage) (Sink, error) {
 	s.config.IdleConnTimeout = "120s"
 	s.config.Timeout = "5s"
 	s.config.FlushDelay = "5s"
+	s.config.BatchSize = 1000
 	s.config.MaxRetries = 3
 	s.config.Precision = "s"
 	cclog.ComponentDebug(s.name, "Init()")
