@@ -265,18 +265,6 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 				},
 			)
 		}
-		// for _, key := range s.config.MetaAsTags {
-		// 	if value, ok := m.GetMeta(key); ok {
-		// 		s.extended_tag_list =
-		// 			append(
-		// 				s.extended_tag_list,
-		// 				key_value_pair{
-		// 					key:   key,
-		// 					value: value,
-		// 				},
-		// 			)
-		// 	}
-		// }
 
 		// Encode tags (they musts be in lexical order)
 		slices.SortFunc(

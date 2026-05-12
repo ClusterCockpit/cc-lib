@@ -83,7 +83,6 @@ type HttpSink struct {
 
 // Write sends metric m as http message
 func (s *HttpSink) Write(msg lp.CCMessage) error {
-
 	useEncoder := func(m lp.CCMessage) error {
 		// Lock and defer unlock for encoder usage
 		s.encoderLock.Lock()
@@ -151,7 +150,6 @@ func (s *HttpSink) Write(msg lp.CCMessage) error {
 
 // Flush sends all metrics stored in encoder to HTTP server
 func (s *HttpSink) Flush() error {
-
 	useEncoder := func() []byte {
 		// Lock and defer unlock for encoder usage
 		// Own lock for as short as possible: the time it takes to clone the buffer.

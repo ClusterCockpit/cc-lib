@@ -13,7 +13,6 @@ import (
 	"os"
 	"strings"
 
-	//	"time"
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
@@ -91,10 +90,6 @@ func NewStdoutSink(name string, config json.RawMessage) (Sink, error) {
 		}
 	}
 	// Create lookup map to use meta infos as tags in the output metric
-	// s.meta_as_tags = make(map[string]bool)
-	// for _, k := range s.config.MetaAsTags {
-	// 	s.meta_as_tags[k] = true
-	// }
 	for _, k := range s.config.MetaAsTags {
 		s.mp.AddMoveMetaToTags("true", k, k)
 	}

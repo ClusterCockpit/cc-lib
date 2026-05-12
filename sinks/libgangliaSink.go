@@ -90,12 +90,6 @@ const (
 	GMOND_CONFIG_FILE    = `/etc/ganglia/gmond.conf`
 )
 
-// type LibgangliaSinkSpecialMetric struct {
-// 	MetricName string `json:"metric_name,omitempty"`
-// 	NewName    string `json:"new_name,omitempty"`
-// 	Slope      string `json:"slope,omitempty"`
-// }
-
 type LibgangliaSinkConfig struct {
 	defaultSinkConfig
 	GangliaLib      string `json:"libganglia_path,omitempty"`
@@ -104,8 +98,6 @@ type LibgangliaSinkConfig struct {
 	AddTypeToName   bool   `json:"add_type_to_name,omitempty"`
 	AddUnits        bool   `json:"add_units,omitempty"`
 	ClusterName     string `json:"cluster_name,omitempty"`
-	// SpecialMetrics  map[string]LibgangliaSinkSpecialMetric `json:"rename_metrics,omitempty"` // Map to rename metric name from key to value
-	// AddTagsAsDesc   bool              `json:"add_tags_as_desc,omitempty"`
 }
 
 type LibgangliaSink struct {
@@ -236,7 +228,6 @@ func NewLibgangliaSink(name string, config json.RawMessage) (Sink, error) {
 	s := new(LibgangliaSink)
 	var err error
 	s.name = fmt.Sprintf("LibgangliaSink(%s)", name)
-	// s.config.AddTagsAsDesc = false
 	s.config.AddGangliaGroup = false
 	s.config.AddTypeToName = false
 	s.config.AddUnits = true
@@ -275,10 +266,6 @@ func NewLibgangliaSink(name string, config json.RawMessage) (Sink, error) {
 
 	// Set up cache for the C strings
 	s.cstrCache = make(map[string]*C.char)
-	// s.cstrCache["globals"] = C.CString("globals")
-
-	// s.cstrCache["override_hostname"] = C.CString("override_hostname")
-	// s.cstrCache["override_ip"] = C.CString("override_ip")
 
 	// Add some constant strings
 	s.cstrCache["GROUP"] = C.CString("GROUP")
@@ -299,9 +286,6 @@ func NewLibgangliaSink(name string, config json.RawMessage) (Sink, error) {
 	// Load Ganglia configuration
 	s.cstrCache[s.config.GmondConfig] = C.CString(s.config.GmondConfig)
 	s.gmond_config = C.Ganglia_gmond_config_create(s.cstrCache[s.config.GmondConfig], 0)
-	// globals := C.cfg_getsec(gmond_config, s.cstrCache["globals"])
-	// override_hostname := C.cfg_getstr(globals, s.cstrCache["override_hostname"])
-	// override_ip := C.cfg_getstr(globals, s.cstrCache["override_ip"])
 
 	s.send_channels = C.Ganglia_udp_send_channels_create(s.global_context, s.gmond_config)
 	return s, nil

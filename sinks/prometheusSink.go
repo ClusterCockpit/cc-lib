@@ -30,9 +30,6 @@ type PrometheusSinkConfig struct {
 	Port             string `json:"port"`
 	Path             string `json:"path,omitempty"`
 	GroupAsNameSpace bool   `json:"group_as_namespace,omitempty"`
-	// User       string `json:"user,omitempty"`
-	// Password   string `json:"password,omitempty"`
-	// FlushDelay string `json:"flush_delay,omitempty"`
 }
 
 type PrometheusSink struct {
