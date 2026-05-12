@@ -196,24 +196,12 @@ func NewNatsSink(name string, config json.RawMessage) (Sink, error) {
 	}
 
 	// Setup Influx line protocol encoder
-	precision := influx.Second
-	if len(s.config.Precision) > 0 {
-		switch s.config.Precision {
-		case "s":
-			precision = influx.Second
-		case "ms":
-			precision = influx.Millisecond
-		case "us":
-			precision = influx.Microsecond
-		case "ns":
-			precision = influx.Nanosecond
-		}
-	}
+	s.encoder.SetPrecision(
+		ParsePrecision(s.config.Precision))
 
-	s.encoder.SetPrecision(precision)
 	// Setup infos for connection
 	if err := s.connect(); err != nil {
-		return nil, fmt.Errorf("unable to connect: %v", err)
+		return nil, fmt.Errorf("unable to connect: %w", err)
 	}
 
 	s.flushTimer = nil

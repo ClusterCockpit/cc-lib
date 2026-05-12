@@ -9,6 +9,7 @@ package sinks
 import (
 	"encoding/json"
 	"slices"
+	"time"
 
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
@@ -83,4 +84,38 @@ func EncoderAdd(encoder *influx.Encoder, msg lp.CCMessage) error {
 
 	// Return encoder errors
 	return encoder.Err()
+}
+
+func ParsePrecision(p string) influx.Precision {
+	precision := influx.Second
+	if len(p) > 0 {
+		switch p {
+		case "s":
+			precision = influx.Second
+		case "ms":
+			precision = influx.Millisecond
+		case "us":
+			precision = influx.Microsecond
+		case "ns":
+			precision = influx.Nanosecond
+		}
+	}
+	return precision
+}
+
+func ParsePrecisionTime(p string) time.Duration {
+	precision := time.Second
+	if len(p) > 0 {
+		switch p {
+		case "s":
+			precision = time.Second
+		case "ms":
+			precision = time.Millisecond
+		case "us":
+			precision = time.Microsecond
+		case "ns":
+			precision = time.Nanosecond
+		}
+	}
+	return precision
 }

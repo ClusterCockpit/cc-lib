@@ -308,20 +308,6 @@ func NewHttpSink(name string, config json.RawMessage) (Sink, error) {
 		s.mp.AddMoveMetaToTags("true", k, k)
 	}
 
-	precision := influx.Second
-	if len(s.config.Precision) > 0 {
-		switch s.config.Precision {
-		case "s":
-			precision = influx.Second
-		case "ms":
-			precision = influx.Millisecond
-		case "us":
-			precision = influx.Microsecond
-		case "ns":
-			precision = influx.Nanosecond
-		}
-	}
-
 	// Create http client
 	s.client = &http.Client{
 		Transport: &http.Transport{
@@ -332,7 +318,8 @@ func NewHttpSink(name string, config json.RawMessage) (Sink, error) {
 	}
 
 	// Configure influx line protocol encoder
-	s.encoder.SetPrecision(precision)
+	s.encoder.SetPrecision(
+		ParsePrecision(s.config.Precision))
 
 	return s, nil
 }

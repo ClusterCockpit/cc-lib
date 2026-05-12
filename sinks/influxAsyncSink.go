@@ -104,20 +104,8 @@ func (s *InfluxAsyncSink) connect() error {
 		},
 	)
 
-	precision := time.Second
-	if len(s.config.Precision) > 0 {
-		switch s.config.Precision {
-		case "s":
-			precision = time.Second
-		case "ms":
-			precision = time.Millisecond
-		case "us":
-			precision = time.Microsecond
-		case "ns":
-			precision = time.Nanosecond
-		}
-	}
-	clientOptions.SetPrecision(precision)
+	clientOptions.SetPrecision(
+		ParsePrecisionTime(s.config.Precision))
 
 	s.client = influxdb2.NewClientWithOptions(uri, auth, clientOptions)
 	s.writeApi = s.client.WriteAPI(s.config.Organization, s.config.Database)
