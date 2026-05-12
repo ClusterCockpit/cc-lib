@@ -267,10 +267,14 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 		}
 	}
 
+	// Directly flush if no flush delay is configured
 	if s.config.flushDelay == 0 {
 		// Directly flush if no flush delay is configured
 		return s.Flush()
-	} else if s.numRecordsInEncoder == s.config.BatchSize {
+	}
+
+	// Flush if maximum batch size is reached
+	if s.numRecordsInEncoder == s.config.BatchSize {
 		// Stop flush timer
 		if s.flushTimer != nil {
 			if ok := s.flushTimer.Stop(); ok {
@@ -281,28 +285,28 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 
 		// Flush if batch size is reached
 		return s.Flush()
-	} else if s.timerLock.TryLock() {
-		// Setup flush timer when flush delay is configured
-		// and no other timer is already running
-		if s.flushTimer != nil {
+	}
 
-			// Restarting existing flush timer
-			cclog.ComponentDebug(s.name, "Write(): Restarting flush timer")
-			s.flushTimer.Reset(s.config.flushDelay)
-		} else {
+	// Initial setup of flush timer
+	if s.flushTimer == nil {
+		cclog.ComponentDebug(s.name, "Write(): Starting new flush timer")
+		s.flushTimer = time.AfterFunc(
+			s.config.flushDelay,
+			func() {
+				defer s.timerLock.Unlock()
+				cclog.ComponentDebug(s.name, "Starting flush triggered by flush timer")
+				if err := s.Flush(); err != nil {
+					cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
+				}
+			},
+		)
+	}
 
-			// Creating and starting flush timer
-			cclog.ComponentDebug(s.name, "Write(): Starting new flush timer")
-			s.flushTimer = time.AfterFunc(
-				s.config.flushDelay,
-				func() {
-					defer s.timerLock.Unlock()
-					cclog.ComponentDebug(s.name, "Starting flush triggered by flush timer")
-					if err := s.Flush(); err != nil {
-						cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
-					}
-				})
-		}
+	// Check if timer has finished
+	if s.timerLock.TryLock() {
+		// Restarting existing flush timer
+		cclog.ComponentDebug(s.name, "Write(): Restarting flush timer")
+		s.flushTimer.Reset(s.config.flushDelay)
 	}
 
 	return nil
