@@ -130,7 +130,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options HTTPRequestTimeout:",
-		time.Second*time.Duration(clientOptions.HTTPRequestTimeout()))
+		time.Second*time.Duration(clientOptions.HTTPRequestTimeout()),
+	)
 
 	// Set retry interval
 	if len(s.config.InfluxRetryInterval) > 0 {
@@ -145,7 +146,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options RetryInterval:",
-		time.Millisecond*time.Duration(clientOptions.RetryInterval()))
+		time.Millisecond*time.Duration(clientOptions.RetryInterval()),
+	)
 
 	// Set the maximum delay between each retry attempt
 	if len(s.config.InfluxMaxRetryInterval) > 0 {
@@ -160,7 +162,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options MaxRetryInterval:",
-		time.Millisecond*time.Duration(clientOptions.MaxRetryInterval()))
+		time.Millisecond*time.Duration(clientOptions.MaxRetryInterval()),
+	)
 
 	// Set the base for the exponential retry delay
 	if s.config.InfluxExponentialBase != 0 {
@@ -170,7 +173,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options ExponentialBase:",
-		clientOptions.ExponentialBase())
+		clientOptions.ExponentialBase(),
+	)
 
 	// Set maximum count of retry attempts of failed writes
 	if s.config.InfluxMaxRetries != 0 {
@@ -180,7 +184,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options MaxRetries:",
-		clientOptions.MaxRetries())
+		clientOptions.MaxRetries(),
+	)
 
 	// Set the maximum total retry timeout
 	if len(s.config.InfluxMaxRetryTime) > 0 {
@@ -196,7 +201,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options MaxRetryTime:",
-		time.Millisecond*time.Duration(clientOptions.MaxRetryTime()))
+		time.Millisecond*time.Duration(clientOptions.MaxRetryTime()),
+	)
 
 	// Specify whether to use GZip compression in write requests
 	clientOptions.SetUseGZip(s.config.InfluxUseGzip)
@@ -204,7 +210,8 @@ func (s *InfluxSink) connect() error {
 		s.name,
 		"connect():",
 		"Influx client options UseGZip:",
-		clientOptions.UseGZip())
+		clientOptions.UseGZip(),
+	)
 
 	// Do not check InfluxDB certificate
 	clientOptions.SetTLSConfig(
@@ -356,7 +363,8 @@ func (s *InfluxSink) Write(msg lp.CCMessage) error {
 					if err := s.Flush(); err != nil {
 						cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
 					}
-				})
+				},
+			)
 		}
 	}
 

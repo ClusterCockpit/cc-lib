@@ -65,7 +65,8 @@ func (r *IPMIReceiver) doReadMetric() {
 		clientConfig := &r.config.ClientConfigs[i]
 		var cmd_options []string
 		if clientConfig.Protocol == "ipmi-sensors" {
-			cmd_options = append(cmd_options,
+			cmd_options = append(
+				cmd_options,
 				"--always-prefix",
 				"--sdr-cache-recreate",
 				// Attempt to interpret OEM data, such as event data, sensor readings, or general extra info
@@ -139,7 +140,10 @@ func (r *IPMIReceiver) doReadMetric() {
 				name := strings.ToLower(
 					strings.ReplaceAll(
 						strings.TrimSpace(
-							v2[idxName]), " ", "_"))
+							v2[idxName],
+						), " ", "_",
+					),
+				)
 				// remove prefix enumeration like 01-...
 				if v := numPrefixRegex.FindStringSubmatch(name); v != nil {
 					name = v[1]
@@ -207,7 +211,8 @@ func (r *IPMIReceiver) doReadMetric() {
 						// Debug output for unprocessed metrics
 						fmt.Printf(
 							"host: '%s', metric: '%s', name: '%s', unit: '%s'\n",
-							host, metric, name, unit)
+							host, metric, name, unit,
+						)
 					}
 					continue
 				}
@@ -238,7 +243,8 @@ func (r *IPMIReceiver) doReadMetric() {
 					map[string]any{
 						"value": value,
 					},
-					time.Now())
+					time.Now(),
+				)
 				if err == nil {
 					r.sink <- y
 				}
@@ -527,7 +533,8 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 				Password:         password,
 				CLIOptions:       cliOptions,
 				isExcluded:       isExcluded,
-			})
+			},
+		)
 	}
 
 	if totalNumHosts == 0 {

@@ -364,7 +364,7 @@ func convertObject(hwloc_obj C.hwloc_obj_t) (Object, bool, error) {
 		value := C._hwloc_get_info_value_by_idx(hwloc_obj, C.int(i))
 		o.Infos[C.GoString(name)] = C.GoString(value)
 	}
-	if (hwloc_obj.attr) != nil {
+	if hwloc_obj.attr != nil {
 		switch hwloc_obj._type {
 		case C.HWLOC_OBJ_NUMANODE:
 			o.Infos["local_memory"] = fmt.Sprintf("%d", uint64(C._hwloc_read_numanode_memory(hwloc_obj)))
