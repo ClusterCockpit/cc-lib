@@ -229,18 +229,6 @@ func SetOutputFile(lvl string, logfile string) {
 	}
 }
 
-/* PRIVATE HELPER */
-
-// Return unformatted string
-func printStr(v ...any) string {
-	return fmt.Sprint(v...)
-}
-
-// Return formatted string
-func printfStr(format string, v ...any) string {
-	return fmt.Sprintf(format, v...)
-}
-
 /* PRINT */
 
 // Print logs to STDOUT without string formatting; application continues.
@@ -250,7 +238,7 @@ func Print(v ...any) {
 }
 
 // Exit logs to STDOUT without string formatting; application exits with error code 0.
-// Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
+// Used for exiting successfully with message after expected outcome, e.g. successful single-call application runs.
 func Exit(v ...any) {
 	fmt.Fprintln(os.Stdout, v...)
 	os.Exit(0)
@@ -265,79 +253,64 @@ func Abort(v ...any) {
 
 // ComponentPrint logs to INFO writer with a component prefix; application continues.
 func ComponentPrint(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	InfoLog.Output(2, printStr(args...))
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Debug logs to DEBUG writer without string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debug(v ...any) {
-	DebugLog.Output(2, printStr(v...))
+	DebugLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentDebug logs to DEBUG writer with a component prefix; application continues.
 func ComponentDebug(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	DebugLog.Output(2, printStr(args...))
+	DebugLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Info logs to INFO writer without string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Info(v ...any) {
-	InfoLog.Output(2, printStr(v...))
+	InfoLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentInfo logs to INFO writer with a component prefix; application continues.
 func ComponentInfo(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	InfoLog.Output(2, printStr(args...))
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Warn logs to WARNING writer without string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warn(v ...any) {
-	WarnLog.Output(2, printStr(v...))
+	WarnLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentWarn logs to WARNING writer with a component prefix; application continues.
 func ComponentWarn(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	WarnLog.Output(2, printStr(args...))
+	WarnLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Error logs to ERROR writer without string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Error(v ...any) {
-	ErrLog.Output(2, printStr(v...))
+	ErrLog.Output(2, fmt.Sprint(v...))
 }
 
 // ComponentError logs to ERROR writer with a component prefix; application continues.
 func ComponentError(component string, v ...any) {
-	args := make([]any, 0, len(v)+1)
-	args = append(args, fmt.Sprintf("[%s] ", component))
-	args = append(args, v...)
-	ErrLog.Output(2, printStr(args...))
+	ErrLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprint(v...)))
 }
 
 // Fatal writes to CRITICAL writer without string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatal(v ...any) {
-	CritLog.Output(2, printStr(v...))
+	CritLog.Output(2, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // Panic logs to PANIC function without string formatting; application exits with panic.
 // Used for terminating on unexpected errors with stacktrace.
 func Panic(v ...any) {
-	panic(printStr(v...))
+	panic(fmt.Sprint(v...))
 }
 
 /* PRINT FORMAT*/
@@ -349,7 +322,7 @@ func Printf(format string, v ...any) {
 }
 
 // Exitf logs to STDOUT with string formatting; application exits with error code 0.
-// Used for exiting succesfully with message after expected outcome, e.g. successful single-call application runs.
+// Used for exiting successfully with message after expected outcome, e.g. successful single-call application runs.
 func Exitf(format string, v ...any) {
 	fmt.Fprintf(os.Stdout, format, v...)
 	os.Exit(0)
@@ -362,39 +335,64 @@ func Abortf(format string, v ...any) {
 	os.Exit(1)
 }
 
+// ComponentPrint logs to INFO writer with a component prefix and string formatting; application continues.
+func ComponentPrintf(component, format string, v ...any) {
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprintf(format, v...)))
+}
+
 // Debugf logs to DEBUG writer with string formatting; application continues.
 // Used for logging additional information, primarily for development.
 func Debugf(format string, v ...any) {
-	DebugLog.Output(2, printfStr(format, v...))
+	DebugLog.Output(2, fmt.Sprintf(format, v...))
+}
+
+// ComponentDebug logs to DEBUG writer with a component prefix and string formatting; application continues.
+func ComponentDebugf(component, format string, v ...any) {
+	DebugLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprintf(format, v...)))
 }
 
 // Infof log to INFO writer with string formatting; application continues.
 // Used for logging additional information, e.g. notable returns or common fail-cases.
 func Infof(format string, v ...any) {
-	InfoLog.Output(2, printfStr(format, v...))
+	InfoLog.Output(2, fmt.Sprintf(format, v...))
+}
+
+// ComponentInfo logs to INFO writer with a component prefix and string formatting; application continues.
+func ComponentInfof(component, format string, v ...any) {
+	InfoLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprintf(format, v...)))
 }
 
 // Warnf logs to WARNING writer with string formatting; application continues.
 // Used for logging important information, e.g. uncommon edge-cases or administration related information.
 func Warnf(format string, v ...any) {
-	WarnLog.Output(2, printfStr(format, v...))
+	WarnLog.Output(2, fmt.Sprintf(format, v...))
+}
+
+// ComponentWarn logs to WARNING writer with a component prefix and string formatting; application continues.
+func ComponentWarnf(component, format string, v ...any) {
+	WarnLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprintf(format, v...)))
 }
 
 // Errorf logs to ERROR writer with string formatting; application continues.
 // Used for logging errors, but code still can return default(s) or nil.
 func Errorf(format string, v ...any) {
-	ErrLog.Output(2, printfStr(format, v...))
+	ErrLog.Output(2, fmt.Sprintf(format, v...))
+}
+
+// ComponentError logs to ERROR writer with a component prefix and string formatting; application continues.
+func ComponentErrorf(component, format string, v ...any) {
+	ErrLog.Output(2, fmt.Sprintf("[%s] %s", component, fmt.Sprintf(format, v...)))
 }
 
 // Fatalf logs to CRITICAL writer with string formatting; application exits with error code 1.
 // Used for terminating on unexpected errors with date and code location.
 func Fatalf(format string, v ...any) {
-	CritLog.Output(2, printfStr(format, v...))
+	CritLog.Output(2, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Panicf logs to PANIC function with string formatting; application exits with panic.
 // Used for terminating on unexpected errors with stacktrace.
 func Panicf(format string, v ...any) {
-	panic(printfStr(format, v...))
+	panic(fmt.Sprintf(format, v...))
 }

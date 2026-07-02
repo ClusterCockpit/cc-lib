@@ -141,7 +141,7 @@ func (s *InfluxAsyncSink) Write(m lp.CCMessage) error {
 		// Run a batched flush for all lines that have arrived in the defined interval
 		s.flushTimer = time.AfterFunc(s.customFlushInterval, func() {
 			if err := s.Flush(); err != nil {
-				cclog.ComponentError(s.name, "flush failed:", err.Error())
+				cclog.ComponentError(s.name, fmt.Sprintf("flush failed: %s", err.Error()))
 			}
 		})
 	}
@@ -210,7 +210,7 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 		d := json.NewDecoder(bytes.NewReader(config))
 		d.DisallowUnknownFields()
 		if err := d.Decode(&s.config); err != nil {
-			cclog.ComponentError(s.name, "Error reading config:", err.Error())
+			cclog.ComponentError(s.name, fmt.Sprintf("Error reading config: %s", err.Error()))
 			return nil, err
 		}
 	}
@@ -228,20 +228,16 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 	if len(s.config.MessageProcessor) > 0 {
 		err = s.mp.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
-	// Create lookup map to use meta infos as tags in the output metric
-	// s.meta_as_tags = make(map[string]bool)
-	// for _, k := range s.config.MetaAsTags {
-	// 	s.meta_as_tags[k] = true
-	// }
+	// Add rules to move meta information to tag space
 	for _, k := range s.config.MetaAsTags {
 		s.mp.AddMoveMetaToTags("true", k, k)
 	}
@@ -260,7 +256,7 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 	if len(s.config.CustomFlushInterval) > 0 {
 		t, err := time.ParseDuration(s.config.CustomFlushInterval)
 		if err != nil {
-			return nil, fmt.Errorf("invalid duration in 'custom_flush_interval': %v", err)
+			return nil, fmt.Errorf("invalid duration in 'custom_flush_interval': %w", err)
 		}
 		s.customFlushInterval = t
 	}

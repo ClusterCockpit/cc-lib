@@ -81,7 +81,7 @@ func NewSampleSink(name string, config json.RawMessage) (Sink, error) {
 	// Initialize and configure the message processor
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 
@@ -89,7 +89,7 @@ func NewSampleSink(name string, config json.RawMessage) (Sink, error) {
 	if len(s.config.MessageProcessor) > 0 {
 		err = p.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	// Add rules to move meta information to tag space

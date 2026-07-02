@@ -6,6 +6,7 @@ package ccTopology
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 )
@@ -114,6 +115,10 @@ func TestGetMemoryDomains(t *testing.T) {
 
 func TestGetPciDevices(t *testing.T) {
 	var topo Topology
+
+	if os.Getenv("CI") != "" {
+		t.Skip("PCI device testing in CI is not supported (there are no PCI devices)")
+	}
 
 	topo, err := LocalTopology()
 	if err != nil {

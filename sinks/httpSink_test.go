@@ -54,7 +54,7 @@ func TestHttpSink(t *testing.T) {
 	httpserver := &http.Server{
 		Addr:        "localhost:8082",
 		Handler:     nil, // handler to invoke, http.DefaultServeMux if nil
-		IdleTimeout: time.Duration(10 * time.Second),
+		IdleTimeout: 10 * time.Second,
 	}
 	http.HandleFunc("/", httpReceiver)
 

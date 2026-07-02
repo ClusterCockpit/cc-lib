@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 	influx "github.com/ClusterCockpit/cc-line-protocol/v2/lineprotocol"
 	nats "github.com/nats-io/nats.go"
-	"golang.org/x/exp/slices"
 )
 
 type NatsSinkConfig struct {
@@ -50,26 +50,23 @@ type NatsSink struct {
 
 func (s *NatsSink) connect() error {
 	var err error
-	var uinfo nats.Option = nil
 	var nc *nats.Conn
+	natsOpts := make([]nats.Option, 0)
 	if len(s.config.User) > 0 && len(s.config.Password) > 0 {
-		uinfo = nats.UserInfo(s.config.User, s.config.Password)
+		natsOpts = append(natsOpts, nats.UserInfo(s.config.User, s.config.Password))
 	} else if len(s.config.NkeyFile) > 0 {
 		if _, err := os.Stat(s.config.NkeyFile); err == nil {
-			uinfo = nats.UserCredentials(s.config.NkeyFile)
+			natsOpts = append(natsOpts, nats.UserCredentials(s.config.NkeyFile))
 		} else {
-			cclog.ComponentError(s.name, "NKEY file", s.config.NkeyFile, "does not exist: %v", err.Error())
+			cclog.ComponentError(s.name, "NKEY file", s.config.NkeyFile, "does not exist: %w", err)
 			return err
 		}
 	}
+	natsOpts = append(natsOpts, nats.MaxReconnects(-1), nats.RetryOnFailedConnect(true))
 	uri := fmt.Sprintf("nats://%s:%s", s.config.Host, s.config.Port)
 	cclog.ComponentDebug(s.name, "Connect to", uri)
 	s.client = nil
-	if uinfo != nil {
-		nc, err = nats.Connect(uri, uinfo)
-	} else {
-		nc, err = nats.Connect(uri)
-	}
+	nc, err = nats.Connect(uri, natsOpts...)
 	if err != nil {
 		cclog.ComponentError(s.name, "Connect to", uri, "failed:", err.Error())
 		return err
@@ -183,14 +180,14 @@ func NewNatsSink(name string, config json.RawMessage) (Sink, error) {
 	// Create a new message processor
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 	// Read config related to message processor
 	if len(s.config.MessageProcessor) > 0 {
 		err = s.mp.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	// Add meta_as_tags list to message processor

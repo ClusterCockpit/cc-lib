@@ -278,6 +278,71 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 	return newData, newFrequency, nil
 }
 
+// ResamplerFunc is the signature shared by all resampler algorithms.
+type ResamplerFunc func(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error)
+
+// GetResampler returns the resampler function for the given name.
+// Valid names: "lttb" (default), "average", "simple". Empty string returns LTTB.
+func GetResampler(name string) (ResamplerFunc, error) {
+	switch name {
+	case "", "lttb":
+		return LargestTriangleThreeBucket, nil
+	case "average":
+		return AverageResampler, nil
+	case "simple":
+		return SimpleResampler, nil
+	default:
+		return nil, fmt.Errorf("unknown resampler algorithm: %s", name)
+	}
+}
+
+// AverageResampler performs RRDTool-style average consolidation by dividing data into
+// fixed-size buckets and computing the arithmetic mean of all valid points in each bucket.
+//
+// This produces scientifically accurate averages over time intervals, unlike LTTB which
+// preserves visual shape, or SimpleResampler which decimates. NaN values are skipped;
+// if all values in a bucket are NaN, the output for that bucket is NaN.
+//
+// Parameters:
+//   - data: input time-series data points
+//   - oldFrequency: original sampling frequency
+//   - newFrequency: target sampling frequency (must be a multiple of oldFrequency)
+//
+// Returns:
+//   - Averaged data slice
+//   - Actual frequency used
+//   - Error if newFrequency is not a multiple of oldFrequency
+func AverageResampler(data []schema.Float, oldFrequency int64, newFrequency int64) ([]schema.Float, int64, error) {
+	newDataLength, step, err := validateFrequency(len(data), oldFrequency, newFrequency)
+	if err != nil {
+		return nil, 0, err
+	}
+	if newDataLength == -1 {
+		return data, oldFrequency, nil
+	}
+
+	newData := make([]schema.Float, newDataLength)
+	for i := range newDataLength {
+		sum := 0.0
+		count := 0
+		base := i * step
+		for j := range step {
+			v := float64(data[base+j])
+			if !math.IsNaN(v) {
+				sum += v
+				count++
+			}
+		}
+		if count == 0 {
+			newData[i] = schema.NaN
+		} else {
+			newData[i] = schema.Float(sum / float64(count))
+		}
+	}
+
+	return newData, newFrequency, nil
+}
+
 func SetMinimumRequiredPoints(setVal int) {
 	MinimumRequiredPoints = setVal
 }

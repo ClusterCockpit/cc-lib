@@ -133,64 +133,62 @@ type GlobalMetricListItem struct {
 
 // InitTopologyMaps initializes the topology mapping caches
 func (topo *Topology) InitTopologyMaps() {
-	topo.hwthreadToSocket = make(map[int][]int)
-	topo.hwthreadToCore = make(map[int][]int)
-	topo.hwthreadToMemoryDomain = make(map[int][]int)
-	topo.coreToSocket = make(map[int][]int)
-	topo.memoryDomainToSocket = make(map[int]int)
-	topo.coresPerSocket = make(map[int]int)
+	if topo.hwthreadToSocket == nil || topo.hwthreadToCore == nil ||
+		topo.hwthreadToMemoryDomain == nil || topo.coreToSocket == nil ||
+		topo.memoryDomainToSocket == nil || topo.coresPerSocket == nil {
 
-	// Build hwthread to socket mapping
-	for socketID, hwthreads := range topo.Socket {
-		for _, hwthread := range hwthreads {
-			topo.hwthreadToSocket[hwthread] = append(topo.hwthreadToSocket[hwthread], socketID)
-		}
-	}
+		topo.hwthreadToSocket = make(map[int][]int)
+		topo.hwthreadToCore = make(map[int][]int)
+		topo.hwthreadToMemoryDomain = make(map[int][]int)
+		topo.coreToSocket = make(map[int][]int)
+		topo.memoryDomainToSocket = make(map[int]int)
+		topo.coresPerSocket = make(map[int]int)
 
-	// Build hwthread to core mapping
-	for coreID, hwthreads := range topo.Core {
-		for _, hwthread := range hwthreads {
-			topo.hwthreadToCore[hwthread] = append(topo.hwthreadToCore[hwthread], coreID)
-		}
-	}
-
-	// Build hwthread to memory domain mapping
-	for memDomID, hwthreads := range topo.MemoryDomain {
-		for _, hwthread := range hwthreads {
-			topo.hwthreadToMemoryDomain[hwthread] = append(topo.hwthreadToMemoryDomain[hwthread], memDomID)
-		}
-	}
-
-	// Build core to socket mapping and count cores per socket
-	for coreID, hwthreads := range topo.Core {
-		socketSet := make(map[int]struct{})
-		for _, hwthread := range hwthreads {
-			for _, socketID := range topo.hwthreadToSocket[hwthread] {
-				socketSet[socketID] = struct{}{}
+		// Build hwthread to socket mapping
+		for socketID, hwthreads := range topo.Socket {
+			for _, hwthread := range hwthreads {
+				topo.hwthreadToSocket[hwthread] = append(topo.hwthreadToSocket[hwthread], socketID)
 			}
 		}
-		topo.coreToSocket[coreID] = make([]int, 0, len(socketSet))
-		for socketID := range socketSet {
-			topo.coreToSocket[coreID] = append(topo.coreToSocket[coreID], socketID)
-			topo.coresPerSocket[socketID]++
-		}
-	}
 
-	// Build memory domain to socket mapping
-	for memDomID, hwthreads := range topo.MemoryDomain {
-		if len(hwthreads) > 0 {
-			// Use the first hwthread to determine the socket
-			if socketIDs, ok := topo.hwthreadToSocket[hwthreads[0]]; ok && len(socketIDs) > 0 {
-				topo.memoryDomainToSocket[memDomID] = socketIDs[0]
+		// Build hwthread to core mapping
+		for coreID, hwthreads := range topo.Core {
+			for _, hwthread := range hwthreads {
+				topo.hwthreadToCore[hwthread] = append(topo.hwthreadToCore[hwthread], coreID)
 			}
 		}
-	}
-}
 
-// EnsureTopologyMaps ensures that the topology maps are initialized
-func (topo *Topology) EnsureTopologyMaps() {
-	if topo.hwthreadToSocket == nil {
-		topo.InitTopologyMaps()
+		// Build hwthread to memory domain mapping
+		for memDomID, hwthreads := range topo.MemoryDomain {
+			for _, hwthread := range hwthreads {
+				topo.hwthreadToMemoryDomain[hwthread] = append(topo.hwthreadToMemoryDomain[hwthread], memDomID)
+			}
+		}
+
+		// Build core to socket mapping and count cores per socket
+		for coreID, hwthreads := range topo.Core {
+			socketSet := make(map[int]struct{})
+			for _, hwthread := range hwthreads {
+				for _, socketID := range topo.hwthreadToSocket[hwthread] {
+					socketSet[socketID] = struct{}{}
+				}
+			}
+			topo.coreToSocket[coreID] = make([]int, 0, len(socketSet))
+			for socketID := range socketSet {
+				topo.coreToSocket[coreID] = append(topo.coreToSocket[coreID], socketID)
+				topo.coresPerSocket[socketID]++
+			}
+		}
+
+		// Build memory domain to socket mapping
+		for memDomID, hwthreads := range topo.MemoryDomain {
+			if len(hwthreads) > 0 {
+				// Use the first hwthread to determine the socket
+				if socketIDs, ok := topo.hwthreadToSocket[hwthreads[0]]; ok && len(socketIDs) > 0 {
+					topo.memoryDomainToSocket[memDomID] = socketIDs[0]
+				}
+			}
+		}
 	}
 }
 
@@ -200,8 +198,6 @@ func (topo *Topology) EnsureTopologyMaps() {
 func (topo *Topology) GetSocketsFromHWThreads(
 	hwthreads []int,
 ) (sockets []int, exclusive bool) {
-	topo.EnsureTopologyMaps()
-
 	// Count hwthreads per socket from input
 	socketsMap := make(map[int]int)
 	for _, hwt := range hwthreads {
@@ -226,8 +222,6 @@ func (topo *Topology) GetSocketsFromHWThreads(
 func (topo *Topology) GetSocketsFromCores(
 	cores []int,
 ) (sockets []int, exclusive bool) {
-	topo.EnsureTopologyMaps()
-
 	socketsMap := make(map[int]int)
 	for _, core := range cores {
 		for _, socketID := range topo.coreToSocket[core] {
@@ -251,8 +245,6 @@ func (topo *Topology) GetSocketsFromCores(
 func (topo *Topology) GetCoresFromHWThreads(
 	hwthreads []int,
 ) (cores []int, exclusive bool) {
-	topo.EnsureTopologyMaps()
-
 	coresMap := make(map[int]int)
 	for _, hwt := range hwthreads {
 		for _, coreID := range topo.hwthreadToCore[hwt] {
@@ -277,8 +269,6 @@ func (topo *Topology) GetCoresFromHWThreads(
 func (topo *Topology) GetMemoryDomainsFromHWThreads(
 	hwthreads []int,
 ) (memDoms []int, exclusive bool) {
-	topo.EnsureTopologyMaps()
-
 	memDomsMap := make(map[int]int)
 	for _, hwt := range hwthreads {
 		for _, memDomID := range topo.hwthreadToMemoryDomain[hwt] {
@@ -300,8 +290,6 @@ func (topo *Topology) GetMemoryDomainsFromHWThreads(
 // GetMemoryDomainsBySocket groups the given memory domain IDs by their parent socket.
 // Returns a map from socket ID to the list of memory domain IDs belonging to that socket.
 func (topo *Topology) GetMemoryDomainsBySocket(domainIDs []int) (map[int][]int, error) {
-	topo.EnsureTopologyMaps()
-
 	socketToDomains := make(map[int][]int)
 	for _, domainID := range domainIDs {
 		if domainID < 0 || domainID >= len(topo.MemoryDomain) || len(topo.MemoryDomain[domainID]) == 0 {

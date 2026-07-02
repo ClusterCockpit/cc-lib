@@ -23,7 +23,7 @@ func generate_message_lists(num_lists, num_entries int) ([][]lp.CCMessage, error
 			var err error = nil
 			switch i % 4 {
 			case 0:
-				x, err = lp.NewEvent("myevent", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{}, "nothing happend", time.Now())
+				x, err = lp.NewEvent("myevent", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{}, "nothing happened", time.Now())
 			case 1:
 				x, err = lp.NewMetric("mymetric", map[string]string{"type": "socket", "type-id": "0"}, map[string]string{"unit": "kByte"}, 12.145, time.Now())
 			case 2:
@@ -315,7 +315,7 @@ func TestConfigList(t *testing.T) {
 			}
 			if c.pre != nil {
 				if err = c.pre(m); err != nil {
-					t.Errorf("error running pre-test function: %v", err.Error())
+					t.Errorf("error running pre-test function: %s", err.Error())
 					return
 				}
 			}
@@ -346,7 +346,7 @@ func TestConfigList(t *testing.T) {
 
 			if c.check != nil {
 				if err := c.check(out); err != nil {
-					t.Errorf("check failed with %v", err.Error())
+					t.Errorf("check failed with %s", err.Error())
 					t.Log("Rerun with debugging")
 					mp.ProcessMessage(m)
 					return
@@ -441,7 +441,7 @@ func BenchmarkProcessing(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, m := range mlist[i] {
 			if _, err := mp.ProcessMessage(m); err != nil {
-				b.Errorf("failed processing message '%s': %v", m.ToLineProtocol(nil), err.Error())
+				b.Errorf("failed processing message '%s': %s", m.ToLineProtocol(nil), err.Error())
 				return
 			}
 		}

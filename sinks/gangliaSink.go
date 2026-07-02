@@ -11,10 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
-	//	"time"
 	"os/exec"
+	"strings"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
@@ -45,8 +43,7 @@ type GangliaSink struct {
 }
 
 func (s *GangliaSink) Write(msg lp.CCMessage) error {
-	var err error = nil
-	// var tagsstr []string
+	var err error
 	var argstr []string
 
 	point, err := s.mp.ProcessMessage(msg)
@@ -70,9 +67,6 @@ func (s *GangliaSink) Write(msg lp.CCMessage) error {
 		if len(s.config.ClusterName) > 0 {
 			argstr = append(argstr, fmt.Sprintf("--cluster=%s", s.config.ClusterName))
 		}
-		// if s.config.AddTagsAsDesc && len(tagsstr) > 0 {
-		// 	argstr = append(argstr, fmt.Sprintf("--desc=%q", strings.Join(tagsstr, ",")))
-		// }
 		if len(s.gmetric_config) > 0 {
 			argstr = append(argstr, fmt.Sprintf("--conf=%s", s.gmetric_config))
 		}
@@ -110,7 +104,7 @@ func NewGangliaSink(name string, config json.RawMessage) (Sink, error) {
 		d := json.NewDecoder(bytes.NewReader(config))
 		d.DisallowUnknownFields()
 		if err := d.Decode(&s.config); err != nil {
-			cclog.ComponentError(s.name, "Error reading config:", err.Error())
+			cclog.ComponentError(s.name, fmt.Sprintf("Error reading config: %s", err.Error()))
 			return nil, err
 		}
 	}
@@ -119,7 +113,7 @@ func NewGangliaSink(name string, config json.RawMessage) (Sink, error) {
 
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 
@@ -144,7 +138,7 @@ func NewGangliaSink(name string, config json.RawMessage) (Sink, error) {
 	if len(s.config.MessageProcessor) > 0 {
 		err = s.mp.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	for _, k := range s.config.MetaAsTags {

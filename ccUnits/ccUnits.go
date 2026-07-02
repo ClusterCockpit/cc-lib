@@ -44,7 +44,7 @@ func (u *unit) String() string {
 	}
 }
 
-// Short returns the short string for the unit like 'kHz' or 'MByte'. Is is recommened to use Short() over String().
+// Short returns the short string for the unit like 'kHz' or 'MByte'. Is is recommend to use Short() over String().
 func (u *unit) Short() string {
 	if u.divMeasure != InvalidMeasure {
 		return fmt.Sprintf("%s%s/%s", u.prefix.Prefix(), u.measure.Short(), u.divMeasure.Short())
@@ -53,7 +53,7 @@ func (u *unit) Short() string {
 	}
 }
 
-// AddUnitDenominator adds a unit denominator to an exising unit. Can be used if you want to derive e.g. data volume to bandwidths.
+// AddUnitDenominator adds a unit denominator to an existing unit. Can be used if you want to derive e.g. data volume to bandwidths.
 // The data volume is in a Byte unit like 'kByte' and by dividing it by the runtime in seconds, we get the bandwidth. We can use the
 // data volume unit and add 'Second' as unit denominator
 func (u *unit) AddUnitDenominator(div Measure) {
@@ -79,10 +79,7 @@ func (u *unit) GetUnitDenominator() Measure {
 // GetPrefixPrefixFactor creates the default conversion function between two prefixes.
 // It returns a conversation function for the value.
 func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value any) any {
-	factor := 1.0
-	in_prefix := float64(in)
-	out_prefix := float64(out)
-	factor = in_prefix / out_prefix
+	factor := float64(in) / float64(out)
 	conv := func(value any) any {
 		switch v := value.(type) {
 		case float64:
@@ -156,8 +153,8 @@ func convertTempF2TempC(value any) any {
 // GetPrefixStringPrefixStringFactor is a wrapper for GetPrefixPrefixFactor with string inputs instead
 // of prefixes. It also returns a conversation function for the value.
 func GetPrefixStringPrefixStringFactor(in string, out string) func(value any) any {
-	var i Prefix = NewPrefix(in)
-	var o Prefix = NewPrefix(out)
+	i := NewPrefix(in)
+	o := NewPrefix(out)
 	return GetPrefixPrefixFactor(i, o)
 }
 
@@ -177,7 +174,7 @@ func GetUnitPrefixFactor(in Unit, out Prefix) (func(value any) any, Unit) {
 // GetUnitPrefixStringFactor gets the conversion function and resulting unit for a unit and a prefix as string.
 // It is a wrapper for GetUnitPrefixFactor
 func GetUnitPrefixStringFactor(in Unit, out string) (func(value any) any, Unit) {
-	var o Prefix = NewPrefix(out)
+	o := NewPrefix(out)
 	return GetUnitPrefixFactor(in, o)
 }
 

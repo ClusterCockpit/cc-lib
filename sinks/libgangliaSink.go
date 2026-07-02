@@ -118,7 +118,7 @@ type LibgangliaSink struct {
 }
 
 func (s *LibgangliaSink) Write(msg lp.CCMessage) error {
-	var err error = nil
+	var err error
 	var c_name *C.char
 	var c_value *C.char
 	var c_type *C.char
@@ -172,8 +172,7 @@ func (s *LibgangliaSink) Write(msg lp.CCMessage) error {
 		// Set name, value, type and unit in the Ganglia metric
 		// The default slope_type is both directions, so up and down. Some metrics want 'zero' slope, probably constant.
 		// The 'tmax' value is by default 300.
-		rval := C.int(0)
-		rval = C.Ganglia_metric_set(gmetric, c_name, c_value, c_type, c_unit, C.uint(slope_type), C.uint(conf.Tmax), 0)
+		var rval C.int = C.Ganglia_metric_set(gmetric, c_name, c_value, c_type, c_unit, C.uint(slope_type), C.uint(conf.Tmax), 0)
 		switch rval {
 		case 1:
 			C.free(unsafe.Pointer(c_value))
@@ -221,7 +220,7 @@ func (s *LibgangliaSink) Flush() error {
 }
 
 func (s *LibgangliaSink) Close() {
-	// Destroy Ganglia configration struct
+	// Destroy Ganglia configuration struct
 	// (not done by gmetric, I thought I am more clever but no...)
 	// C.Ganglia_gmond_config_destroy(s.gmond_config)
 	// Destroy Ganglia pool
@@ -235,7 +234,7 @@ func (s *LibgangliaSink) Close() {
 
 func NewLibgangliaSink(name string, config json.RawMessage) (Sink, error) {
 	s := new(LibgangliaSink)
-	var err error = nil
+	var err error
 	s.name = fmt.Sprintf("LibgangliaSink(%s)", name)
 	// s.config.AddTagsAsDesc = false
 	s.config.AddGangliaGroup = false
@@ -253,13 +252,13 @@ func NewLibgangliaSink(name string, config json.RawMessage) (Sink, error) {
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
-		return nil, fmt.Errorf("initialization of message processor failed: %v", err.Error())
+		return nil, fmt.Errorf("initialization of message processor failed: %w", err)
 	}
 	s.mp = p
 	if len(s.config.MessageProcessor) > 0 {
 		err = s.mp.FromConfigJSON(s.config.MessageProcessor)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing JSON for message processor: %v", err.Error())
+			return nil, fmt.Errorf("failed parsing JSON for message processor: %w", err)
 		}
 	}
 	for _, k := range s.config.MetaAsTags {

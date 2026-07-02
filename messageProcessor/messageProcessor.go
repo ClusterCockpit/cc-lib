@@ -53,7 +53,7 @@ type messageProcessor struct {
 	// For thread-safety
 	mutex sync.RWMutex
 
-	// mapping contains all evalables as strings to gval.Evaluable
+	// mapping contains all evaluables as strings to gval.Evaluable
 	// because it is not possible to get the original string out of
 	// a gval.Evaluable
 	mapping map[string]*vm.Program
@@ -122,9 +122,9 @@ type MessageProcessor interface {
 	FromConfigJSON(config json.RawMessage) error
 	// Processing functions for legacy CCMetric and current CCMessage
 	ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
-	// EvalToBool(condition string, parameters map[string]interface{}) (bool, error)
-	// EvalToFloat64(condition string, parameters map[string]interface{}) (float64, error)
-	// EvalToString(condition string, parameters map[string]interface{}) (string, error)
+	// EvalToBool(condition string, parameters map[string]any) (bool, error)
+	// EvalToFloat64(condition string, parameters map[string]any) (float64, error)
+	// EvalToString(condition string, parameters map[string]any) (string, error)
 }
 
 const (
@@ -183,13 +183,22 @@ func sanitizeExprString(key string) string {
 
 func getParamMap(point lp.CCMessage) map[string]any {
 	params := paramMapPool.Get().(map[string]any)
+	clear(params)
+
+	// Put metric name into params map
+	params["name"] = point.Name()
+
+	// Put full message into params map
 	params["message"] = point
 	params["msg"] = point
-	params["name"] = point.Name()
+
+	// Put timestamp into params map
 	params["timestamp"] = point.Time().Unix()
 	params["time"] = params["timestamp"]
 
+	// Put fields into params map
 	fields := paramMapPool.Get().(map[string]any)
+	clear(fields)
 	for key, value := range point.Fields() {
 		fields[key] = value
 		switch key {
@@ -213,17 +222,24 @@ func getParamMap(point lp.CCMessage) map[string]any {
 	params["msgtype"] = params["messagetype"]
 	params["fields"] = fields
 	params["field"] = fields
+
+	// Put tags into params map
 	tags := paramMapPool.Get().(map[string]any)
+	clear(tags)
 	for key, value := range point.Tags() {
 		tags[sanitizeExprString(key)] = value
 	}
 	params["tags"] = tags
 	params["tag"] = tags
+
+	// Put meta information into params map
 	meta := paramMapPool.Get().(map[string]any)
+	clear(meta)
 	for key, value := range point.Meta() {
 		meta[sanitizeExprString(key)] = value
 	}
 	params["meta"] = meta
+
 	return params
 }
 
@@ -360,10 +376,9 @@ func (mp *messageProcessor) RemoveDropMessagesByType(typestring string) {
 }
 
 func (mp *messageProcessor) addTagConfig(condition, key, value string, config *map[*vm.Program]messageProcessorTagConfig) error {
-	var err error
 	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
 	if err != nil {
-		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
+		return fmt.Errorf("failed to create condition evaluable of '%s': %w", condition, err)
 	}
 	mp.mutex.Lock()
 	if _, ok := (*config)[evaluable]; !ok {
@@ -439,7 +454,7 @@ func (mp *messageProcessor) AddDropMessagesByCondition(condition string) error {
 	var err error
 	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
 	if err != nil {
-		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
+		return fmt.Errorf("failed to create condition evaluable of '%s': %w", condition, err)
 	}
 	mp.mutex.Lock()
 	if _, ok := mp.dropMessagesIf[evaluable]; !ok {
@@ -463,7 +478,7 @@ func (mp *messageProcessor) AddRenameMetricByCondition(condition string, name st
 	var err error
 	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
 	if err != nil {
-		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
+		return fmt.Errorf("failed to create condition evaluable of '%s': %w", condition, err)
 	}
 	mp.mutex.Lock()
 	if _, ok := mp.renameMessagesIf[evaluable]; !ok {
@@ -493,7 +508,7 @@ func (mp *messageProcessor) AddChangeUnitPrefix(condition string, prefix string)
 	var err error
 	evaluable, err := expr.Compile(sanitizeExprString(condition), expr.Env(baseenv), expr.AsBool())
 	if err != nil {
-		return fmt.Errorf("failed to create condition evaluable of '%s': %v", condition, err.Error())
+		return fmt.Errorf("failed to create condition evaluable of '%s': %w", condition, err)
 	}
 	mp.mutex.Lock()
 	if _, ok := mp.changeUnitPrefix[evaluable]; !ok {
@@ -614,139 +629,139 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 
 	err := json.Unmarshal(config, &c)
 	if err != nil {
-		return fmt.Errorf("failed to process config JSON: %v", err.Error())
+		return fmt.Errorf("failed to process config JSON: %w", err)
 	}
 
 	if len(c.StageOrder) > 0 {
 		err = mp.SetStages(c.StageOrder)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	} else {
 		err = mp.SetStages(mp.DefaultStages())
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 
 	for _, m := range c.DropMessages {
 		err = mp.AddDropMessagesByName(m)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, m := range c.DropByType {
 		err = mp.AddDropMessagesByType(m)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, m := range c.DropMessagesIf {
 		err = mp.AddDropMessagesByCondition(m)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for k, v := range c.RenameMessagesIf {
 		err = mp.AddRenameMetricByCondition(k, v)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for k, v := range c.RenameMessages {
 		err = mp.AddRenameMetricByName(k, v)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for k, v := range c.ChangeUnitPrefix {
 		err = mp.AddChangeUnitPrefix(k, v)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.AddTagsIf {
 		err = mp.AddAddTagsByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.AddMetaIf {
 		err = mp.AddAddMetaByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.AddFieldIf {
 		err = mp.AddAddFieldByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.DelTagsIf {
 		err = mp.AddDeleteTagsByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.DelMetaIf {
 		err = mp.AddDeleteMetaByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.DelFieldIf {
 		err = mp.AddDeleteFieldByCondition(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveTagToMeta {
 		err = mp.AddMoveTagToMeta(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveTagToField {
 		err = mp.AddMoveTagToFields(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveMetaToTag {
 		err = mp.AddMoveMetaToTags(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveMetaToField {
 		err = mp.AddMoveMetaToFields(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveFieldToTag {
 		err = mp.AddMoveFieldToTags(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, c := range c.MoveFieldToMeta {
 		err = mp.AddMoveFieldToMeta(c.Condition, c.Key, c.Value)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	for _, m := range c.DropByType {
 		err = mp.AddDropMessagesByType(m)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	if len(c.AddBaseEnv) > 0 {
 		err = mp.AddBaseEnv(c.AddBaseEnv)
 		if err != nil {
-			return fmt.Errorf("failed to process config JSON: %v", err.Error())
+			return fmt.Errorf("failed to process config JSON: %w", err)
 		}
 	}
 	mp.SetNormalizeUnits(c.NormalizeUnits)
@@ -754,7 +769,7 @@ func (mp *messageProcessor) FromConfigJSON(config json.RawMessage) error {
 }
 
 func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error) {
-	var err error = nil
+	var err error
 	out := lp.FromMessage(m)
 
 	if len(mp.stages) == 0 {
@@ -798,7 +813,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Dropping by condition")
 				drop, err := dropMessagesIf(&params, &mp.dropMessagesIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 				if drop {
 					// cclog.ComponentDebug("MessageProcessor", "Drop")
@@ -823,7 +838,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Renaming by condition")
 				_, err := renameMessagesIf(out, &params, &mp.renameMessagesIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_ADD_TAG:
@@ -831,7 +846,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Adding tags")
 				_, err = addTagIf(out, &params, &mp.addTagsIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_DELETE_TAG:
@@ -839,7 +854,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Delete tags")
 				_, err = deleteTagIf(out, &params, &mp.deleteTagsIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_ADD_META:
@@ -847,7 +862,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Adding meta information")
 				_, err = addMetaIf(out, &params, &mp.addMetaIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_DELETE_META:
@@ -855,7 +870,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Delete meta information")
 				_, err = deleteMetaIf(out, &params, &mp.deleteMetaIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_ADD_FIELD:
@@ -863,7 +878,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Adding fields")
 				_, err = addFieldIf(out, &params, &mp.addFieldIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_DELETE_FIELD:
@@ -871,7 +886,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Delete fields")
 				_, err = deleteFieldIf(out, &params, &mp.deleteFieldIf)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_TAG_META:
@@ -879,7 +894,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move tag to meta")
 				_, err := moveTagToMeta(out, &params, &mp.moveTagToMeta)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_TAG_FIELD:
@@ -887,7 +902,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move tag to fields")
 				_, err := moveTagToField(out, &params, &mp.moveTagToField)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_META_TAG:
@@ -895,7 +910,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move meta to tags")
 				_, err := moveMetaToTag(out, &params, &mp.moveMetaToTag)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_META_FIELD:
@@ -903,7 +918,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move meta to fields")
 				_, err := moveMetaToField(out, &params, &mp.moveMetaToField)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_FIELD_META:
@@ -911,7 +926,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move field to meta")
 				_, err := moveFieldToMeta(out, &params, &mp.moveFieldToMeta)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_MOVE_FIELD_TAG:
@@ -919,7 +934,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				// cclog.ComponentDebug("MessageProcessor", "Move field to tags")
 				_, err := moveFieldToTag(out, &params, &mp.moveFieldToTag)
 				if err != nil {
-					return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+					return out, fmt.Errorf("failed to evaluate: %w", err)
 				}
 			}
 		case STAGENAME_NORMALIZE_UNIT:
@@ -928,7 +943,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				if out.IsMetric() {
 					_, err := normalizeUnits(out, &params)
 					if err != nil {
-						return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+						return out, fmt.Errorf("failed to evaluate: %w", err)
 					}
 				} else {
 					cclog.ComponentDebug("MessageProcessor", "skipped, no metric")
@@ -941,7 +956,7 @@ func (mp *messageProcessor) ProcessMessage(m lp.CCMessage) (lp.CCMessage, error)
 				if out.IsMetric() {
 					_, err := changeUnitPrefix(out, &params, &mp.changeUnitPrefix)
 					if err != nil {
-						return out, fmt.Errorf("failed to evaluate: %v", err.Error())
+						return out, fmt.Errorf("failed to evaluate: %w", err)
 					}
 				} else {
 					cclog.ComponentDebug("MessageProcessor", "skipped, no metric")
@@ -958,7 +973,7 @@ func NewMessageProcessor() (MessageProcessor, error) {
 	mp := new(messageProcessor)
 	err := mp.init()
 	if err != nil {
-		err := fmt.Errorf("failed to create MessageProcessor: %v", err.Error())
+		err := fmt.Errorf("failed to create MessageProcessor: %w", err)
 		cclog.ComponentError("MessageProcessor", err.Error())
 		return nil, err
 	}
