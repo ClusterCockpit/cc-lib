@@ -18,7 +18,7 @@ go test -v ./ccMessage -run TestJSONEncode   # Run single test
 go test -cover ./...                        # Tests with coverage
 ```
 
-No Makefile or special build tools. The `ccTopology` package requires hwloc C library (`sudo apt install hwloc`).
+`make fmt` formats all source files with `gofumpt`. The `ccTopology` package requires hwloc C library (`sudo apt install hwloc`).
 
 ## Code Style Requirements
 
@@ -37,7 +37,7 @@ lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 mp "github.com/ClusterCockpit/cc-lib/v2/messageProcessor"
 ```
 
-**Formatting:** Code must be formatted with `gofumpt` (a stricter `gofmt`).
+**Formatting:** Code must be formatted with `gofumpt` (a stricter `gofmt`). Run `make fmt` to format all source files.
 
 **Import grouping:** stdlib first, then third-party separated by blank line.
 
