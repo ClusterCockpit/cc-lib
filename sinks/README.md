@@ -45,6 +45,8 @@ The configuration file for the sinks is a list of configurations. The `type` fie
 }
 ```
 
+Each sink is written to by its own goroutine through a buffered queue, so a slow sink does not stall the other sinks or the metric pipeline. If a sink cannot keep up and its queue is full, messages for that sink are dropped and a warning is logged. The optional `queue_length` option sets the queue capacity per sink; if unset, it defaults to `max(4096, 24 * number of CPUs)` so that one interval's burst of per-hwthread metrics fits on nodes with many cores.
+
 
 
 

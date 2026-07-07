@@ -9,13 +9,18 @@ package sinks
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"sync"
+	"time"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 	lp "github.com/ClusterCockpit/cc-lib/v2/ccMessage"
 )
 
 const SINK_MAX_FORWARD = 50
+
+// Minimum interval between warnings about a full sink queue
+const SINK_DROP_WARN_INTERVAL = 5 * time.Second
 
 type Sink interface {
 	Write(point lp.CCMessage) error // Write metric to the sink
@@ -35,11 +40,13 @@ type SinkManager interface {
 
 // Metric collector manager data structure
 type sinkManager struct {
-	input      chan lp.CCMessage // input channel
-	done       chan bool         // channel to finish / stop metric sink manager
-	wg         *sync.WaitGroup   // wait group for all goroutines in cc-metric-collector
-	sinks      map[string]Sink   // Mapping sink name to sink
-	maxForward int               // number of metrics to write maximally in one iteration
+	input      chan lp.CCMessage            // input channel
+	done       chan bool                    // channel to finish / stop metric sink manager
+	wg         *sync.WaitGroup              // wait group for all goroutines in cc-metric-collector
+	sinks      map[string]Sink              // Mapping sink name to sink
+	queues     map[string]chan lp.CCMessage // per-sink queue, so a slow sink does not stall the others
+	writer_wg  sync.WaitGroup               // wait group for the per-sink writer goroutines
+	maxForward int                          // number of metrics to write maximally in one iteration
 }
 
 // Init initializes the sink manager by:
@@ -50,6 +57,7 @@ func (sm *sinkManager) Init(wg *sync.WaitGroup, sinkConfig json.RawMessage) erro
 	sm.done = make(chan bool)
 	sm.wg = wg
 	sm.sinks = make(map[string]Sink, 0)
+	sm.queues = make(map[string]chan lp.CCMessage)
 	sm.maxForward = SINK_MAX_FORWARD
 
 	// Parse config
@@ -81,9 +89,28 @@ func (sm *sinkManager) Init(wg *sync.WaitGroup, sinkConfig json.RawMessage) erro
 // Start starts the sink managers background task, which
 // distributes received metrics to the sinks
 func (sm *sinkManager) Start() {
+	// One writer goroutine per sink, so a slow sink only fills its own queue
+	// instead of stalling the other sinks and the whole metric pipeline
+	for name, s := range sm.sinks {
+		queue := sm.queues[name]
+		sm.writer_wg.Go(func() {
+			for p := range queue {
+				if err := s.Write(p); err != nil {
+					cclog.ComponentError("SinkManager", "WRITE", s.Name(), "write failed:", err.Error())
+				}
+			}
+		})
+	}
+
 	sm.wg.Go(func() {
 		// Sink manager is done
 		done := func() {
+			// Close the queues and wait for the writers to drain them,
+			// then close the sinks to flush their buffered metrics
+			for _, q := range sm.queues {
+				close(q)
+			}
+			sm.writer_wg.Wait()
 			for _, s := range sm.sinks {
 				s.Close()
 			}
@@ -92,13 +119,25 @@ func (sm *sinkManager) Start() {
 			cclog.ComponentDebug("SinkManager", "DONE")
 		}
 
+		dropped := make(map[string]int)
+		var lastDropWarn time.Time
+
 		toTheSinks := func(p lp.CCMessage) {
 			// Send received metric to all outputs
 			cclog.ComponentDebug("SinkManager", "WRITE", p)
-			for _, s := range sm.sinks {
-				if err := s.Write(p); err != nil {
-					cclog.ComponentError("SinkManager", "WRITE", s.Name(), "write failed:", err.Error())
+			for name, q := range sm.queues {
+				select {
+				case q <- p:
+				default:
+					dropped[name]++
 				}
+			}
+			if len(dropped) > 0 && time.Since(lastDropWarn) >= SINK_DROP_WARN_INTERVAL {
+				for name, n := range dropped {
+					cclog.ComponentWarn("SinkManager", "sink", name, "is too slow, queue full,", n, "messages dropped")
+				}
+				clear(dropped)
+				lastDropWarn = time.Now()
 			}
 		}
 
@@ -146,7 +185,14 @@ func (sm *sinkManager) AddOutput(name string, rawConfig json.RawMessage) error {
 		return err
 	}
 	sm.sinks[name] = s
-	cclog.ComponentDebug("SinkManager", "ADD SINK", s.Name(), "with name", fmt.Sprintf("'%s'", name))
+	// Queue between the sink manager and the sink's writer goroutine, sized to
+	// hold one interval's burst of per-hwthread metrics on nodes with many cores
+	queueLength := sinkConfig.QueueLength
+	if queueLength <= 0 {
+		queueLength = max(4096, 24*runtime.NumCPU())
+	}
+	sm.queues[name] = make(chan lp.CCMessage, queueLength)
+	cclog.ComponentDebug("SinkManager", "ADD SINK", s.Name(), "with name", fmt.Sprintf("'%s'", name), "queue length", queueLength)
 	return nil
 }
 

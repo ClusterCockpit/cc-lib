@@ -19,6 +19,7 @@ type defaultSinkConfig struct {
 	MetaAsTags       []string        `json:"meta_as_tags,omitempty"`
 	MessageProcessor json.RawMessage `json:"process_messages,omitempty"`
 	Type             string          `json:"type"`
+	QueueLength      int             `json:"queue_length,omitempty"`
 }
 
 type sink struct {
