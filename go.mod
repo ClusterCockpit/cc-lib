@@ -4,17 +4,17 @@ go 1.25.0
 
 require (
 	github.com/ClusterCockpit/cc-line-protocol/v2 v2.4.0
-	github.com/NVIDIA/go-nvml v0.13.3-0
+	github.com/NVIDIA/go-nvml v0.13.3-1
 	github.com/expr-lang/expr v1.17.8
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/nats-io/nats-server/v2 v2.14.2
+	github.com/nats-io/nats-server/v2 v2.14.3
 	github.com/nats-io/nats.go v1.52.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/questdb/go-questdb-client/v4 v4.2.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/stmcginnis/gofish v0.22.0
+	github.com/stmcginnis/gofish v0.23.0
 )
 
 require (
