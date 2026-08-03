@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/questdb/go-questdb-client/v4 v4.2.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/stmcginnis/gofish v0.23.0
+	github.com/stmcginnis/gofish v0.24.0
 )
 
 require (
