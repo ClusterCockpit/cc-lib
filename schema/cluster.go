@@ -100,6 +100,7 @@ type MetricConfig struct {
 	Scope         MetricScope         `json:"scope"`                 // Metric scope (node, socket, core, etc.)
 	Aggregation   string              `json:"aggregation"`           // Aggregation function (avg, sum, min, max)
 	Footprint     string              `json:"footprint,omitempty"`   // Footprint category
+	Tooltip       string              `json:"tooltip,omitempty"`     // Tooltip text shown in frontend if defined
 	SubClusters   []*SubClusterConfig `json:"subClusters,omitempty"` // Subcluster-specific overrides
 	Timestep      int                 `json:"timestep"`              // Measurement interval in seconds
 	Restrict      bool                `json:"restrict"`              // Restrict visibility to non user roles
@@ -128,6 +129,7 @@ type GlobalMetricListItem struct {
 	Unit         Unit             `json:"unit"`                // Unit of measurement
 	Scope        MetricScope      `json:"scope"`               // Metric scope level
 	Footprint    string           `json:"footprint,omitempty"` // Footprint category
+	Tooltip      string           `json:"tooltip,omitempty"`   // Tooltip text shown in frontend if defined
 	Availability []ClusterSupport `json:"availability"`        // Where this metric is available
 }
 

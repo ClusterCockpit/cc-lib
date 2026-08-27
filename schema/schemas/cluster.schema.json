@@ -56,6 +56,10 @@
               "min"
             ]
           },
+          "tooltip": {
+            "description": "Shortly describes the metric",
+            "type": "string"
+          },
           "energy": {
             "description": "Is it used to calculate job energy",
             "type": "string",
