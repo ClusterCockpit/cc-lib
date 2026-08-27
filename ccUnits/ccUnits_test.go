@@ -99,7 +99,7 @@ func TestUnitUnitConversion(t *testing.T) {
 		{"Flops/s", NewUnit("GFlops/s"), 1e-9},
 		{"MHz", NewUnit("Hertz"), 1e6},
 		{"kb", NewUnit("Kib"), 1000.0 / 1024},
-		{"Mib", NewUnit("MBytes"), (1024 * 1024.0) / (1e6)},
+		{"Mib", NewUnit("MBytes"), (1024 * 1024.0) / 1e6},
 		{"mb", NewUnit("MBytes"), 1.0},
 	}
 	compareUnitWithPrefix := func(in, out Unit, factor float64) bool {

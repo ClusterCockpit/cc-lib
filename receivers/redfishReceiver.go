@@ -37,7 +37,7 @@ type RedfishReceiverClientConfig struct {
 	Hostname string
 
 	// is metric excluded globally or per client
-	isExcluded map[string](bool)
+	isExcluded map[string]bool
 
 	doPowerMetric      bool
 	doProcessorMetrics bool
@@ -294,7 +294,8 @@ func (r *RedfishReceiver) readSensors(
 					return
 				}
 			},
-			clientConfig.readSensorURLs[chassis.ID])
+			clientConfig.readSensorURLs[chassis.ID],
+		)
 	}
 	return nil
 }
@@ -622,7 +623,8 @@ func (r *RedfishReceiver) readMetrics(clientConfig *RedfishReceiverClientConfig)
 			clientConfig.gofish.BasicAuth,
 			clientConfig.gofish.HTTPClient.Timeout,
 			clientConfig.gofish.HTTPClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
-			err)
+			err,
+		)
 	}
 	defer c.Logout()
 
@@ -1021,7 +1023,8 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 						HTTPClient: httpClient,
 					},
 					mp: p,
-				})
+				},
+			)
 		}
 
 	}

@@ -117,7 +117,8 @@ func (s *HttpSink) Write(msg lp.CCMessage) error {
 					if err := s.Flush(); err != nil {
 						cclog.ComponentError(s.name, "Flush triggered by flush timer: flush failed:", err)
 					}
-				})
+				},
+			)
 		}
 	}
 

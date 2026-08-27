@@ -14,15 +14,17 @@ func TestAddNodeScope(t *testing.T) {
 	// host1 has 2 cores with 3 data points each.
 	// host2 has 2 cores with 5 data points each.
 	jd := JobData{
-		"flops_any": {
-			MetricScopeCore: &JobMetric{
-				Unit:     Unit{Base: "F/s"},
-				Timestep: 10,
-				Series: []Series{
-					{Hostname: "host1", Data: []Float{1, 2, 3}, Statistics: MetricStatistics{Min: 1, Avg: 2, Max: 3}},
-					{Hostname: "host1", Data: []Float{4, 5, 6}, Statistics: MetricStatistics{Min: 4, Avg: 5, Max: 6}},
-					{Hostname: "host2", Data: []Float{10, 20, 30, 40, 50}, Statistics: MetricStatistics{Min: 10, Avg: 30, Max: 50}},
-					{Hostname: "host2", Data: []Float{100, 200, 300, 400, 500}, Statistics: MetricStatistics{Min: 100, Avg: 300, Max: 500}},
+		Metrics: map[string]ScopedMetrics{
+			"flops_any": {
+				MetricScopeCore: &JobMetric{
+					Unit:     Unit{Base: "F/s"},
+					Timestep: 10,
+					Series: []Series{
+						{Hostname: "host1", Data: []Float{1, 2, 3}, Statistics: MetricStatistics{Min: 1, Avg: 2, Max: 3}},
+						{Hostname: "host1", Data: []Float{4, 5, 6}, Statistics: MetricStatistics{Min: 4, Avg: 5, Max: 6}},
+						{Hostname: "host2", Data: []Float{10, 20, 30, 40, 50}, Statistics: MetricStatistics{Min: 10, Avg: 30, Max: 50}},
+						{Hostname: "host2", Data: []Float{100, 200, 300, 400, 500}, Statistics: MetricStatistics{Min: 100, Avg: 300, Max: 500}},
+					},
 				},
 			},
 		},
@@ -33,7 +35,7 @@ func TestAddNodeScope(t *testing.T) {
 		t.Fatal("AddNodeScope returned false")
 	}
 
-	nodeMetric, exists := jd["flops_any"][MetricScopeNode]
+	nodeMetric, exists := jd.Metrics["flops_any"][MetricScopeNode]
 	if !exists {
 		t.Fatal("node scope not created")
 	}
@@ -76,13 +78,15 @@ func TestAddNodeScope(t *testing.T) {
 func TestAddNodeScopeUnevenCores(t *testing.T) {
 	// Same host, cores with different data lengths.
 	jd := JobData{
-		"mem_bw": {
-			MetricScopeCore: &JobMetric{
-				Unit:     Unit{Base: "B/s"},
-				Timestep: 10,
-				Series: []Series{
-					{Hostname: "node1", Data: []Float{1, 2, 3}, Statistics: MetricStatistics{Min: 1, Avg: 2, Max: 3}},
-					{Hostname: "node1", Data: []Float{10, 20, 30, 40, 50}, Statistics: MetricStatistics{Min: 10, Avg: 30, Max: 50}},
+		Metrics: map[string]ScopedMetrics{
+			"mem_bw": {
+				MetricScopeCore: &JobMetric{
+					Unit:     Unit{Base: "B/s"},
+					Timestep: 10,
+					Series: []Series{
+						{Hostname: "node1", Data: []Float{1, 2, 3}, Statistics: MetricStatistics{Min: 1, Avg: 2, Max: 3}},
+						{Hostname: "node1", Data: []Float{10, 20, 30, 40, 50}, Statistics: MetricStatistics{Min: 10, Avg: 30, Max: 50}},
+					},
 				},
 			},
 		},
@@ -93,7 +97,7 @@ func TestAddNodeScopeUnevenCores(t *testing.T) {
 		t.Fatal("AddNodeScope returned false")
 	}
 
-	nodeMetric := jd["mem_bw"][MetricScopeNode]
+	nodeMetric := jd.Metrics["mem_bw"][MetricScopeNode]
 	if len(nodeMetric.Series) != 1 {
 		t.Fatalf("expected 1 node series, got %d", len(nodeMetric.Series))
 	}

@@ -6,6 +6,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -15,19 +16,352 @@ import (
 	"github.com/ClusterCockpit/cc-lib/v2/util"
 )
 
-// JobData maps metric names to their data organized by scope.
-// Structure: map[metricName]map[scope]*JobMetric
-//
-// For example: jobData["cpu_load"][MetricScopeNode] contains node-level CPU load data.
-// This structure allows efficient lookup of metrics at different hierarchical levels.
-type JobData map[string]map[MetricScope]*JobMetric
+// ScopedMetrics maps a hierarchical scope (node/socket/core/...) to its metric
+// data. It is the value stored for a single metric name.
+type ScopedMetrics map[MetricScope]*JobMetric
 
-// ScopedJobStats maps metric names to statistical summaries organized by scope.
-// Structure: map[metricName]map[scope][]*ScopedStats
+// MetricGroupInstance is one named element of an array-valued metric group,
+// such as a single filesystem (and, in the future, a single network
+// interconnect). Alongside its identity (Name/Type) it carries its own set of
+// scoped metrics keyed by metric name (e.g. "read_bw", "write_bw").
 //
-// Used to store pre-computed statistics without the full time series data,
-// reducing memory footprint when only aggregated values are needed.
-type ScopedJobStats map[string]map[MetricScope][]*ScopedStats
+// In the job-archive JSON, per-instance metrics are node-scoped; the scope map
+// is kept general so finer scopes remain representable without type changes.
+type MetricGroupInstance struct {
+	Name    string                   `json:"name"`
+	Type    string                   `json:"type"`
+	Metrics map[string]ScopedMetrics `json:"-"` // flattened onto the instance object by MarshalJSON
+}
+
+// MetricGroup is an array-valued group of named instances, identified by its
+// top-level JSON key (e.g. "filesystems"). Instance order is preserved because
+// the schema array order is meaningful for rendering.
+type MetricGroup struct {
+	Key       string
+	Instances []MetricGroupInstance
+}
+
+// JobData holds all metric data of a HPC job.
+//
+// Metrics maps a metric name to its scope-organized data, for example
+// jobData.Metrics["cpu_load"][MetricScopeNode]. Groups holds array-valued
+// metric groups (filesystems, and later interconnects) whose members each
+// carry their own scoped metrics; these cannot be expressed by the flat
+// Metrics map because a plain map has nowhere to store per-instance identity.
+//
+// Custom (Un)MarshalJSON keep the on-disk/on-wire layout identical to the JSON
+// schema: flat metrics are top-level scope objects and each group is a
+// top-level array (see job-data.schema.json).
+type JobData struct {
+	Metrics map[string]ScopedMetrics
+	Groups  []MetricGroup
+}
+
+// ScopedMetricStats maps a scope to its per-source statistical summaries.
+type ScopedMetricStats map[MetricScope][]*ScopedStats
+
+// ScopedStatsGroupInstance is the ScopedJobStats analogue of
+// MetricGroupInstance: one named instance carrying scope-organized statistics.
+type ScopedStatsGroupInstance struct {
+	Name    string                       `json:"name"`
+	Type    string                       `json:"type"`
+	Metrics map[string]ScopedMetricStats `json:"-"`
+}
+
+// ScopedStatsGroup is an array-valued group of ScopedStatsGroupInstance.
+type ScopedStatsGroup struct {
+	Key       string
+	Instances []ScopedStatsGroupInstance
+}
+
+// ScopedJobStats stores pre-computed statistics without the full time series
+// data, reducing memory footprint when only aggregated values are needed. It
+// mirrors JobData: flat metrics in Metrics, array-valued groups in Groups.
+type ScopedJobStats struct {
+	Metrics map[string]ScopedMetricStats
+	Groups  []ScopedStatsGroup
+}
+
+// metricGroupKeys is the set of top-level JSON keys that are array-valued
+// metric groups rather than scope objects. Adding a new group (e.g.
+// "interconnects") is a single registration; no new types or codec are needed.
+var metricGroupKeys = map[string]bool{
+	"filesystems": true,
+}
+
+// RegisterMetricGroup registers an additional top-level key as an array-valued
+// metric group so that it is (de)serialized into JobData.Groups.
+func RegisterMetricGroup(key string) {
+	metricGroupKeys[key] = true
+}
+
+// IsMetricGroupKey reports whether key denotes an array-valued metric group.
+func IsMetricGroupKey(key string) bool {
+	return metricGroupKeys[key]
+}
+
+// firstToken returns the first non-whitespace byte of a JSON value, or 0 if
+// the value is empty. Used to distinguish an array group ('[') from a scope
+// object ('{') when a key is not (yet) registered.
+func firstToken(b []byte) byte {
+	for _, c := range b {
+		switch c {
+		case ' ', '\t', '\n', '\r':
+			continue
+		default:
+			return c
+		}
+	}
+	return 0
+}
+
+// MarshalJSON renders JobData in the job-data schema layout: every flat metric
+// as a top-level scope object, and every group as a top-level array of
+// {name, type, <metric>: <scopeObject>, ...} instances. Per-metric values reuse
+// the existing *JobMetric/Series marshalling (NaN -> null preserved).
+func (jd JobData) MarshalJSON() ([]byte, error) {
+	out := make(map[string]json.RawMessage, len(jd.Metrics)+len(jd.Groups))
+
+	for name, scopes := range jd.Metrics {
+		b, err := json.Marshal(scopes)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = b
+	}
+
+	for _, group := range jd.Groups {
+		arr := make([]json.RawMessage, 0, len(group.Instances))
+		for _, inst := range group.Instances {
+			obj := make(map[string]json.RawMessage, len(inst.Metrics)+2)
+			name, err := json.Marshal(inst.Name)
+			if err != nil {
+				return nil, err
+			}
+			obj["name"] = name
+			typ, err := json.Marshal(inst.Type)
+			if err != nil {
+				return nil, err
+			}
+			obj["type"] = typ
+			for metric, scopes := range inst.Metrics {
+				b, err := json.Marshal(scopes)
+				if err != nil {
+					return nil, err
+				}
+				obj[metric] = b
+			}
+			b, err := json.Marshal(obj)
+			if err != nil {
+				return nil, err
+			}
+			arr = append(arr, b)
+		}
+		b, err := json.Marshal(arr)
+		if err != nil {
+			return nil, err
+		}
+		out[group.Key] = b
+	}
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON parses the job-data schema layout into JobData. Top-level keys
+// are dispatched by group-key registration; as a robustness fallback an
+// unregistered key whose value is a JSON array is also treated as a group, so a
+// reader can ingest a new array group before it is registered.
+func (jd *JobData) UnmarshalJSON(b []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	jd.Metrics = make(map[string]ScopedMetrics, len(raw))
+	jd.Groups = nil
+
+	for key, msg := range raw {
+		if IsMetricGroupKey(key) || firstToken(msg) == '[' {
+			group, err := unmarshalMetricGroup(key, msg)
+			if err != nil {
+				return err
+			}
+			jd.Groups = append(jd.Groups, group)
+			continue
+		}
+
+		var scopes ScopedMetrics
+		if err := json.Unmarshal(msg, &scopes); err != nil {
+			return err
+		}
+		jd.Metrics[key] = scopes
+	}
+
+	return nil
+}
+
+// unmarshalMetricGroup decodes a top-level array value into a MetricGroup,
+// splitting each instance's name/type from its per-metric scope objects.
+func unmarshalMetricGroup(key string, msg json.RawMessage) (MetricGroup, error) {
+	group := MetricGroup{Key: key}
+
+	var items []map[string]json.RawMessage
+	if err := json.Unmarshal(msg, &items); err != nil {
+		return group, err
+	}
+
+	for _, item := range items {
+		inst := MetricGroupInstance{Metrics: make(map[string]ScopedMetrics, len(item))}
+		for field, fmsg := range item {
+			switch field {
+			case "name":
+				if err := json.Unmarshal(fmsg, &inst.Name); err != nil {
+					return group, err
+				}
+			case "type":
+				if err := json.Unmarshal(fmsg, &inst.Type); err != nil {
+					return group, err
+				}
+			default:
+				var scopes ScopedMetrics
+				if err := json.Unmarshal(fmsg, &scopes); err != nil {
+					return group, err
+				}
+				inst.Metrics[field] = scopes
+			}
+		}
+		group.Instances = append(group.Instances, inst)
+	}
+
+	return group, nil
+}
+
+// FlatMap returns the flat scoped-metrics map, providing the pre-struct
+// access shape (metric -> scope -> *JobMetric) for consumers that do not need
+// the grouped metrics.
+func (jd JobData) FlatMap() map[string]ScopedMetrics {
+	return jd.Metrics
+}
+
+// AddGroupInstance appends a named instance (with its own scoped metrics) to the
+// group identified by groupKey, creating the group if necessary. This is the
+// converter seam used to assemble grouped data from flat, selector-style query
+// results without the caller knowing the JobData layout.
+func (jd *JobData) AddGroupInstance(groupKey, name, typ string, metrics map[string]ScopedMetrics) {
+	inst := MetricGroupInstance{Name: name, Type: typ, Metrics: metrics}
+	for i := range jd.Groups {
+		if jd.Groups[i].Key == groupKey {
+			jd.Groups[i].Instances = append(jd.Groups[i].Instances, inst)
+			return
+		}
+	}
+	jd.Groups = append(jd.Groups, MetricGroup{Key: groupKey, Instances: []MetricGroupInstance{inst}})
+}
+
+// MarshalJSON renders ScopedJobStats in the same top-level layout as JobData:
+// flat metrics as scope objects, groups as top-level arrays of
+// {name, type, <metric>: <scopeObject>} instances.
+func (sjs ScopedJobStats) MarshalJSON() ([]byte, error) {
+	out := make(map[string]json.RawMessage, len(sjs.Metrics)+len(sjs.Groups))
+
+	for name, scopes := range sjs.Metrics {
+		b, err := json.Marshal(scopes)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = b
+	}
+
+	for _, group := range sjs.Groups {
+		arr := make([]json.RawMessage, 0, len(group.Instances))
+		for _, inst := range group.Instances {
+			obj := make(map[string]json.RawMessage, len(inst.Metrics)+2)
+			name, err := json.Marshal(inst.Name)
+			if err != nil {
+				return nil, err
+			}
+			obj["name"] = name
+			typ, err := json.Marshal(inst.Type)
+			if err != nil {
+				return nil, err
+			}
+			obj["type"] = typ
+			for metric, scopes := range inst.Metrics {
+				b, err := json.Marshal(scopes)
+				if err != nil {
+					return nil, err
+				}
+				obj[metric] = b
+			}
+			b, err := json.Marshal(obj)
+			if err != nil {
+				return nil, err
+			}
+			arr = append(arr, b)
+		}
+		b, err := json.Marshal(arr)
+		if err != nil {
+			return nil, err
+		}
+		out[group.Key] = b
+	}
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON parses the top-level layout into ScopedJobStats, dispatching
+// array-valued group keys into Groups (see JobData.UnmarshalJSON).
+func (sjs *ScopedJobStats) UnmarshalJSON(b []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	sjs.Metrics = make(map[string]ScopedMetricStats, len(raw))
+	sjs.Groups = nil
+
+	for key, msg := range raw {
+		if IsMetricGroupKey(key) || firstToken(msg) == '[' {
+			group := ScopedStatsGroup{Key: key}
+			var items []map[string]json.RawMessage
+			if err := json.Unmarshal(msg, &items); err != nil {
+				return err
+			}
+			for _, item := range items {
+				inst := ScopedStatsGroupInstance{Metrics: make(map[string]ScopedMetricStats, len(item))}
+				for field, fmsg := range item {
+					switch field {
+					case "name":
+						if err := json.Unmarshal(fmsg, &inst.Name); err != nil {
+							return err
+						}
+					case "type":
+						if err := json.Unmarshal(fmsg, &inst.Type); err != nil {
+							return err
+						}
+					default:
+						var scopes ScopedMetricStats
+						if err := json.Unmarshal(fmsg, &scopes); err != nil {
+							return err
+						}
+						inst.Metrics[field] = scopes
+					}
+				}
+				group.Instances = append(group.Instances, inst)
+			}
+			sjs.Groups = append(sjs.Groups, group)
+			continue
+		}
+
+		var scopes ScopedMetricStats
+		if err := json.Unmarshal(msg, &scopes); err != nil {
+			return err
+		}
+		sjs.Metrics[key] = scopes
+	}
+
+	return nil
+}
 
 // JobMetric contains time series data and statistics for a single metric.
 //
@@ -166,7 +500,7 @@ func (e MetricScope) Valid() bool {
 
 func (jd *JobData) Size() int {
 	n := 128
-	for _, scopes := range *jd {
+	sizeScopes := func(scopes ScopedMetrics) {
 		for _, metric := range scopes {
 			if metric.StatisticsSeries != nil {
 				n += len(metric.StatisticsSeries.Max)
@@ -177,6 +511,17 @@ func (jd *JobData) Size() int {
 
 			for _, series := range metric.Series {
 				n += len(series.Data)
+			}
+		}
+	}
+
+	for _, scopes := range jd.Metrics {
+		sizeScopes(scopes)
+	}
+	for _, group := range jd.Groups {
+		for _, inst := range group.Instances {
+			for _, scopes := range inst.Metrics {
+				sizeScopes(scopes)
 			}
 		}
 	}
@@ -271,7 +616,7 @@ func (jm *JobMetric) AddStatisticsSeries() {
 }
 
 func (jd *JobData) AddNodeScope(metric string) bool {
-	scopes, ok := (*jd)[metric]
+	scopes, ok := jd.Metrics[metric]
 	if !ok {
 		return false
 	}
@@ -340,7 +685,7 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 
 func (jd *JobData) RoundMetricStats() {
 	// TODO: Make Digit-Precision Configurable? (Currently: Fixed to 2 Digits)
-	for _, scopes := range *jd {
+	roundScopes := func(scopes ScopedMetrics) {
 		for _, jm := range scopes {
 			for index := range jm.Series {
 				jm.Series[index].Statistics = MetricStatistics{
@@ -351,11 +696,22 @@ func (jd *JobData) RoundMetricStats() {
 			}
 		}
 	}
+
+	for _, scopes := range jd.Metrics {
+		roundScopes(scopes)
+	}
+	for _, group := range jd.Groups {
+		for _, inst := range group.Instances {
+			for _, scopes := range inst.Metrics {
+				roundScopes(scopes)
+			}
+		}
+	}
 }
 
 func (sjs *ScopedJobStats) RoundScopedMetricStats() {
 	// TODO: Make Digit-Precision Configurable? (Currently: Fixed to 2 Digits)
-	for _, scopes := range *sjs {
+	roundScopes := func(scopes ScopedMetricStats) {
 		for _, stats := range scopes {
 			for index := range stats {
 				roundedStats := MetricStatistics{
@@ -364,6 +720,17 @@ func (sjs *ScopedJobStats) RoundScopedMetricStats() {
 					Max: (math.Round(stats[index].Data.Max*100) / 100),
 				}
 				stats[index].Data = &roundedStats
+			}
+		}
+	}
+
+	for _, scopes := range sjs.Metrics {
+		roundScopes(scopes)
+	}
+	for _, group := range sjs.Groups {
+		for _, inst := range group.Instances {
+			for _, scopes := range inst.Metrics {
+				roundScopes(scopes)
 			}
 		}
 	}
