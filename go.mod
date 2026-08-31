@@ -1,6 +1,6 @@
 module github.com/ClusterCockpit/cc-lib/v2
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/ClusterCockpit/cc-line-protocol/v2 v2.4.0
@@ -9,7 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/nats-io/nats-server/v2 v2.14.5
+	github.com/nats-io/nats-server/v2 v2.14.6
 	github.com/nats-io/nats.go v1.53.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/questdb/go-questdb-client/v4 v4.2.0
