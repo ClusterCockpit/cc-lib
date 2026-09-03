@@ -12,11 +12,73 @@ This package contains utilities for:
 - **Custom types** - Selector types
 - **File system watcher** - Event-based file system monitoring
 - **Statistics** - Basic statistical functions (mean, median, min, max)
+- **Secrets** - Resolving secrets from environment variables or secret files
 
 The `Float` type with JSON NaN support is in the [`schema`](../schema) package,
 not here.
 
 ## Key Features
+
+### Secrets from the Environment
+
+A secret should not have to live in a configuration file. `SecretFromEnv`
+resolves one from three sources, in this order of precedence:
+
+1. the environment variable `$VAR`, if set and non-empty
+2. the contents of the file named by `$VAR_FILE`
+3. the value read from the configuration file
+
+```go
+// Resolves $NATS_PASSWORD, else the file named by $NATS_PASSWORD_FILE,
+// else the value from the config file.
+password, err := util.SecretFromEnv("CC_NATS_PASSWORD", cfg.Password)
+if err != nil {
+    return err
+}
+```
+
+The second step is what makes the standard secret-mounting mechanisms usable:
+
+```bash
+# Docker / docker compose
+docker run -e CC_NATS_PASSWORD_FILE=/run/secrets/nats-pw ...
+
+# Kubernetes: mount the secret, then name the path
+#   env:
+#     - name: CC_NATS_PASSWORD_FILE
+#       value: /etc/secrets/nats-pw
+
+# systemd
+[Service]
+LoadCredential=nats-pw:/etc/cc/nats-pw
+Environment=CC_NATS_PASSWORD_FILE=%d/nats-pw
+```
+
+For a repeated configuration section — one sink, one receiver — no fixed
+variable name can address a single instance, so the instance names its own
+sources through sibling configuration keys and resolves them with
+`SecretFromConfig`:
+
+```go
+// {"password": "...", "password_env": "...", "password_file": "..."}
+password, err := util.SecretFromConfig(cfg.Password, cfg.PasswordEnv, cfg.PasswordFile)
+```
+
+Rules that apply to both functions:
+
+- An empty environment variable counts as unset.
+- File contents are trimmed of surrounding whitespace, so a secret file may end
+  in a newline. A secret with significant leading or trailing whitespace cannot
+  be supplied through a file.
+- A secret file that cannot be read, or that holds no non-whitespace
+  characters, is an **error** rather than a silent fallback to the configured
+  value. An operator who names a file intends it to win, so falling back would
+  quietly start the process with a stale credential.
+- Neither function ever logs a resolved secret. Errors carry only the path.
+
+Environment variables that cc-lib itself reads are prefixed `CC_`, so they
+cannot collide with a variable already present in the environment of the
+application linking cc-lib.
 
 ### File Operations
 
