@@ -33,6 +33,12 @@ type InfluxAsyncSinkConfig struct {
 	Password     string `json:"password,omitempty"`
 	Organization string `json:"organization,omitempty"`
 	SSL          bool   `json:"ssl,omitempty"`
+	// Alternative sources for the credentials above, so that they need not be
+	// stored in the configuration file. See resolveSecrets.
+	UserEnv      string `json:"user_env,omitempty"`
+	UserFile     string `json:"user_file,omitempty"`
+	PasswordEnv  string `json:"password_env,omitempty"`
+	PasswordFile string `json:"password_file,omitempty"`
 	// Maximum number of points sent to server in single request. Default 5000
 	BatchSize uint `json:"batch_size,omitempty"`
 	// Interval, in ms, in which is buffer flushed if it has not been already written (by reaching batch size) . Default 1000ms
@@ -213,6 +219,16 @@ func NewInfluxAsyncSink(name string, config json.RawMessage) (Sink, error) {
 			cclog.ComponentError(s.name, fmt.Sprintf("Error reading config: %s", err.Error()))
 			return nil, err
 		}
+	}
+	// Resolve credentials before the required-field checks below, since the
+	// password may be supplied from the environment or a secret file rather
+	// than from the configuration file.
+	if err := resolveSecrets(
+		secretRef{"user", &s.config.User, s.config.UserEnv, s.config.UserFile},
+		secretRef{"password", &s.config.Password, s.config.PasswordEnv, s.config.PasswordFile},
+	); err != nil {
+		cclog.ComponentError(s.name, err.Error())
+		return nil, err
 	}
 	if len(s.config.Port) == 0 {
 		return nil, errors.New("missing port configuration required by InfluxSink")

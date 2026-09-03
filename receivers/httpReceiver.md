@@ -60,3 +60,18 @@ curl http://localhost:8080/write \
 "myMetric,hostname=myHost,type=hwthread,type-id=0,unit=Hz value=400000i 1694777161164284635
 myMetric,hostname=myHost,type=hwthread,type-id=1,unit=Hz value=400001i 1694777161164284635"
 ```
+
+### Credentials from the environment
+
+The credentials above need not be stored in the configuration file. Each of
+`username`, `password` has two sibling keys that select an alternative source:
+
+- `username_env`: name of an environment variable holding the value
+- `username_file`: path to a file holding the value
+- `password_env`: name of an environment variable holding the value
+- `password_file`: path to a file holding the value
+
+The environment variable takes precedence over the file, and the file over the
+inline value. A named file that cannot be read is an error rather than a silent
+fallback, so a stale credential is never used in its place. See the
+[`util`](../util/README.md) package for the full rules.

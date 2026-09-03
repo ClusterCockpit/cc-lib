@@ -28,6 +28,13 @@ type NatsReceiverConfig struct {
 	User     string `json:"user,omitempty"`      // Username for authentication
 	Password string `json:"password,omitempty"`  // Password for authentication
 	NkeyFile string `json:"nkey_file,omitempty"` // Path to NKey credentials file
+
+	// Alternative sources for the credentials above, so that they need not be
+	// stored in the configuration file. See resolveSecrets.
+	UserEnv      string `json:"user_env,omitempty"`
+	UserFile     string `json:"user_file,omitempty"`
+	PasswordEnv  string `json:"password_env,omitempty"`
+	PasswordFile string `json:"password_file,omitempty"`
 }
 
 type NatsReceiver struct {
@@ -108,6 +115,13 @@ func NewNatsReceiver(name string, config json.RawMessage) (Receiver, error) {
 		len(r.config.Port) == 0 ||
 		len(r.config.Subject) == 0 {
 		return nil, errors.New("not all configuration variables set required by NatsReceiver")
+	}
+	if err := resolveSecrets(
+		secretRef{"user", &r.config.User, r.config.UserEnv, r.config.UserFile},
+		secretRef{"password", &r.config.Password, r.config.PasswordEnv, r.config.PasswordFile},
+	); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
 	}
 	p, err := mp.NewMessageProcessor()
 	if err != nil {

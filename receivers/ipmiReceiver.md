@@ -68,3 +68,16 @@ These settings can be defined globally and overridden in `client_config`:
 - **Platform**: Linux only.
 - **Tools**: `ipmi-sensors` must be installed and available in the PATH.
 - **Permissions**: The user running the collector must have permission to execute `ipmi-sensors`.
+
+### Credentials from the environment
+
+The global default `username` and `password` need not be stored in the
+configuration file. When they are absent, they are read from
+`$CC_IPMI_USERNAME` and `$CC_IPMI_PASSWORD`, or from the files named by
+`$CC_IPMI_USERNAME_FILE` and `$CC_IPMI_PASSWORD_FILE`.
+
+A `client_config` entry that sets its own `username` or `password` always takes
+precedence, so per-host credentials keep working unchanged. Because the
+variables are fixed names, several `ipmi` receiver instances in one process
+share them. A named file that cannot be read is an error rather than a silent
+fallback. See the [`util`](../util/README.md) package for the full rules.

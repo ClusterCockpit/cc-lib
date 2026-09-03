@@ -373,6 +373,18 @@ func NewIPMIReceiver(name string, config json.RawMessage) (Receiver, error) {
 		}
 	}
 
+	// BMC credentials are the most sensitive part of this configuration, so
+	// allow the global defaults to come from the environment instead of
+	// plaintext JSON. Per-host client_config entries still take precedence.
+	if err := secretDefaultFromEnv(&configJSON.Username, EnvIPMIUsername); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
+	}
+	if err := secretDefaultFromEnv(&configJSON.Password, EnvIPMIPassword); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
+	}
+
 	// Convert interval string representation to duration
 	var err error
 	r.config.Interval, err = time.ParseDuration(configJSON.IntervalString)

@@ -871,6 +871,19 @@ func NewRedfishReceiver(name string, config json.RawMessage) (Receiver, error) {
 			return nil, err
 		}
 	}
+
+	// BMC credentials are the most sensitive part of this configuration, so
+	// allow the global defaults to come from the environment instead of
+	// plaintext JSON. Per-host client_config entries still take precedence.
+	if err := secretDefaultFromEnv(&configJSON.Username, EnvRedfishUsername); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
+	}
+	if err := secretDefaultFromEnv(&configJSON.Password, EnvRedfishPassword); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
+	}
+
 	p, err := mp.NewMessageProcessor()
 	if err != nil {
 		return nil, fmt.Errorf("initialization of message processor failed: %w", err)

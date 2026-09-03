@@ -37,6 +37,14 @@ type QuestDBSinkConfig struct {
 	Password string `json:"password,omitempty"`
 	// Authentication with bearer token in HTTP header
 	BearerToken string `json:"bearer_token,omitempty"`
+	// Alternative sources for the credentials above, so that they need not be
+	// stored in the configuration file. See resolveSecrets.
+	UsernameEnv     string `json:"username_env,omitempty"`
+	UsernameFile    string `json:"username_file,omitempty"`
+	PasswordEnv     string `json:"password_env,omitempty"`
+	PasswordFile    string `json:"password_file,omitempty"`
+	BearerTokenEnv  string `json:"bearer_token_env,omitempty"`
+	BearerTokenFile string `json:"bearer_token_file,omitempty"`
 	// Auto flush configuration
 	// Interval at which the sender automatically flushes its buffer
 	AutoFlushInterval string `json:"auto_flush_interval,omitempty"`
@@ -136,6 +144,18 @@ func NewQuestDBSink(name string, config json.RawMessage) (Sink, error) {
 			cclog.ComponentError(s.name, "Error reading config:", err.Error())
 			return nil, err
 		}
+	}
+
+	// Resolve credentials before the authentication checks below, so that
+	// values supplied from the environment or a secret file count as
+	// configured.
+	if err := resolveSecrets(
+		secretRef{"username", &s.config.Username, s.config.UsernameEnv, s.config.UsernameFile},
+		secretRef{"password", &s.config.Password, s.config.PasswordEnv, s.config.PasswordFile},
+		secretRef{"bearer_token", &s.config.BearerToken, s.config.BearerTokenEnv, s.config.BearerTokenFile},
+	); err != nil {
+		cclog.ComponentError(s.name, err.Error())
+		return nil, err
 	}
 
 	// Initialize and configure the message processor

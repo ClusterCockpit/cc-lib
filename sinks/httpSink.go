@@ -36,6 +36,16 @@ type HttpSinkConfig struct {
 	Password     string `json:"password"`
 	useBasicAuth bool
 
+	// Alternative sources for the JWT and the basic authentication credentials
+	// above, so that they need not be stored in the configuration file. See
+	// resolveSecrets.
+	JWTEnv       string `json:"jwt_env,omitempty"`
+	JWTFile      string `json:"jwt_file,omitempty"`
+	UsernameEnv  string `json:"username_env,omitempty"`
+	UsernameFile string `json:"username_file,omitempty"`
+	PasswordEnv  string `json:"password_env,omitempty"`
+	PasswordFile string `json:"password_file,omitempty"`
+
 	// time limit for requests made by the http client
 	Timeout string `json:"timeout,omitempty"`
 	timeout time.Duration
@@ -230,6 +240,18 @@ func NewHttpSink(name string, config json.RawMessage) (Sink, error) {
 	}
 	if len(s.config.URL) == 0 {
 		return nil, errors.New("`url` config option is required for HTTP sink")
+	}
+
+	// Resolve credentials before the basic authentication check below, so that
+	// a username and password supplied from the environment or a secret file
+	// count as configured.
+	if err := resolveSecrets(
+		secretRef{"jwt", &s.config.JWT, s.config.JWTEnv, s.config.JWTFile},
+		secretRef{"username", &s.config.Username, s.config.UsernameEnv, s.config.UsernameFile},
+		secretRef{"password", &s.config.Password, s.config.PasswordEnv, s.config.PasswordFile},
+	); err != nil {
+		cclog.ComponentError(s.name, err.Error())
+		return nil, err
 	}
 
 	// Check basic authentication config

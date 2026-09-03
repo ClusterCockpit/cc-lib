@@ -39,6 +39,13 @@ type HttpReceiverConfig struct {
 	Username     string `json:"username"` // Basic auth username (optional)
 	Password     string `json:"password"` // Basic auth password (optional)
 	useBasicAuth bool
+
+	// Alternative sources for the credentials above, so that they need not be
+	// stored in the configuration file. See resolveSecrets.
+	UsernameEnv  string `json:"username_env,omitempty"`
+	UsernameFile string `json:"username_file,omitempty"`
+	PasswordEnv  string `json:"password_env,omitempty"`
+	PasswordFile string `json:"password_file,omitempty"`
 }
 
 type HttpReceiver struct {
@@ -137,6 +144,17 @@ func NewHttpReceiver(name string, config json.RawMessage) (Receiver, error) {
 			cclog.ComponentDebug(r.name, "idleTimeout", t)
 			r.config.idleTimeout = t
 		}
+	}
+
+	// Resolve credentials before the basic authentication check below, so that
+	// values supplied from the environment or a secret file count as
+	// configured.
+	if err := resolveSecrets(
+		secretRef{"username", &r.config.Username, r.config.UsernameEnv, r.config.UsernameFile},
+		secretRef{"password", &r.config.Password, r.config.PasswordEnv, r.config.PasswordFile},
+	); err != nil {
+		cclog.ComponentError(r.name, err.Error())
+		return nil, err
 	}
 
 	if len(r.config.Username) > 0 || len(r.config.Password) > 0 {
