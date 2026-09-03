@@ -25,14 +25,20 @@ import (
 
 type NatsSinkConfig struct {
 	defaultSinkConfig
-	Host       string `json:"host,omitempty"`
-	Port       string `json:"port,omitempty"`
-	Subject    string `json:"subject,omitempty"`
-	User       string `json:"user,omitempty"`
-	Password   string `json:"password,omitempty"`
-	FlushDelay string `json:"flush_delay,omitempty"`
-	flushDelay time.Duration
-	NkeyFile   string `json:"nkey_file,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Port     string `json:"port,omitempty"`
+	Subject  string `json:"subject,omitempty"`
+	User     string `json:"user,omitempty"`
+	Password string `json:"password,omitempty"`
+	// Alternative sources for the credentials above, so that they need not be
+	// stored in the configuration file. See resolveSecrets.
+	UserEnv      string `json:"user_env,omitempty"`
+	UserFile     string `json:"user_file,omitempty"`
+	PasswordEnv  string `json:"password_env,omitempty"`
+	PasswordFile string `json:"password_file,omitempty"`
+	FlushDelay   string `json:"flush_delay,omitempty"`
+	flushDelay   time.Duration
+	NkeyFile     string `json:"nkey_file,omitempty"`
 	// Timestamp precision
 	Precision string `json:"precision,omitempty"`
 }
@@ -177,6 +183,13 @@ func NewNatsSink(name string, config json.RawMessage) (Sink, error) {
 		len(s.config.Port) == 0 ||
 		len(s.config.Subject) == 0 {
 		return nil, errors.New("not all configuration variables set required by NatsSink")
+	}
+	if err := resolveSecrets(
+		secretRef{"user", &s.config.User, s.config.UserEnv, s.config.UserFile},
+		secretRef{"password", &s.config.Password, s.config.PasswordEnv, s.config.PasswordFile},
+	); err != nil {
+		cclog.ComponentError(s.name, err.Error())
+		return nil, err
 	}
 	// Create a new message processor
 	p, err := mp.NewMessageProcessor()

@@ -401,3 +401,194 @@ func TestMedian(t *testing.T) {
 		t.Error("expected NaN for empty slice")
 	}
 }
+
+func TestSecretFromEnv_Precedence(t *testing.T) {
+	tests := []struct {
+		name        string
+		envSet      bool
+		envValue    string
+		fileSet     bool
+		fileContent string
+		configValue string
+		want        string
+	}{
+		{
+			name: "env wins over file and config", envSet: true, envValue: "from-env",
+			fileSet: true, fileContent: "from-file", configValue: "from-config", want: "from-env",
+		},
+		{
+			name: "empty env falls through to file", envSet: true, envValue: "",
+			fileSet: true, fileContent: "from-file", configValue: "from-config", want: "from-file",
+		},
+		{
+			name: "empty env without file falls through to config", envSet: true, envValue: "",
+			configValue: "from-config", want: "from-config",
+		},
+		{
+			name: "file wins over config", fileSet: true, fileContent: "from-file",
+			configValue: "from-config", want: "from-file",
+		},
+		{
+			name: "file contents are trimmed", fileSet: true, fileContent: "  s3cret\n",
+			configValue: "from-config", want: "s3cret",
+		},
+		{
+			name: "nothing set returns config", configValue: "from-config", want: "from-config",
+		},
+		{
+			name: "nothing set with empty config returns empty", want: "",
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// A per-subtest name keeps an unset case genuinely unset, whatever
+			// the surrounding environment holds.
+			envVar := fmt.Sprintf("CC_LIB_TEST_SECRET_%d", i)
+
+			if tt.envSet {
+				t.Setenv(envVar, tt.envValue)
+			}
+			if tt.fileSet {
+				path := filepath.Join(t.TempDir(), "secret")
+				if err := os.WriteFile(path, []byte(tt.fileContent), 0o600); err != nil {
+					t.Fatalf("writing secret file: %v", err)
+				}
+				t.Setenv(envVar+util.EnvFileSuffix, path)
+			}
+
+			got, err := util.SecretFromEnv(envVar, tt.configValue)
+			if err != nil {
+				t.Fatalf("SecretFromEnv failed: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestSecretFromEnv_UnreadableFile(t *testing.T) {
+	dir := t.TempDir()
+
+	// A path that does not exist.
+	t.Setenv("CC_LIB_TEST_MISSING"+util.EnvFileSuffix, filepath.Join(dir, "absent"))
+	if _, err := util.SecretFromEnv("CC_LIB_TEST_MISSING", "from-config"); err == nil {
+		t.Error("expected an error for a nonexistent secret file, got nil")
+	}
+
+	// A directory rather than a file.
+	t.Setenv("CC_LIB_TEST_ISDIR"+util.EnvFileSuffix, dir)
+	if _, err := util.SecretFromEnv("CC_LIB_TEST_ISDIR", "from-config"); err == nil {
+		t.Error("expected an error for a directory secret file, got nil")
+	}
+}
+
+func TestSecretFromEnv_EmptyFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte("\n  \t\n"), 0o600); err != nil {
+		t.Fatalf("writing secret file: %v", err)
+	}
+
+	t.Setenv("CC_LIB_TEST_EMPTYFILE"+util.EnvFileSuffix, path)
+	if _, err := util.SecretFromEnv("CC_LIB_TEST_EMPTYFILE", "from-config"); err == nil {
+		t.Error("expected an error for a whitespace-only secret file, got nil")
+	}
+}
+
+func TestSecretFromEnv_NoVarName(t *testing.T) {
+	got, err := util.SecretFromEnv("", "from-config")
+	if err != nil {
+		t.Fatalf("SecretFromEnv failed: %v", err)
+	}
+	if got != "from-config" {
+		t.Errorf("expected \"from-config\", got %q", got)
+	}
+}
+
+func TestSecretFromConfig_Precedence(t *testing.T) {
+	tests := []struct {
+		name        string
+		useEnvName  bool
+		envSet      bool
+		envValue    string
+		fileSet     bool
+		fileContent string
+		value       string
+		want        string
+	}{
+		{
+			name: "env wins over file and value", useEnvName: true, envSet: true, envValue: "from-env",
+			fileSet: true, fileContent: "from-file", value: "inline", want: "from-env",
+		},
+		{
+			name: "empty env falls through to file", useEnvName: true, envSet: true, envValue: "",
+			fileSet: true, fileContent: "from-file", value: "inline", want: "from-file",
+		},
+		{
+			name: "unset env falls through to value", useEnvName: true, value: "inline", want: "inline",
+		},
+		{
+			name: "file wins over value", fileSet: true, fileContent: "from-file",
+			value: "inline", want: "from-file",
+		},
+		{
+			name: "file contents are trimmed", fileSet: true, fileContent: "s3cret\n",
+			value: "inline", want: "s3cret",
+		},
+		{
+			name: "no env name and no file returns value", value: "inline", want: "inline",
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			envName := ""
+			if tt.useEnvName {
+				envName = fmt.Sprintf("CC_LIB_TEST_INSTANCE_SECRET_%d", i)
+				if tt.envSet {
+					t.Setenv(envName, tt.envValue)
+				}
+			}
+
+			filePath := ""
+			if tt.fileSet {
+				filePath = filepath.Join(t.TempDir(), "secret")
+				if err := os.WriteFile(filePath, []byte(tt.fileContent), 0o600); err != nil {
+					t.Fatalf("writing secret file: %v", err)
+				}
+			}
+
+			got, err := util.SecretFromConfig(tt.value, envName, filePath)
+			if err != nil {
+				t.Fatalf("SecretFromConfig failed: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestSecretFromConfig_UnreadableFile(t *testing.T) {
+	dir := t.TempDir()
+
+	if _, err := util.SecretFromConfig("inline", "", filepath.Join(dir, "absent")); err == nil {
+		t.Error("expected an error for a nonexistent secret file, got nil")
+	}
+
+	if _, err := util.SecretFromConfig("inline", "", dir); err == nil {
+		t.Error("expected an error for a directory secret file, got nil")
+	}
+}
+
+func TestSecretFromConfig_EmptyFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte("   "), 0o600); err != nil {
+		t.Fatalf("writing secret file: %v", err)
+	}
+
+	if _, err := util.SecretFromConfig("inline", "", path); err == nil {
+		t.Error("expected an error for a whitespace-only secret file, got nil")
+	}
+}

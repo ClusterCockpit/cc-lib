@@ -21,6 +21,10 @@
 //	  }
 //	}
 //
+// The username and password may instead come from the environment, via
+// $CC_NATS_USERNAME and $CC_NATS_PASSWORD or the files named by their _FILE
+// variants, which take precedence over the configuration file.
+//
 // Or using a credentials file:
 //
 //	{
@@ -55,6 +59,7 @@ import (
 	"sync"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
+	"github.com/ClusterCockpit/cc-lib/v2/util"
 	"github.com/nats-io/nats.go"
 )
 
@@ -99,6 +104,27 @@ func GetClient() *Client {
 	return clientInstance
 }
 
+// resolveCredentials returns the username and password to authenticate with.
+// They may come from the environment ($CC_NATS_USERNAME, $CC_NATS_PASSWORD, or
+// the files named by their _FILE variants) so that they need not be stored in
+// the configuration file.
+//
+// Resolution happens here rather than in Init for three reasons: an explicitly
+// passed config then behaves the same as the global one, Init is optional, and
+// the plaintext never lands in the exported Keys, which an application may
+// re-marshal or dump.
+func resolveCredentials(cfg *NatsConfig) (username, password string, err error) {
+	if username, err = util.SecretFromEnv(EnvUsername, cfg.Username); err != nil {
+		return "", "", fmt.Errorf("resolving %s: %w", EnvUsername, err)
+	}
+
+	if password, err = util.SecretFromEnv(EnvPassword, cfg.Password); err != nil {
+		return "", "", fmt.Errorf("resolving %s: %w", EnvPassword, err)
+	}
+
+	return username, password, nil
+}
+
 // NewClient creates a new NATS client. If cfg is nil, uses the global Keys config.
 func NewClient(cfg *NatsConfig) (*Client, error) {
 	if cfg == nil {
@@ -111,8 +137,13 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 
 	var opts []nats.Option
 
-	if cfg.Username != "" && cfg.Password != "" {
-		opts = append(opts, nats.UserInfo(cfg.Username, cfg.Password))
+	username, password, err := resolveCredentials(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	if username != "" && password != "" {
+		opts = append(opts, nats.UserInfo(username, password))
 	}
 
 	if cfg.CredsFilePath != "" {

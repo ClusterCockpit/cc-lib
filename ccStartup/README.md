@@ -36,3 +36,10 @@ The configuration file for the startup contains the targets where the topology s
 - `nats.url`: NATS server URL
 - `nats.subject`: NATS subject where to publish the topology as JSON
 - `nats.nkey_file`: Path to NKey file for authentification
+
+The auth token need not be stored in the configuration file. It is also read
+from `$CC_STARTUP_AUTH_TOKEN`, or from the file named by
+`$CC_STARTUP_AUTH_TOKEN_FILE`, either of which takes precedence over
+`http.auth_token`. A named file that cannot be read is an error, so a request
+is never sent unauthenticated in its place. See the
+[`util`](../util/README.md) package for the full precedence rules.

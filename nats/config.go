@@ -23,6 +23,18 @@ type NatsConfig struct {
 // Keys holds the global NATS configuration loaded via Init.
 var Keys NatsConfig
 
+// Environment variables that override the corresponding configuration values.
+// Each also accepts a "_FILE" variant naming a file that holds the value, so a
+// credential can be supplied from a Docker or Kubernetes secret mount or from
+// systemd LoadCredential; see util.SecretFromEnv for the precedence rules.
+//
+// The names are prefixed CC_ because cc-lib is linked into several
+// applications, whose environments it must not silently claim names in.
+const (
+	EnvUsername = "CC_NATS_USERNAME"
+	EnvPassword = "CC_NATS_PASSWORD"
+)
+
 const ConfigSchema = `{
     "type": "object",
     "description": "Configuration for NATS messaging client.",
@@ -32,11 +44,11 @@ const ConfigSchema = `{
             "type": "string"
         },
         "username": {
-            "description": "Username for NATS authentication (optional).",
+            "description": "Username for NATS authentication (optional). Overridden by the CC_NATS_USERNAME environment variable when set, or by the contents of the file named by CC_NATS_USERNAME_FILE.",
             "type": "string"
         },
         "password": {
-            "description": "Password for NATS authentication (optional).",
+            "description": "Password for NATS authentication (optional). Overridden by the CC_NATS_PASSWORD environment variable when set, or by the contents of the file named by CC_NATS_PASSWORD_FILE.",
             "type": "string"
         },
         "creds-file-path": {
