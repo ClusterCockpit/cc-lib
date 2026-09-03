@@ -9,28 +9,14 @@ This package contains utilities for:
 - **File compression** - Gzip compression and decompression
 - **File/directory operations** - Copying files and directories
 - **Disk usage** - Calculating directory size
-- **Custom types** - Float type with JSON NaN support, Selector types
+- **Custom types** - Selector types
 - **File system watcher** - Event-based file system monitoring
 - **Statistics** - Basic statistical functions (mean, median, min, max)
 
+The `Float` type with JSON NaN support is in the [`schema`](../schema) package,
+not here.
+
 ## Key Features
-
-### Float Type with NaN Support
-
-Go's standard JSON encoder doesn't support NaN values (see [golang/go#3480](https://github.com/golang/go/issues/3480)). This package provides a `Float` type that properly handles NaN values in JSON by converting them to/from `null`.
-
-```go
-import "github.com/ClusterCockpit/cc-lib/v2/util"
-
-// Create a Float value
-f := util.Float(3.14)
-
-// Use NaN to represent missing data
-missing := util.NaN
-
-// JSON marshaling - NaN becomes null
-data, _ := json.Marshal(missing) // Returns: null
-```
 
 ### File Operations
 
