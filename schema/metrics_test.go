@@ -73,6 +73,14 @@ func TestAddNodeScope(t *testing.T) {
 			t.Errorf("host2 data[%d]: expected %v, got %v", i, v, h2.Data[i])
 		}
 	}
+
+	// Statistics describe the summed series, not the per-core ones.
+	if want := (MetricStatistics{Min: 5, Avg: 7, Max: 9}); h1.Statistics != want {
+		t.Errorf("host1 statistics: expected %+v, got %+v", want, h1.Statistics)
+	}
+	if want := (MetricStatistics{Min: 110, Avg: 330, Max: 550}); h2.Statistics != want {
+		t.Errorf("host2 statistics: expected %+v, got %+v", want, h2.Statistics)
+	}
 }
 
 func TestAddNodeScopeUnevenCores(t *testing.T) {
@@ -121,5 +129,47 @@ func TestAddNodeScopeUnevenCores(t *testing.T) {
 		if !s.Data[i].IsNaN() {
 			t.Errorf("data[%d]: expected NaN, got %v", i, s.Data[i])
 		}
+	}
+
+	// NaN padding is excluded from the statistics.
+	if want := (MetricStatistics{Min: 11, Avg: 22, Max: 33}); s.Statistics != want {
+		t.Errorf("statistics: expected %+v, got %+v", want, s.Statistics)
+	}
+}
+
+func TestAddNodeScope_NaNStatistics(t *testing.T) {
+	jd := JobData{
+		Metrics: map[string]ScopedMetrics{
+			"mem_bw": {
+				MetricScopeSocket: &JobMetric{
+					Unit:     Unit{Base: "B/s"},
+					Timestep: 10,
+					Series: []Series{
+						{Hostname: "node1", Data: []Float{1, NaN, 3}},
+						{Hostname: "node1", Data: []Float{2, 2, 2}},
+						{Hostname: "node2", Data: []Float{NaN, NaN}},
+						{Hostname: "node2", Data: []Float{1, 1}},
+					},
+				},
+			},
+		},
+	}
+
+	if !jd.AddNodeScope("mem_bw") {
+		t.Fatal("AddNodeScope returned false")
+	}
+
+	byHost := make(map[string]Series)
+	for _, s := range jd.Metrics["mem_bw"][MetricScopeNode].Series {
+		byHost[s.Hostname] = s
+	}
+
+	// node1: sums [3, NaN, 5]; the NaN point is skipped.
+	if want := (MetricStatistics{Min: 3, Avg: 4, Max: 5}); byHost["node1"].Statistics != want {
+		t.Errorf("node1 statistics: expected %+v, got %+v", want, byHost["node1"].Statistics)
+	}
+	// node2: every summed point is NaN, so statistics fall back to zero.
+	if want := (MetricStatistics{}); byHost["node2"].Statistics != want {
+		t.Errorf("node2 statistics: expected %+v, got %+v", want, byHost["node2"].Statistics)
 	}
 }

@@ -367,13 +367,6 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 		Series:   make([]Series, 0, len(hosts)),
 	}
 	for hostname, series := range hosts {
-		min, sum, max := math.MaxFloat32, 0.0, -math.MaxFloat32
-		for _, series := range series {
-			sum += series.Statistics.Avg
-			min = math.Min(min, series.Statistics.Min)
-			max = math.Max(max, series.Statistics.Max)
-		}
-
 		n, m := 0, len(series[0].Data)
 		for _, s := range series {
 			if len(s.Data) > n {
@@ -384,6 +377,9 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 			}
 		}
 
+		// Statistics are taken from the summed node series itself: the min
+		// and max of a sum cannot be derived from the per-series min and max.
+		min, sum, max, valid := math.MaxFloat64, 0.0, -math.MaxFloat64, 0
 		i, data := 0, make([]Float, n)
 		for ; i < m; i++ {
 			x := Float(0.0)
@@ -391,15 +387,28 @@ func (jd *JobData) AddNodeScope(metric string) bool {
 				x += s.Data[i]
 			}
 			data[i] = x
+
+			if !x.IsNaN() {
+				v := float64(x)
+				sum += v
+				min = math.Min(min, v)
+				max = math.Max(max, v)
+				valid++
+			}
 		}
 
 		for ; i < n; i++ {
 			data[i] = NaN
 		}
 
+		stats := MetricStatistics{}
+		if valid > 0 {
+			stats = MetricStatistics{Min: min, Avg: sum / float64(valid), Max: max}
+		}
+
 		nodeJm.Series = append(nodeJm.Series, Series{
 			Hostname:   hostname,
-			Statistics: MetricStatistics{Min: min, Avg: sum / float64(len(series)), Max: max},
+			Statistics: stats,
 			Data:       data,
 		})
 	}

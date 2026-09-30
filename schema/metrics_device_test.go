@@ -251,6 +251,9 @@ func TestAddNodeScope_Filesystem(t *testing.T) {
 	if !reflect.DeepEqual(node.Series[0].Data, want) {
 		t.Errorf("node total = %v, want %v", node.Series[0].Data, want)
 	}
+	if want := (MetricStatistics{Min: 3, Avg: 6, Max: 9}); node.Series[0].Statistics != want {
+		t.Errorf("node total statistics = %+v, want %+v", node.Series[0].Statistics, want)
+	}
 }
 
 func TestTopology_GetDeviceIDs(t *testing.T) {
