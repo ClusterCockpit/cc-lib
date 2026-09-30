@@ -109,149 +109,22 @@ type JobStatistics struct {
 	Max  float64 `json:"max" example:"3000" minimum:"0"` // Job metric maximum
 }
 
-// StatsGroupInstance is one named element of an array-valued statistics group
-// (a single filesystem, later a single interconnect). Its per-instance metrics
-// are flat JobStatistics (the job-meta schema does not scope filesystem stats).
-type StatsGroupInstance struct {
-	Name    string                   `json:"name"`
-	Type    string                   `json:"type"`
-	Metrics map[string]JobStatistics `json:"-"` // flattened onto the instance object by MarshalJSON
-}
-
-// StatsGroup is an array-valued statistics group identified by its top-level
-// JSON key (e.g. "filesystems"). Instance order is preserved.
-type StatsGroup struct {
-	Key       string
-	Instances []StatsGroupInstance
-}
-
-// JobStatisticsSet is the value of Job.Statistics. Metrics holds the flat
-// per-metric aggregates; Groups holds array-valued groups (filesystems, and
-// later interconnects) whose members each carry their own statistics. Custom
-// (Un)MarshalJSON keep the job-meta "statistics" layout: flat metrics as
-// objects plus each group as a nested array.
+// JobStatisticsSet is the value of Job.Statistics: the per-metric aggregates,
+// keyed by metric name. Custom (Un)MarshalJSON keep the job-meta "statistics"
+// layout, one {unit,avg,min,max} object per metric.
 type JobStatisticsSet struct {
 	Metrics map[string]JobStatistics
-	Groups  []StatsGroup
 }
 
-// MarshalJSON renders the job-meta "statistics" layout: each flat metric as
-// {unit,avg,min,max}, and each group as an array of
-// {name, type, <metric>: {unit,avg,min,max}, ...} instances.
+// MarshalJSON renders the job-meta "statistics" layout.
 func (s JobStatisticsSet) MarshalJSON() ([]byte, error) {
-	out := make(map[string]json.RawMessage, len(s.Metrics)+len(s.Groups))
-
-	for name, stat := range s.Metrics {
-		b, err := json.Marshal(stat)
-		if err != nil {
-			return nil, err
-		}
-		out[name] = b
-	}
-
-	for _, group := range s.Groups {
-		arr := make([]json.RawMessage, 0, len(group.Instances))
-		for _, inst := range group.Instances {
-			obj := make(map[string]json.RawMessage, len(inst.Metrics)+2)
-			name, err := json.Marshal(inst.Name)
-			if err != nil {
-				return nil, err
-			}
-			obj["name"] = name
-			typ, err := json.Marshal(inst.Type)
-			if err != nil {
-				return nil, err
-			}
-			obj["type"] = typ
-			for metric, stat := range inst.Metrics {
-				b, err := json.Marshal(stat)
-				if err != nil {
-					return nil, err
-				}
-				obj[metric] = b
-			}
-			b, err := json.Marshal(obj)
-			if err != nil {
-				return nil, err
-			}
-			arr = append(arr, b)
-		}
-		b, err := json.Marshal(arr)
-		if err != nil {
-			return nil, err
-		}
-		out[group.Key] = b
-	}
-
-	return json.Marshal(out)
+	return json.Marshal(s.Metrics)
 }
 
 // UnmarshalJSON parses the job-meta "statistics" layout into a JobStatisticsSet.
-// Array-valued group keys (registered, or fallback: value starts with '[') are
-// decoded into Groups; all other keys into flat Metrics.
 func (s *JobStatisticsSet) UnmarshalJSON(b []byte) error {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	s.Metrics = make(map[string]JobStatistics, len(raw))
-	s.Groups = nil
-
-	for key, msg := range raw {
-		if IsMetricGroupKey(key) || firstToken(msg) == '[' {
-			group := StatsGroup{Key: key}
-			var items []map[string]json.RawMessage
-			if err := json.Unmarshal(msg, &items); err != nil {
-				return err
-			}
-			for _, item := range items {
-				inst := StatsGroupInstance{Metrics: make(map[string]JobStatistics, len(item))}
-				for field, fmsg := range item {
-					switch field {
-					case "name":
-						if err := json.Unmarshal(fmsg, &inst.Name); err != nil {
-							return err
-						}
-					case "type":
-						if err := json.Unmarshal(fmsg, &inst.Type); err != nil {
-							return err
-						}
-					default:
-						var stat JobStatistics
-						if err := json.Unmarshal(fmsg, &stat); err != nil {
-							return err
-						}
-						inst.Metrics[field] = stat
-					}
-				}
-				group.Instances = append(group.Instances, inst)
-			}
-			s.Groups = append(s.Groups, group)
-			continue
-		}
-
-		var stat JobStatistics
-		if err := json.Unmarshal(msg, &stat); err != nil {
-			return err
-		}
-		s.Metrics[key] = stat
-	}
-
-	return nil
-}
-
-// AddGroupInstance appends a named statistics instance to the group identified
-// by groupKey, creating the group if necessary.
-func (s *JobStatisticsSet) AddGroupInstance(groupKey, name, typ string, metrics map[string]JobStatistics) {
-	inst := StatsGroupInstance{Name: name, Type: typ, Metrics: metrics}
-	for i := range s.Groups {
-		if s.Groups[i].Key == groupKey {
-			s.Groups[i].Instances = append(s.Groups[i].Instances, inst)
-			return
-		}
-	}
-	s.Groups = append(s.Groups, StatsGroup{Key: groupKey, Instances: []StatsGroupInstance{inst}})
+	s.Metrics = nil
+	return json.Unmarshal(b, &s.Metrics)
 }
 
 // Tag model

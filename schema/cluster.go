@@ -18,6 +18,22 @@ type Accelerator struct {
 	Model string `json:"model"` // Specific model name (e.g., "A100", "MI100")
 }
 
+// Filesystem represents a mount point whose metrics are collected per node at
+// MetricScopeFilesystem. The ID is the mount point as sent by the collector in
+// stype-id and reported as Series.ID.
+type Filesystem struct {
+	ID   string `json:"id"`   // Mount point (e.g., "/home", "/scratch")
+	Type string `json:"type"` // Filesystem type (e.g., "nfs", "lustre")
+}
+
+// Network represents a network interface whose metrics are collected per node
+// at MetricScopeNetwork. The ID is the interface as sent by the collector in
+// stype-id and reported as Series.ID.
+type Network struct {
+	ID   string `json:"id"`   // Interface name (e.g., "ib0", "eth0")
+	Type string `json:"type"` // Network type (e.g., "infiniband", "ethernet")
+}
+
 // Topology defines the hardware topology of a compute node, mapping the hierarchical
 // relationships between hardware threads, cores, sockets, memory domains, and accelerators.
 //
@@ -28,6 +44,8 @@ type Accelerator struct {
 //   - MemoryDomain: Hardware threads grouped by NUMA domain
 //   - Die: Optional grouping by CPU die within sockets
 //   - Accelerators: List of attached hardware accelerators
+//   - Filesystems: List of mount points with per-mount metrics
+//   - Networks: List of network interfaces with per-interface metrics
 type Topology struct {
 	Node         []int          `json:"node"`                   // All hardware thread IDs on this node
 	Socket       [][]int        `json:"socket"`                 // Hardware threads grouped by socket
@@ -35,6 +53,8 @@ type Topology struct {
 	Die          [][]*int       `json:"die,omitempty"`          // Hardware threads grouped by die (optional)
 	Core         [][]int        `json:"core"`                   // Hardware threads grouped by core
 	Accelerators []*Accelerator `json:"accelerators,omitempty"` // Attached accelerators (GPUs, etc.)
+	Filesystems  []*Filesystem  `json:"filesystems,omitempty"`  // Mount points (static per subcluster)
+	Networks     []*Network     `json:"networks,omitempty"`     // Network interfaces (static per subcluster)
 
 	// Cache maps for faster lookups
 	hwthreadToSocket       map[int][]int
@@ -329,6 +349,43 @@ func (topo *Topology) GetAcceleratorIDs() []string {
 		accels[i] = accel.ID
 	}
 	return accels
+}
+
+// GetFilesystemIDs returns the mount points of all declared filesystems, in
+// declaration order.
+func (topo *Topology) GetFilesystemIDs() []string {
+	ids := make([]string, len(topo.Filesystems))
+	for i, fs := range topo.Filesystems {
+		ids[i] = fs.ID
+	}
+	return ids
+}
+
+// GetNetworkIDs returns the interface names of all declared networks, in
+// declaration order.
+func (topo *Topology) GetNetworkIDs() []string {
+	ids := make([]string, len(topo.Networks))
+	for i, nw := range topo.Networks {
+		ids[i] = nw.ID
+	}
+	return ids
+}
+
+// GetDeviceIDs returns the declared device IDs for a device scope: accelerator,
+// filesystem or network. It returns nil for any other scope. For accelerators
+// this is every device of the node; the subset allocated to a job is in
+// Resource.Accelerators.
+func (topo *Topology) GetDeviceIDs(scope MetricScope) []string {
+	switch scope {
+	case MetricScopeAccelerator:
+		return topo.GetAcceleratorIDs()
+	case MetricScopeFilesystem:
+		return topo.GetFilesystemIDs()
+	case MetricScopeNetwork:
+		return topo.GetNetworkIDs()
+	default:
+		return nil
+	}
 }
 
 // GetAcceleratorIDsAsInt attempts to convert all accelerator IDs to integers.

@@ -32,7 +32,9 @@
               "memoryDomain",
               "core",
               "hwthread",
-              "accelerator"
+              "accelerator",
+              "filesystem",
+              "network"
             ]
           },
           "timestep": {
@@ -337,6 +339,65 @@
                     "id",
                     "type",
                     "model"
+                  ]
+                }
+              },
+              "filesystems": {
+                "type": "array",
+                "description": "List of mount points with per-mount metrics (scope filesystem)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The mount point, as sent by the collector in stype-id"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "The filesystem type",
+                      "enum": [
+                        "nfs",
+                        "lustre",
+                        "gpfs",
+                        "beegfs",
+                        "cephfs",
+                        "weka",
+                        "nvme",
+                        "ssd",
+                        "hdd"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
+                  ]
+                }
+              },
+              "networks": {
+                "type": "array",
+                "description": "List of network interfaces with per-interface metrics (scope network)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The interface name, as sent by the collector in stype-id"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "The network type",
+                      "enum": [
+                        "infiniband",
+                        "ethernet",
+                        "omnipath",
+                        "slingshot"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
                   ]
                 }
               }
