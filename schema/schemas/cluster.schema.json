@@ -350,7 +350,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "description": "The mount point, as sent by the collector in stype-id"
+                      "description": "The mount point, as sent by the collector in type-id with type=filesystem"
                     },
                     "type": {
                       "type": "string",
@@ -382,7 +382,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "description": "The interface name, as sent by the collector in stype-id"
+                      "description": "The interface name, as sent by the collector in type-id with type=network"
                     },
                     "type": {
                       "type": "string",

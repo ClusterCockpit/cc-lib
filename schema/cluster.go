@@ -20,7 +20,7 @@ type Accelerator struct {
 
 // Filesystem represents a mount point whose metrics are collected per node at
 // MetricScopeFilesystem. The ID is the mount point as sent by the collector in
-// stype-id and reported as Series.ID.
+// type-id (with type=filesystem, as for accelerators) and reported as Series.ID.
 type Filesystem struct {
 	ID   string `json:"id"`   // Mount point (e.g., "/home", "/scratch")
 	Type string `json:"type"` // Filesystem type (e.g., "nfs", "lustre")
@@ -28,7 +28,7 @@ type Filesystem struct {
 
 // Network represents a network interface whose metrics are collected per node
 // at MetricScopeNetwork. The ID is the interface as sent by the collector in
-// stype-id and reported as Series.ID.
+// type-id (with type=network, as for accelerators) and reported as Series.ID.
 type Network struct {
 	ID   string `json:"id"`   // Interface name (e.g., "ib0", "eth0")
 	Type string `json:"type"` // Network type (e.g., "infiniband", "ethernet")
