@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ClusterCockpit/cc-lib/v2/util"
+	"github.com/nats-io/nkeys"
 )
 
 func TestResolveCredentials_Precedence(t *testing.T) {
@@ -102,7 +103,7 @@ func TestNewClient_RejectsUnreadableSecretFileBeforeConnecting(t *testing.T) {
 	t.Setenv(EnvPassword+util.EnvFileSuffix, filepath.Join(t.TempDir(), "absent"))
 
 	// An unroutable address: if credential resolution did not fail first, this
-	// would block on a connection attempt instead of returning promptly.
+	// would return a client connecting in the background instead of an error.
 	_, err := NewClient(&NatsConfig{Address: "nats://127.0.0.1:1", Password: "cfg-pass"})
 	if err == nil {
 		t.Fatal("expected an error, got nil")
@@ -115,5 +116,53 @@ func TestNewClient_RejectsUnreadableSecretFileBeforeConnecting(t *testing.T) {
 func TestNewClient_RequiresAddress(t *testing.T) {
 	if _, err := NewClient(&NatsConfig{}); err == nil {
 		t.Error("expected an error for an empty address, got nil")
+	}
+}
+
+func TestNewClient_RejectsInvalidNkeySeedFile(t *testing.T) {
+	dir := t.TempDir()
+	garbage := filepath.Join(dir, "garbage.nk")
+	if err := os.WriteFile(garbage, []byte("not a seed\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, path := range map[string]string{
+		"missing": filepath.Join(dir, "absent.nk"),
+		"garbage": garbage,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := NewClient(&NatsConfig{Address: "nats://127.0.0.1:1", NkeySeedFile: path})
+			if err == nil {
+				t.Fatal("expected an error, got nil")
+			}
+			if !strings.Contains(err.Error(), path) {
+				t.Errorf("expected the error to name %s, got %q", path, err.Error())
+			}
+		})
+	}
+}
+
+func TestNewClient_UnreachableServerConnectsInBackground(t *testing.T) {
+	kp, err := nkeys.CreateUser()
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := kp.Seed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedFile := filepath.Join(t.TempDir(), "user.nk")
+	if err := os.WriteFile(seedFile, seed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := NewClient(&NatsConfig{Address: "nats://127.0.0.1:1", NkeySeedFile: seedFile})
+	if err != nil {
+		t.Fatalf("expected a client connecting in the background, got error: %v", err)
+	}
+	defer client.Close()
+
+	if client.IsConnected() {
+		t.Error("expected the client to be disconnected")
 	}
 }
