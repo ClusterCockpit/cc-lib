@@ -52,10 +52,11 @@ The library is designed to be modular, allowing you to use individual packages a
 
 ### Configuration & Logging
 
-| Package                | Description                                              |
-| ---------------------- | -------------------------------------------------------- |
-| [ccConfig](./ccConfig) | Configuration file management with hot-reloading support |
-| [ccLogger](./ccLogger) | Structured logging with multiple output levels           |
+| Package                | Description                                                      |
+| ---------------------- | ---------------------------------------------------------------- |
+| [ccConfig](./ccConfig) | Configuration file management with hot-reloading support         |
+| [ccLogger](./ccLogger) | Structured logging with multiple output levels                   |
+| [fleet](./fleet)       | cc-backend fleet client: registration, central config, discovery |
 
 ### Utilities
 
@@ -145,6 +146,7 @@ config.Watch(func() {
 - [ccMessage](./ccMessage/README.md) - Message types and protocols
 - [ccTopology](./ccTopology/README.md) - System topology detection
 - [ccUnits](./ccUnits/README.md) - Unit conversion
+- [fleet](./fleet/README.md) - cc-backend fleet client
 - [hostlist](./hostlist/README.md) - Hostlist expansion
 - [lrucache](./lrucache/README.md) - LRU cache with TTL
 - [messageProcessor](./messageProcessor/README.md) - Message processing
