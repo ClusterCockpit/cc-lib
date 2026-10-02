@@ -34,6 +34,23 @@
 //	  }
 //	}
 //
+// Or using plain NKey authentication with a seed file:
+//
+//	{
+//	  "nats": {
+//	    "address": "nats://localhost:4222",
+//	    "nkey-seed-file": "/path/to/user.nk"
+//	  }
+//	}
+//
+// # Connection Handling
+//
+// NewClient does not fail when the server is unreachable. The client is
+// returned disconnected and connects in the background; it reconnects without
+// limit after losing the connection. Until then, published messages are
+// buffered and subscriptions take effect once the connection is up. Use
+// IsConnected to check the current state.
+//
 // # Usage
 //
 // The package provides a singleton client initialized once and retrieved globally:
@@ -150,6 +167,22 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 		opts = append(opts, nats.UserCredentials(cfg.CredsFilePath))
 	}
 
+	if cfg.NkeySeedFile != "" {
+		nkeyOpt, err := nats.NkeyOptionFromSeed(cfg.NkeySeedFile)
+		if err != nil {
+			return nil, fmt.Errorf("NATS nkey seed file '%s': %w", cfg.NkeySeedFile, err)
+		}
+		opts = append(opts, nkeyOpt)
+	}
+
+	// Keep trying while the server is down, both at startup and after losing
+	// the connection. The nats.go default gives up for good after 60 attempts.
+	opts = append(opts, nats.RetryOnFailedConnect(true), nats.MaxReconnects(-1))
+
+	opts = append(opts, nats.ConnectHandler(func(nc *nats.Conn) {
+		cclog.Infof("NATS connected to %s", nc.ConnectedUrl())
+	}))
+
 	opts = append(opts, nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 		if err != nil {
 			cclog.Warnf("NATS disconnected: %v", err)
@@ -176,7 +209,9 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 		return nil, fmt.Errorf("NATS connect failed: %w", err)
 	}
 
-	cclog.Infof("NATS connected to %s", cfg.Address)
+	if !nc.IsConnected() {
+		cclog.Warnf("NATS server %s not reachable, connecting in background", cfg.Address)
+	}
 
 	return &Client{
 		conn:          nc,

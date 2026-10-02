@@ -18,6 +18,7 @@ type NatsConfig struct {
 	Username      string `json:"username"`        // Username for authentication (optional)
 	Password      string `json:"password"`        // Password for authentication (optional)
 	CredsFilePath string `json:"creds-file-path"` // Path to credentials file (optional)
+	NkeySeedFile  string `json:"nkey-seed-file"`  // Path to NKey seed file (optional)
 }
 
 // Keys holds the global NATS configuration loaded via Init.
@@ -53,6 +54,10 @@ const ConfigSchema = `{
         },
         "creds-file-path": {
             "description": "Path to NATS credentials file for authentication (optional).",
+            "type": "string"
+        },
+        "nkey-seed-file": {
+            "description": "Path to a file holding the NKey seed (private key) for plain NKey authentication (optional).",
             "type": "string"
         }
     },
