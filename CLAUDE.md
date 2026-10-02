@@ -78,6 +78,7 @@ Both receivers and sinks use a Manager pattern (`ReceiveManager`/`SinkManager`) 
 - `ccTopology` — Hardware topology via hwloc C bindings (cgo)
 - `runtime` — .env loading, privilege dropping, systemd integration
 - `nats` — Singleton NATS client wrapper
+- `fleet` — cc-backend fleet client (register, config pull, heartbeat, discovery) and shared fleet wire types
 - `hostlist` — HPC hostlist expansion (e.g., `node[1-10]`)
 
 ### Notable Types
@@ -89,7 +90,7 @@ Both receivers and sinks use a Manager pattern (`ReceiveManager`/`SinkManager`) 
 
 ### Thread Safety
 
-- `ccLogger`, `lrucache`, `messageProcessor`, `nats.Client` are thread-safe
+- `ccLogger`, `lrucache`, `messageProcessor`, `nats.Client`, `fleet.Client` are thread-safe
 - `CCMessage` is NOT thread-safe — use `FromMessage()` to copy
 
 ### CI
