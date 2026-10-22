@@ -80,7 +80,8 @@ initial, err := client.Bootstrap(ctx, 10*time.Second)
 // err == nil:             initial.Source is SourceFleet, or SourceNone (nothing authored)
 // errors.Is(err, fleet.ErrUnreachable): initial is the cached config (SourceCache) or none
 // errors.Is(err, fleet.ErrUnauthorized): token or IP allowlist problem
-applyConfig(initial.Config) // nil: run with the local configuration
+// Bootstrap logs the outcome itself, so the error needs no further reporting.
+applyConfig(initial.Config, true) // nil: run with the local configuration
 
 go client.Run(ctx)
 defer client.Close(shutdownCtx) // stops Run, then deregisters
@@ -88,7 +89,7 @@ defer client.Close(shutdownCtx) // stops Run, then deregisters
 for {
     select {
     case u := <-client.Configs():
-        applyConfig(u.Config) // only sent when the configuration really changed
+        applyConfig(u.Config, false) // only sent when the configuration really changed
     case providers := <-client.Rosters():
         replaceProviders(providers) // full list, not a delta
     case <-ctx.Done():
@@ -101,9 +102,40 @@ for {
 not been read yet is replaced by the newer one, so a slow main loop always
 sees the latest state and never blocks the client.
 
-Merging the received configuration with the local one is left to the
-application. Which keys must stay local (the fleet section itself, paths,
-credentials) and which need a restart differs from service to service.
+## Merging with the local configuration
+
+`Overlay` builds the effective configuration from the built-in defaults, the
+local configuration file and the fleet configuration, in that order. The
+application only states its policy: which keys must stay local (the fleet
+section itself, paths, credentials) and which only take effect at startup.
+
+```go
+overlay := fleet.Overlay[AppConfig]{
+    Defaults:    defaultConfig, // fresh value per call, no shared maps
+    Local:       localFileContents,
+    LocalOnly:   []string{"fleet", "pid-file"},
+    StartupOnly: []string{"nats"},
+    Validate:    validate, // optional, may normalize values
+}
+
+func applyConfig(blob json.RawMessage, startup bool) {
+    res, err := overlay.Apply(current, blob, startup)
+    if err != nil {
+        log.Printf("rejecting fleet configuration: %v", err) // keep current
+        return
+    }
+    current = res.Config
+    res.Log() // changed keys, and keys that need a restart
+}
+```
+
+`AppConfig` is a struct whose top-level fields are addressed by their JSON
+keys. JSON objects decoded into maps merge key by key; arrays and scalars are
+replaced. An empty blob yields the local configuration. Fleet keys listed in
+`LocalOnly` are ignored with a warning, unknown keys are logged at debug level,
+because the top-level defaults of the configuration tree apply to all service
+types. After startup, `StartupOnly` keys keep their running value and are
+reported in `Result.RestartRequired`.
 
 ## Behaviour
 

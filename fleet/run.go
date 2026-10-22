@@ -103,15 +103,31 @@ func (c *Client) Bootstrap(ctx context.Context, timeout time.Duration) (Update, 
 		if _, err := c.Register(bctx); err != nil {
 			c.regRetry.fail(time.Now())
 			c.report("register", err)
+			c.logFallback(fallback)
 			return fallback, classify(err)
+		}
+		if c.cluster != "" {
+			cclog.ComponentInfof(component, "registered as %s for cluster %q", c.svcType, c.cluster)
+		} else {
+			cclog.ComponentInfof(component, "registered as %s in infra scope", c.svcType)
 		}
 	}
 	u, _, err := c.PullConfig(bctx)
 	if err != nil {
 		c.report("config", err)
+		c.logFallback(fallback)
 		return fallback, classify(err)
 	}
 	return u, nil
+}
+
+// logFallback reports the configuration Bootstrap falls back to.
+func (c *Client) logFallback(u Update) {
+	if u.Source == SourceCache {
+		cclog.ComponentWarnf(component, "starting with cached configuration from %s (revision %q), retrying in the background", c.cachePath, u.Revision)
+	} else {
+		cclog.ComponentWarnf(component, "starting without fleet configuration, retrying in the background")
+	}
 }
 
 // classify wraps transport errors in ErrUnreachable and leaves HTTP status
