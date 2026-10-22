@@ -33,6 +33,10 @@
 // unknown, and delivers changes on [Client.Configs] and [Client.Rosters].
 // [Client.Close] stops Run and performs step 5.
 //
+// [Overlay] merges a received configuration with the application's defaults
+// and local configuration file, keeping local-only keys and reporting keys
+// that need a restart.
+//
 // # Security
 //
 // The instance id is a bearer credential for heartbeat, config pull and
