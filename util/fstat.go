@@ -7,6 +7,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
@@ -40,4 +41,23 @@ func GetFilecount(path string) int {
 	}
 
 	return len(files)
+}
+
+// checkDistinctDestination rejects aliases before any destination is truncated.
+func checkDistinctDestination(source *os.File, destination string) error {
+	sourceInfo, err := source.Stat()
+	if err != nil {
+		return err
+	}
+	destinationInfo, err := os.Stat(destination)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if os.SameFile(sourceInfo, destinationInfo) {
+		return fmt.Errorf("source and destination refer to the same file")
+	}
+	return nil
 }

@@ -23,6 +23,10 @@ func CopyFile(src, dst string) (err error) {
 	}
 	defer in.Close()
 
+	if err = checkDistinctDestination(in, dst); err != nil {
+		return
+	}
+
 	out, err := os.Create(dst)
 	if err != nil {
 		return
