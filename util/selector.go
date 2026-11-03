@@ -32,6 +32,8 @@ func (se *SelectorElement) UnmarshalJSON(input []byte) error {
 			return err
 		}
 
+		se.Group = nil
+		se.Any = false
 		if se.String == "*" {
 			se.Any = true
 			se.String = ""
@@ -41,7 +43,12 @@ func (se *SelectorElement) UnmarshalJSON(input []byte) error {
 	}
 
 	if input[0] == '[' {
-		return json.Unmarshal(input, &se.Group)
+		if err := json.Unmarshal(input, &se.Group); err != nil {
+			return err
+		}
+		se.String = ""
+		se.Any = false
+		return nil
 	}
 
 	return errors.New("the Go SelectorElement type can only be a string or an array of strings")

@@ -474,11 +474,12 @@ func NewEECPTReceiver(name string, config json.RawMessage) (Receiver, error) {
 	uri := addr + p
 	cclog.ComponentDebug(r.name, "INIT ", "listen on:", uri)
 
-	http.HandleFunc(p, r.ServerHttp)
+	mux := http.NewServeMux()
+	mux.HandleFunc(p, r.ServerHttp)
 
 	r.server = &http.Server{
 		Addr:        addr,
-		Handler:     nil,
+		Handler:     mux,
 		IdleTimeout: r.config.idleTimeout,
 	}
 	r.server.SetKeepAlivesEnabled(r.config.KeepAlivesEnabled)

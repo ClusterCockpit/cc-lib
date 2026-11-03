@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 /*
@@ -106,7 +107,11 @@ hwloc_obj_t _hwloc_get_child(hwloc_obj_t obj, unsigned int offset) {
 hwloc_obj_t _hwloc_get_memory_child(hwloc_obj_t obj, unsigned int offset) {
 	if (offset < obj->memory_arity)
 	{
-		return &obj->memory_first_child[offset];
+		hwloc_obj_t child = obj->memory_first_child;
+		while (child && offset--) {
+			child = child->next_sibling;
+		}
+		return child;
 	}
 	return NULL;
 }
@@ -114,7 +119,11 @@ hwloc_obj_t _hwloc_get_memory_child(hwloc_obj_t obj, unsigned int offset) {
 hwloc_obj_t _hwloc_get_io_child(hwloc_obj_t obj, unsigned int offset) {
 	if (offset < obj->io_arity)
 	{
-		return &obj->io_first_child[offset];
+		hwloc_obj_t child = obj->io_first_child;
+		while (child && offset--) {
+			child = child->next_sibling;
+		}
+		return child;
 	}
 	return NULL;
 }
@@ -315,6 +324,14 @@ func (t *topology) MarshalJSON() ([]byte, error) {
 }
 
 func addObject(o Object, objects *[]*Object) {
+	// Older topology JSON may contain a NUMA node in both child lists.
+	if o.Type == HWLOC_TYPE_NUMANODE {
+		for _, existing := range *objects {
+			if existing.Type == HWLOC_TYPE_NUMANODE && existing.ID == o.ID {
+				return
+			}
+		}
+	}
 	*objects = append(*objects, &o)
 	for _, c := range o.Children {
 		addObject(c, objects)
@@ -328,11 +345,15 @@ func addObject(o Object, objects *[]*Object) {
 }
 
 func (t *topology) UnmarshalJSON(in []byte) error {
-	err := json.Unmarshal(in, &t.root)
+	var root Object
+	err := json.Unmarshal(in, &root)
 	if err != nil {
 		return err
 	}
-	addObject(t.root, &t.objects)
+	objects := make([]*Object, 0)
+	addObject(root, &objects)
+	t.root = root
+	t.objects = objects
 	return nil
 }
 
@@ -463,16 +484,8 @@ func (t *topology) additionalMachineOps(hwtopo C.hwloc_topology_t) []Object {
 
 func (t *topology) additionalPackageOps(hwtopo C.hwloc_topology_t, packageObj Object) []Object {
 	out := make([]Object, 0)
-	nbobj := C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_NUMANODE)
-	for j := range int(nbobj) {
-		hwobj := C.hwloc_get_obj_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_NUMANODE, C.uint(j))
-		if HWLOC_OBJ_TYPE(hwobj.parent._type) == packageObj.Type &&
-			int64(hwobj.parent.os_index) == int64(packageObj.ID) &&
-			int(hwobj.parent.logical_index) == int(packageObj.LogicalIndex) {
-			out = append(out, t.traverseObject(hwtopo, hwobj))
-		}
-	}
-	nbobj = C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_OS_DEVICE)
+	// NUMA nodes are already traversed through MemoryChildren.
+	nbobj := C.hwloc_get_nbobjs_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_OS_DEVICE)
 	for j := range int(nbobj) {
 		hwobj := C.hwloc_get_obj_by_depth(hwtopo, C.HWLOC_TYPE_DEPTH_OS_DEVICE, C.uint(j))
 		if HWLOC_OBJ_TYPE(hwobj.parent._type) == packageObj.Type &&
@@ -556,6 +569,7 @@ func (t *topology) init() error {
 	C.hwloc_topology_set_all_types_filter(hwtopo, C.HWLOC_TYPE_FILTER_KEEP_ALL)
 	ret = C.hwloc_topology_load(hwtopo)
 	if ret != 0 {
+		C.hwloc_topology_destroy(hwtopo)
 		return fmt.Errorf("hwloc_topology_load returned %d", ret)
 	}
 
@@ -571,8 +585,11 @@ func (t *topology) init() error {
 }
 
 var _ccTopology_local_topo *topology = nil
+var localTopologyMu sync.Mutex
 
 func LocalTopology() (Topology, error) {
+	localTopologyMu.Lock()
+	defer localTopologyMu.Unlock()
 	if _ccTopology_local_topo == nil {
 		t := new(topology)
 		err := t.init()
@@ -731,38 +748,73 @@ func (t *topology) GetHwthreadStringsOfSocket(socket uint) []string {
 	return out
 }
 
+func getMemoryDomainParent(o Object, memoryDomain uint, parent Object) (Object, bool) {
+	if o.Type == HWLOC_TYPE_NUMANODE && o.ID == memoryDomain {
+		return parent, true
+	}
+	if o.Type != HWLOC_TYPE_NUMANODE && o.Type != HWLOC_TYPE_MEMCACHE {
+		parent = o
+	}
+	for _, child := range o.Children {
+		if found, ok := getMemoryDomainParent(child, memoryDomain, parent); ok {
+			return found, true
+		}
+	}
+	for _, child := range o.MemoryChildren {
+		if found, ok := getMemoryDomainParent(child, memoryDomain, parent); ok {
+			return found, true
+		}
+	}
+	return Object{}, false
+}
+
 func (t *topology) GetHwthreadsOfMemoryDomain(memoryDomain uint) []uint {
 	out := make([]uint, 0)
 	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_NUMANODE {
-			numHWthreads := C._hwloc_cpuset_size(o.HwlocObject.cpuset)
+		if o.Type != HWLOC_TYPE_NUMANODE || o.ID != memoryDomain {
+			continue
+		}
+		if o.HwlocObject != nil && o.HwlocObject.cpuset != nil {
 			for _, hwo := range t.objects {
 				if hwo.Type == HWLOC_TYPE_PU && C._hwloc_cpuset_isset(o.HwlocObject.cpuset, C.unsigned(hwo.ID)) == 1 {
 					out = append(out, hwo.ID)
 				}
-				if len(out) == int(numHWthreads) {
-					break
-				}
 			}
+			return out
 		}
+
+		// Remote JSON has no usable hwloc pointer. Explicit PU children are exact.
+		getChildrenIdsOfType(*o, HWLOC_TYPE_PU, &out)
+		if len(out) != 0 {
+			return out
+		}
+		parent, ok := getMemoryDomainParent(t.root, memoryDomain, t.root)
+		if !ok {
+			return out
+		}
+		// Without cpusets, multiple domains at one CPU ancestor are ambiguous.
+		// Preserve the existing slice API and report unavailable membership as empty.
+		pending := []Object{parent}
+		for len(pending) != 0 {
+			last := len(pending) - 1
+			child := pending[last]
+			pending = pending[:last]
+			if child.Type == HWLOC_TYPE_NUMANODE && child.ID != memoryDomain {
+				return out
+			}
+			pending = append(pending, child.Children...)
+			pending = append(pending, child.MemoryChildren...)
+		}
+		getChildrenIdsOfType(parent, HWLOC_TYPE_PU, &out)
+		return out
 	}
 	return out
 }
 
 func (t *topology) GetHwthreadStringsOfMemoryDomain(memoryDomain uint) []string {
 	out := make([]string, 0)
-	for _, o := range t.objects {
-		if o.Type == HWLOC_TYPE_NUMANODE {
-			numHWthreads := C._hwloc_cpuset_size(o.HwlocObject.cpuset)
-			for _, hwo := range t.objects {
-				if hwo.Type == HWLOC_TYPE_PU && C._hwloc_cpuset_isset(o.HwlocObject.cpuset, C.unsigned(hwo.ID)) == 1 {
-					out = append(out, fmt.Sprintf("%d", hwo.ID))
-				}
-				if len(out) == int(numHWthreads) {
-					break
-				}
-			}
-		}
+	for _, id := range t.GetHwthreadsOfMemoryDomain(memoryDomain) {
+		out = append(out, fmt.Sprintf("%d", id))
 	}
 	return out
 }
@@ -792,12 +844,18 @@ type CpuInformation struct {
 }
 
 func (t *topology) CpuInfo() CpuInformation {
+	numHWthreads := len(t.GetHwthreads())
+	numCores := len(t.GetCores())
+	smtWidth := 0
+	if numCores != 0 {
+		smtWidth = numHWthreads / numCores
+	}
 	return CpuInformation{
-		NumHWthreads:   len(t.GetHwthreads()),
-		SMTWidth:       len(t.GetHwthreads()) / len(t.GetCores()),
+		NumHWthreads:   numHWthreads,
+		SMTWidth:       smtWidth,
 		NumSockets:     len(t.GetSockets()),
 		NumDies:        len(t.GetDies()),
-		NumCores:       len(t.GetCores()),
+		NumCores:       numCores,
 		NumNumaDomains: len(t.GetMemoryDomains()),
 	}
 }

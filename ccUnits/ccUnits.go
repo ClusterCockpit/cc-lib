@@ -28,7 +28,11 @@ type Unit interface {
 	SetPrefix(p Prefix)
 }
 
-var INVALID_UNIT = NewUnit("foobar")
+var INVALID_UNIT Unit = &unit{
+	prefix:     InvalidPrefix,
+	measure:    InvalidMeasure,
+	divMeasure: InvalidMeasure,
+}
 
 // Valid checks whether a unit is a valid unit. A unit is valid if it has at least a prefix and a measure. The unit denominator is optional.
 func (u *unit) Valid() bool {
@@ -81,6 +85,9 @@ func (u *unit) GetUnitDenominator() Measure {
 func GetPrefixPrefixFactor(in Prefix, out Prefix) func(value any) any {
 	factor := float64(in) / float64(out)
 	conv := func(value any) any {
+		if factor == 1 {
+			return value
+		}
 		switch v := value.(type) {
 		case float64:
 			return v * factor
@@ -162,6 +169,9 @@ func GetPrefixStringPrefixStringFactor(in string, out string) func(value any) an
 // the most common case where you have some input unit and want to convert it to the same unit but with
 // a different prefix. The returned unit represents the value after conversation.
 func GetUnitPrefixFactor(in Unit, out Prefix) (func(value any) any, Unit) {
+	if !in.Valid() || out == InvalidPrefix {
+		return nil, INVALID_UNIT
+	}
 	outUnit := NewUnit(in.Short())
 	if outUnit.Valid() {
 		outUnit.SetPrefix(out)
@@ -189,9 +199,12 @@ func GetUnitStringPrefixStringFactor(in string, out string) (func(value any) any
 // It is basically a wrapper for GetPrefixPrefixFactor with some special cases for temperature
 // conversion between Fahrenheit and Celsius.
 func GetUnitUnitFactor(in Unit, out Unit) (func(value any) any, error) {
-	if in.GetMeasure() == TemperatureC && out.GetMeasure() == TemperatureF {
+	if !in.Valid() || !out.Valid() {
+		return nil, fmt.Errorf("invalid input or output unit")
+	}
+	if in.GetUnitDenominator() == out.GetUnitDenominator() && in.GetMeasure() == TemperatureC && out.GetMeasure() == TemperatureF {
 		return convertTempC2TempF, nil
-	} else if in.GetMeasure() == TemperatureF && out.GetMeasure() == TemperatureC {
+	} else if in.GetUnitDenominator() == out.GetUnitDenominator() && in.GetMeasure() == TemperatureF && out.GetMeasure() == TemperatureC {
 		return convertTempF2TempC, nil
 	} else if in.GetMeasure() != out.GetMeasure() || in.GetUnitDenominator() != out.GetUnitDenominator() {
 		return func(value any) any { return 1.0 }, fmt.Errorf("invalid measures in in and out Unit")
@@ -211,6 +224,9 @@ func NewUnit(unitStr string) Unit {
 	if len(matches) > 2 {
 		pre := NewPrefix(matches[1])
 		measures := strings.Split(matches[2], "/")
+		if len(measures) > 2 {
+			return INVALID_UNIT
+		}
 		m := NewMeasure(measures[0])
 		// Special case for prefix 'p' or 'P' (Peta) and measures starting with 'p' or 'P'
 		// like 'packets' or 'percent'. Same for 'e' or 'E' (Exa) for measures starting with
@@ -228,11 +244,17 @@ func NewUnit(unitStr string) Unit {
 		div := InvalidMeasure
 		if len(measures) > 1 {
 			div = NewMeasure(measures[1])
+			if div == InvalidMeasure {
+				return INVALID_UNIT
+			}
 		}
 
 		switch m {
 		// Special case for 'm' as prefix for Bytes and some others as thers is no unit like MilliBytes
 		case Bytes, Flops, Packets, Events, Cycles, Requests:
+			if pre == Micro || pre == Nano {
+				return u
+			}
 			if pre == Milli {
 				pre = Mega
 			}

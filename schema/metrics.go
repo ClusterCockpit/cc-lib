@@ -273,12 +273,15 @@ func (jm *JobMetric) AddStatisticsSeries() {
 	// mean := make([]Float, n)
 	min, median, max := make([]Float, n), make([]Float, n), make([]Float, n)
 	i := 0
-	for ; i < m; i++ {
+	for ; i < n; i++ {
 		seriesCount := len(jm.Series)
 		// ssum := 0.0
-		smin, smed, smax := math.MaxFloat32, make([]float64, seriesCount), -math.MaxFloat32
+		smin, smed, smax := math.MaxFloat32, make([]float64, 0, seriesCount), -math.MaxFloat32
 		notnan := 0
 		for j := range seriesCount {
+			if i >= len(jm.Series[j].Data) {
+				continue
+			}
 			x := float64(jm.Series[j].Data[i])
 			if math.IsNaN(x) {
 				continue
@@ -286,7 +289,7 @@ func (jm *JobMetric) AddStatisticsSeries() {
 
 			notnan += 1
 			// ssum += x
-			smed[j] = x
+			smed = append(smed, x)
 			smin = math.Min(smin, x)
 			smax = math.Max(smax, x)
 		}
@@ -461,7 +464,7 @@ func (jm *JobMetric) AddPercentiles(ps []int) bool {
 		jm.AddStatisticsSeries()
 	}
 
-	if len(jm.Series) < 3 {
+	if len(jm.Series) < 3 || jm.StatisticsSeries == nil {
 		return false
 	}
 
@@ -480,7 +483,7 @@ func (jm *JobMetric) AddPercentiles(ps []int) bool {
 	for i := range n {
 		vals := make([]float64, 0, len(jm.Series))
 		for _, series := range jm.Series {
-			if i < len(series.Data) {
+			if i < len(series.Data) && !series.Data[i].IsNaN() {
 				vals = append(vals, float64(series.Data[i]))
 			}
 		}
@@ -501,6 +504,10 @@ func (jm *JobMetric) AddPercentiles(ps []int) bool {
 		percentiles := make([]Float, n)
 		for i := range n {
 			sorted := data[i]
+			if len(sorted) == 0 {
+				percentiles[i] = NaN
+				continue
+			}
 			percentiles[i] = Float(sorted[(len(sorted)*p)/100])
 		}
 

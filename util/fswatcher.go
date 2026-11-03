@@ -22,31 +22,37 @@ type Listener interface {
 }
 
 var (
-	initOnce  sync.Once
-	w         *fsnotify.Watcher
-	listeners []Listener
+	listenersMu sync.RWMutex
+	initOnce    sync.Once
+	w           *fsnotify.Watcher
+	listeners   []Listener
 )
 
 // AddListener registers a new file system watcher for the specified path.
 // The watcher is initialized on the first call to AddListener.
 // The listener will be notified of file system events matching its EventMatch criteria.
 func AddListener(path string, l Listener) {
-	var err error
-
 	initOnce.Do(func() {
-		var err error
-		w, err = fsnotify.NewWatcher()
+		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
-			cclog.Error("creating a new watcher: %w", err)
+			cclog.Errorf("creating a new watcher: %v", err)
+			return
 		}
+		listenersMu.Lock()
+		w = watcher
 		listeners = make([]Listener, 0)
-
-		go watchLoop(w)
+		listenersMu.Unlock()
+		go watchLoop(watcher)
 	})
-
+	listenersMu.Lock()
+	watcher := w
+	if watcher == nil {
+		listenersMu.Unlock()
+		return
+	}
 	listeners = append(listeners, l)
-	err = w.Add(path)
-	if err != nil {
+	listenersMu.Unlock()
+	if err := watcher.Add(path); err != nil {
 		cclog.Warnf("%q: %s", path, err)
 	}
 }
@@ -54,8 +60,11 @@ func AddListener(path string, l Listener) {
 // FsWatcherShutdown closes the file system watcher.
 // This should be called during application shutdown to clean up resources.
 func FsWatcherShutdown() {
-	if w != nil {
-		w.Close()
+	listenersMu.RLock()
+	watcher := w
+	listenersMu.RUnlock()
+	if watcher != nil {
+		watcher.Close()
 	}
 }
 
@@ -75,7 +84,10 @@ func watchLoop(w *fsnotify.Watcher) {
 			}
 
 			cclog.Infof("Event %s", e)
-			for _, l := range listeners {
+			listenersMu.RLock()
+			current := append([]Listener(nil), listeners...)
+			listenersMu.RUnlock()
+			for _, l := range current {
 				if l.EventMatch(e.String()) {
 					l.EventCallback()
 				}

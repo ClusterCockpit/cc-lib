@@ -188,6 +188,8 @@ func (s *HttpSink) Flush() error {
 		return errors.New("flush failed due to repeated errors")
 	}
 
+	defer res.Body.Close()
+
 	// Handle application errors
 	if res.StatusCode != http.StatusOK {
 		err := errors.New(res.Status)

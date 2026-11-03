@@ -198,7 +198,7 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 	if err != nil {
 		return nil, 0, err
 	}
-	if newDataLength == -1 {
+	if newDataLength < 2 {
 		return data, oldFrequency, nil
 	}
 
@@ -224,6 +224,13 @@ func LargestTriangleThreeBucket(data []schema.Float, oldFrequency int64, newFreq
 		bucketHigh := int(math.Floor(float64(i+2)*bucketSize)) + 1
 		if bucketHigh >= len(data)-1 {
 			bucketHigh = len(data) - 2
+		}
+
+		// The final candidate bucket includes the last interior point;
+		// its lookahead is the separately retained endpoint.
+		if i == newDataLength-3 {
+			bucketMiddle = len(data) - 1
+			bucketHigh = len(data) - 1
 		}
 
 		// Calculate average point for next bucket (point c in triangle)
