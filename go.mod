@@ -11,7 +11,7 @@ require (
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/nats-io/nats-server/v2 v2.15.1
 	github.com/nats-io/nats.go v1.54.0
-	github.com/nats-io/nkeys v0.4.16
+	github.com/nats-io/nkeys v0.4.17
 	github.com/prometheus/client_golang v1.25.0
 	github.com/questdb/go-questdb-client/v4 v4.2.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
