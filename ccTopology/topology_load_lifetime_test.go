@@ -43,34 +43,42 @@ func TestTopology_LoadFailureReleasesContext(t *testing.T) {
 		}
 		return
 	}
-	t.Setenv("HWLOC_SYNTHETIC", "")
-	xml := filepath.Join(t.TempDir(), "truncated.xml")
-	if err := os.WriteFile(xml, []byte(`<topology version="2.0">`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("HWLOC_XMLFILE", xml)
-	_ccTopology_local_topo = nil
-	for attempt := 1; attempt <= 3; attempt++ {
-		if _, err := LocalTopology(); err == nil {
-			t.Fatal("truncated XML unexpectedly loaded")
-		}
+	readCounts := func() (counts struct{ Initialized, Failed, Loaded, Destroyed int }) {
+		t.Helper()
 		data, err := os.ReadFile(os.Getenv("CC_TOPOLOGY_LIFETIME_TRACE"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		var counts struct{ Initialized, Failed, Loaded, Destroyed int }
 		if err := json.Unmarshal(data, &counts); err != nil {
 			t.Fatal(err)
 		}
+		return counts
+	}
+
+	// hwloc falls back to native discovery when an env-selected backend such as
+	// HWLOC_XMLFILE fails, so the preloaded probe injects the load failure instead.
+	// os.Setenv propagates to the C environment in cgo binaries.
+	t.Setenv("CC_TOPOLOGY_LIFETIME_FAIL_LOAD", "1")
+	_ccTopology_local_topo = nil
+	for attempt := 1; attempt <= 3; attempt++ {
+		if _, err := LocalTopology(); err == nil {
+			t.Fatal("injected load failure was not reported")
+		}
+		counts := readCounts()
 		if counts.Initialized != attempt || counts.Failed != attempt || counts.Destroyed != attempt || counts.Loaded != 0 {
 			t.Errorf("failed attempt %d leaked native context: %+v", attempt, counts)
 		}
 	}
-	t.Setenv("HWLOC_XMLFILE", "")
+
+	t.Setenv("CC_TOPOLOGY_LIFETIME_FAIL_LOAD", "0")
 	t.Setenv("HWLOC_SYNTHETIC", "package:1 numa:1 core:1 pu:2")
 	topo, err := LocalTopology()
 	if err != nil {
 		t.Fatal(err)
+	}
+	// A successful context must stay alive: cpusets are read from it later.
+	if counts := readCounts(); counts.Loaded != 1 || counts.Destroyed != 3 {
+		t.Errorf("successful load not retained: %+v", counts)
 	}
 	if cpus := topo.GetHwthreadsOfMemoryDomain(0); len(cpus) != 2 {
 		t.Fatalf("successful context is not live: %v", cpus)

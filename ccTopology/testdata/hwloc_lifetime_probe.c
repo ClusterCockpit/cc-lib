@@ -5,6 +5,7 @@
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "hwloc.h"
@@ -21,6 +22,10 @@ int hwloc_topology_init(hwloc_topology_t *topology) {
  int result=next(topology);if(result==0) initialized++;trace();return result;
 }
 int hwloc_topology_load(hwloc_topology_t topology) {
+ /* hwloc falls back to native discovery when an env-selected backend (e.g. HWLOC_XMLFILE)
+    fails, so a load failure cannot be provoked reliably from outside. Inject it here. */
+ const char *fail=getenv("CC_TOPOLOGY_LIFETIME_FAIL_LOAD");
+ if (fail && fail[0]=='1') { failed++; trace(); errno=EINVAL; return -1; }
  int (*next)(hwloc_topology_t)=dlsym(RTLD_NEXT,"hwloc_topology_load");
  int result=next(topology);if(result==0) loaded++;else failed++;trace();return result;
 }

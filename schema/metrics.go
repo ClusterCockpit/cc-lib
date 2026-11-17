@@ -260,20 +260,16 @@ func (jm *JobMetric) AddStatisticsSeries() {
 		return
 	}
 
-	n, m := 0, len(jm.Series[0].Data)
+	n := 0
 	for _, series := range jm.Series {
 		if len(series.Data) > n {
 			n = len(series.Data)
-		}
-		if len(series.Data) < m {
-			m = len(series.Data)
 		}
 	}
 
 	// mean := make([]Float, n)
 	min, median, max := make([]Float, n), make([]Float, n), make([]Float, n)
-	i := 0
-	for ; i < n; i++ {
+	for i := range n {
 		seriesCount := len(jm.Series)
 		// ssum := 0.0
 		smin, smed, smax := math.MaxFloat32, make([]float64, 0, seriesCount), -math.MaxFloat32
@@ -311,13 +307,6 @@ func (jm *JobMetric) AddStatisticsSeries() {
 				median[i] = Float(medianRaw)
 			}
 		}
-	}
-
-	for ; i < n; i++ {
-		min[i] = NaN
-		// mean[i] = NaN
-		median[i] = NaN
-		max[i] = NaN
 	}
 
 	if smooth {

@@ -26,6 +26,7 @@ func TestNonfiniteJSON_RejectsUnrepresentableNumbers(t *testing.T) {
 		t.Errorf("nonfinite statistics emitted %q without error", data)
 	}
 }
+
 func TestNonfiniteJSON_PreservesMissingContract(t *testing.T) {
 	for _, item := range []json.Marshaler{NaN, FloatArray{NaN}, &Series{Hostname: "node001", Data: []Float{NaN}}} {
 		data, err := item.MarshalJSON()
@@ -34,6 +35,7 @@ func TestNonfiniteJSON_PreservesMissingContract(t *testing.T) {
 		}
 	}
 }
+
 func TestNonfiniteGraphQL_UsesNullableScalar(t *testing.T) {
 	for _, value := range []Float{NaN, Float(math.Inf(1)), Float(math.Inf(-1))} {
 		var output bytes.Buffer

@@ -14,7 +14,7 @@ import (
 func TestCheckFileExists_NonDirectoryPath(t *testing.T) {
 	directory := t.TempDir()
 	file := filepath.Join(directory, "file")
-	if err := os.WriteFile(file, []byte("owned fixture"), 0600); err != nil {
+	if err := os.WriteFile(file, []byte("owned fixture"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if !CheckFileExists(directory) || !CheckFileExists(file) {

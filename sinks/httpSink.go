@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"sync"
@@ -188,7 +189,11 @@ func (s *HttpSink) Flush() error {
 		return errors.New("flush failed due to repeated errors")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		// Drain the body so the keep-alive connection can be reused.
+		_, _ = io.Copy(io.Discard, res.Body)
+		res.Body.Close()
+	}()
 
 	// Handle application errors
 	if res.StatusCode != http.StatusOK {

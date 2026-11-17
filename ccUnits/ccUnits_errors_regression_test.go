@@ -87,8 +87,14 @@ func TestUnitConverters_ValidControls(t *testing.T) {
 		input, output string
 		value, want   float64
 	}{
-		{"KB/s", "MB/s", 1000, 1}, {"KiB", "B", 1, 1024}, {"us", "s", 1000000, 1}, {"ns", "s", 1000000000, 1},
-		{"degC", "degF", 0, 32}, {"degC", "degF", 100, 212}, {"degF", "degC", 32, 0}, {"degF", "degC", 212, 100},
+		{"KB/s", "MB/s", 1000, 1},
+		{"KiB", "B", 1, 1024},
+		{"us", "s", 1000000, 1},
+		{"ns", "s", 1000000000, 1},
+		{"degC", "degF", 0, 32},
+		{"degC", "degF", 100, 212},
+		{"degF", "degC", 32, 0},
+		{"degF", "degC", 212, 100},
 	} {
 		convert, err := GetUnitUnitFactor(NewUnit(tc.input), NewUnit(tc.output))
 		if err != nil || convert == nil {
