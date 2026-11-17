@@ -72,7 +72,10 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 	"sync"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
@@ -105,7 +108,7 @@ func Connect() {
 
 		client, err := NewClient(nil)
 		if err != nil {
-			cclog.Warnf("NATS connection failed: %v", err)
+			cclog.Warnf("NATS connection failed: %s", connectionErrorForLog(err))
 			return
 		}
 
@@ -180,17 +183,17 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 	opts = append(opts, nats.RetryOnFailedConnect(true), nats.MaxReconnects(-1))
 
 	opts = append(opts, nats.ConnectHandler(func(nc *nats.Conn) {
-		cclog.Infof("NATS connected to %s", nc.ConnectedUrl())
+		cclog.Infof("NATS connected to %s", addressForLog(nc.ConnectedUrl()))
 	}))
 
 	opts = append(opts, nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 		if err != nil {
-			cclog.Warnf("NATS disconnected: %v", err)
+			cclog.Warnf("NATS disconnected: %s", connectionErrorForLog(err))
 		}
 	}))
 
 	opts = append(opts, nats.ReconnectHandler(func(nc *nats.Conn) {
-		cclog.Infof("NATS reconnected to %s", nc.ConnectedUrl())
+		cclog.Infof("NATS reconnected to %s", addressForLog(nc.ConnectedUrl()))
 	}))
 
 	opts = append(opts, nats.ErrorHandler(func(_ *nats.Conn, sub *nats.Subscription, err error) {
@@ -198,9 +201,9 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 			pending, _, _ := sub.Pending()
 			dropped, _ := sub.Dropped()
 			cclog.Errorf("NATS error on subject '%s' (queue: '%s', pending: %d, dropped: %d): %v",
-				sub.Subject, sub.Queue, pending, dropped, err)
+				sub.Subject, sub.Queue, pending, dropped, connectionErrorForLog(err))
 		} else {
-			cclog.Errorf("NATS error: %v", err)
+			cclog.Errorf("NATS error: %s", connectionErrorForLog(err))
 		}
 	}))
 
@@ -210,7 +213,7 @@ func NewClient(cfg *NatsConfig) (*Client, error) {
 	}
 
 	if !nc.IsConnected() {
-		cclog.Warnf("NATS server %s not reachable, connecting in background", cfg.Address)
+		cclog.Warnf("NATS server %s not reachable, connecting in background", addressForLog(cfg.Address))
 	}
 
 	return &Client{
@@ -316,4 +319,37 @@ func (c *Client) IsConnected() bool {
 // Connection returns the underlying NATS connection for advanced usage.
 func (c *Client) Connection() *nats.Conn {
 	return c.conn
+}
+
+// addressForLog removes password and token userinfo while retaining endpoints.
+// NATS accepts schemeless addresses and comma-separated server lists as well.
+func addressForLog(address string) string {
+	servers := strings.Split(address, ",")
+	for i, server := range servers {
+		server = strings.TrimSpace(server)
+		if !strings.Contains(server, "://") {
+			server = "nats://" + server
+		}
+		parsed, err := url.Parse(server)
+		if err != nil {
+			servers[i] = "[invalid NATS address]"
+			continue
+		}
+		parsed.User = nil
+		servers[i] = parsed.String()
+	}
+	return strings.Join(servers, ",")
+}
+
+// connectionErrorForLog redacts nested URL errors only for diagnostics.
+// The original error and its unwrap identity are never modified.
+func connectionErrorForLog(err error) string {
+	if err == nil {
+		return ""
+	}
+	var addressError *url.Error
+	if errors.As(err, &addressError) {
+		return fmt.Sprintf("%s %s: %v", addressError.Op, addressForLog(addressError.URL), addressError.Err)
+	}
+	return err.Error()
 }
