@@ -190,6 +190,7 @@ func (c *Cache) Get(key string, computeValue ComputeValue) any {
 	now := time.Now()
 
 	c.mutex.Lock()
+lookup:
 	if entry, ok := c.entries[key]; ok {
 		// The expiration not being set is what shows us that
 		// the computation of that value is still ongoing.
@@ -197,6 +198,11 @@ func (c *Cache) Get(key string, computeValue ComputeValue) any {
 			entry.waitingForComputation += 1
 			c.cond.Wait()
 			entry.waitingForComputation -= 1
+		}
+		// A failed computation removes its entry before waking waiters.
+		// Retry against the map instead of using the abandoned entry.
+		if c.entries[key] != entry {
+			goto lookup
 		}
 
 		if now.After(entry.expiration) {
@@ -236,6 +242,9 @@ func (c *Cache) Get(key string, computeValue ComputeValue) any {
 			delete(c.entries, key)
 			entry.expiration = now
 			entry.waitingForComputation -= 1
+			if entry.waitingForComputation > 0 {
+				c.cond.Broadcast()
+			}
 		}
 		c.mutex.Unlock()
 	}()
@@ -299,31 +308,37 @@ func (c *Cache) Put(key string, value any, size int, ttl time.Duration) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if entry, ok := c.entries[key]; ok {
+lookup:
+	entry, exists := c.entries[key]
+	if exists {
 		for entry.expiration.IsZero() {
-			entry.waitingForComputation += 1
+			entry.waitingForComputation++
 			c.cond.Wait()
-			entry.waitingForComputation -= 1
+			entry.waitingForComputation--
 		}
-
+		if c.entries[key] != entry {
+			goto lookup
+		}
 		c.usedmemory -= entry.size
-		entry.expiration = now.Add(ttl)
-		entry.size = size
-		entry.value = value
-		c.usedmemory += entry.size
-
 		c.unlinkEntry(entry)
-		c.insertFront(entry)
-		return
+	} else {
+		entry = &cacheEntry{key: key}
+		c.entries[key] = entry
 	}
-
-	entry := &cacheEntry{
-		key:        key,
-		value:      value,
-		expiration: now.Add(ttl),
-	}
-	c.entries[key] = entry
+	entry.value = value
+	entry.size = size
+	entry.expiration = now.Add(ttl)
+	c.usedmemory += size
 	c.insertFront(entry)
+
+	// Apply the same budget and in-flight-reader rules as Get.
+	for candidate := c.tail; c.usedmemory > c.maxmemory && candidate != nil; {
+		previous := candidate.prev
+		if (candidate.size > 0 || now.After(candidate.expiration)) && candidate.waitingForComputation == 0 {
+			c.evictEntry(candidate)
+		}
+		candidate = previous
+	}
 }
 
 // Del removes the entry with the given key from the cache.
