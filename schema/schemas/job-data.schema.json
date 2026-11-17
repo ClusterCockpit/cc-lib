@@ -36,7 +36,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "mem_bw": {
       "description": "Main memory bandwidth",
@@ -51,7 +55,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "net_bw": {
       "description": "Total fast interconnect network bandwidth",
@@ -84,7 +92,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "cpu_user": {
       "description": "CPU user active core utilization",
@@ -105,7 +117,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "cpu_load": {
       "description": "CPU requested core utilization (load 1m)",
@@ -116,6 +132,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "flops_dp": {
@@ -137,7 +157,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "flops_sp": {
       "description": "Single precision flops rate",
@@ -158,7 +182,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "vectorization_ratio": {
       "description": "Fraction of arithmetic instructions using SIMD instructions",
@@ -179,7 +207,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "cpu_power": {
       "description": "CPU power consumption",
@@ -191,7 +223,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "mem_power": {
       "description": "Memory power consumption",
@@ -203,7 +239,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "acc_utilization": {
       "description": "GPU utilization",
@@ -214,6 +254,10 @@
       },
       "required": [
         "accelerator"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "acc_mem_used": {
@@ -225,6 +269,10 @@
       },
       "required": [
         "accelerator"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "acc_power": {
@@ -236,6 +284,10 @@
       },
       "required": [
         "accelerator"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "clock": {
@@ -257,7 +309,11 @@
           "$ref": "embedfs://job-metric-data.schema.json"
         }
       },
-      "minProperties": 1
+      "minProperties": 1,
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "eth_read_bw": {
       "description": "Ethernet read bandwidth",
@@ -268,6 +324,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "eth_write_bw": {
@@ -279,6 +339,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "ic_rcv_packets": {
@@ -290,6 +354,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "ic_send_packets": {
@@ -301,6 +369,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "ic_read_bw": {
@@ -312,6 +384,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     },
     "ic_write_bw": {
@@ -323,6 +399,10 @@
       },
       "required": [
         "node"
+      ],
+      "type": [
+        "object",
+        "null"
       ]
     }
   },

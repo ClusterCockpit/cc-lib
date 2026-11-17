@@ -222,7 +222,12 @@ func (topo *Topology) GetSocketsFromHWThreads(
 ) (sockets []int, exclusive bool) {
 	// Count hwthreads per socket from input
 	socketsMap := make(map[int]int)
+	seen := make(map[int]struct{}, len(hwthreads))
 	for _, hwt := range hwthreads {
+		if _, ok := seen[hwt]; ok {
+			continue
+		}
+		seen[hwt] = struct{}{}
 		for _, socketID := range topo.hwthreadToSocket[hwt] {
 			socketsMap[socketID]++
 		}
@@ -245,7 +250,12 @@ func (topo *Topology) GetSocketsFromCores(
 	cores []int,
 ) (sockets []int, exclusive bool) {
 	socketsMap := make(map[int]int)
+	seen := make(map[int]struct{}, len(cores))
 	for _, core := range cores {
+		if _, ok := seen[core]; ok {
+			continue
+		}
+		seen[core] = struct{}{}
 		for _, socketID := range topo.coreToSocket[core] {
 			socketsMap[socketID]++
 		}
@@ -268,7 +278,12 @@ func (topo *Topology) GetCoresFromHWThreads(
 	hwthreads []int,
 ) (cores []int, exclusive bool) {
 	coresMap := make(map[int]int)
+	seen := make(map[int]struct{}, len(hwthreads))
 	for _, hwt := range hwthreads {
+		if _, ok := seen[hwt]; ok {
+			continue
+		}
+		seen[hwt] = struct{}{}
 		for _, coreID := range topo.hwthreadToCore[hwt] {
 			coresMap[coreID]++
 		}
@@ -292,7 +307,12 @@ func (topo *Topology) GetMemoryDomainsFromHWThreads(
 	hwthreads []int,
 ) (memDoms []int, exclusive bool) {
 	memDomsMap := make(map[int]int)
+	seen := make(map[int]struct{}, len(hwthreads))
 	for _, hwt := range hwthreads {
+		if _, ok := seen[hwt]; ok {
+			continue
+		}
+		seen[hwt] = struct{}{}
 		for _, memDomID := range topo.hwthreadToMemoryDomain[hwt] {
 			memDomsMap[memDomID]++
 		}

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"syscall"
 
 	cclog "github.com/ClusterCockpit/cc-lib/v2/ccLogger"
 )
@@ -17,7 +18,7 @@ import (
 // Returns true if the file exists, false otherwise.
 func CheckFileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
-	return !errors.Is(err, os.ErrNotExist)
+	return !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR)
 }
 
 // GetFilesize returns the size of a file in bytes.

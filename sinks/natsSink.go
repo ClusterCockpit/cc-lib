@@ -88,7 +88,7 @@ func (s *NatsSink) Write(m lp.CCMessage) error {
 		s.encoderLock.Lock()
 
 		// Add message to encoder
-		err = EncoderAdd(&s.encoder, m)
+		err = EncoderAdd(&s.encoder, msg)
 
 		// Unlock encoder usage
 		s.encoderLock.Unlock()
@@ -160,8 +160,17 @@ func (s *NatsSink) Close() {
 			s.timerLock.Unlock()
 		}
 	}
+	// If a timer has fired, it owns timerLock until publishing completes.
+	s.timerLock.Lock()
+	defer s.timerLock.Unlock()
+	defer s.client.Close()
+	if err := s.Flush(); err != nil {
+		cclog.ComponentError(s.name, "Close(): Flush failed:", err)
+	}
+	if err := s.client.Flush(); err != nil {
+		cclog.ComponentError(s.name, "Close(): NATS flush failed:", err)
+	}
 	cclog.ComponentDebug(s.name, "Close NATS connection")
-	s.client.Close()
 }
 
 func NewNatsSink(name string, config json.RawMessage) (Sink, error) {

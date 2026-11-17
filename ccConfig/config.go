@@ -116,9 +116,9 @@ func Init(filename string) {
 
 	// Process each key-value pair, handling file references
 	for k, v := range jkeys {
-		s := strings.Split(k, "-")
+		packageName, isFile := strings.CutSuffix(k, "-file")
 		// Check if this is a file reference (key ends with "-file")
-		if len(s) == 2 && s[1] == "file" {
+		if isFile && packageName != "" {
 			var filename string
 			err := json.Unmarshal(v, &filename)
 			if err != nil {
@@ -129,7 +129,7 @@ func Init(filename string) {
 				cclog.ComponentError("ccConfig", err.Error())
 			}
 
-			keys[s[0]] = b
+			keys[packageName] = b
 		} else {
 			keys[k] = jkeys[k]
 		}

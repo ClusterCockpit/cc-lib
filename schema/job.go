@@ -171,8 +171,12 @@ const (
 )
 
 func (j Job) GoString() string {
+	id := int64(0)
+	if j.ID != nil {
+		id = *j.ID
+	}
 	return fmt.Sprintf("Job{ID:%d, StartTime:%d, JobID:%v, BaseJob:%v}",
-		j.ID, j.StartTime, j.JobID, j)
+		id, j.StartTime, j.JobID, j)
 }
 
 func (e *JobState) UnmarshalGQL(v any) error {

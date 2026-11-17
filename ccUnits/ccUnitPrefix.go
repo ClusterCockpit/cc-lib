@@ -33,7 +33,7 @@ const (
 	Zebi                 = 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
 	Yobi                 = 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
 )
-const PrefixUnitSplitRegexStr = `^([kKmMgGtTpPeEzZyY]?[i]?)(.*)`
+const PrefixUnitSplitRegexStr = `^([kKmMgGtTpPeEzZyYun]?[i]?)(.*)`
 
 var prefixUnitSplitRegex = regexp.MustCompile(PrefixUnitSplitRegexStr)
 

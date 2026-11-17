@@ -18,129 +18,220 @@
       "description": "Statistics series across topology",
       "properties": {
         "min": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0
-          },
-          "minItems": 3
+          }
         },
         "max": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0
-          },
-          "minItems": 3
+          }
         },
         "mean": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0
-          },
-          "minItems": 3
+          }
         },
         "median": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0
-          },
-          "minItems": 3
+          }
         },
         "percentiles": {
           "type": "object",
           "properties": {
             "10": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "30": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "40": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "50": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "60": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "70": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "80": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "90": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "25": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             },
             "75": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
-                "type": "number",
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "minimum": 0
-              },
-              "minItems": 3
+              }
             }
-          }
+          },
+          "patternProperties": {
+            "^[+-]?[0-9]+$": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              }
+            }
+          },
+          "additionalProperties": false
         }
       }
     },
@@ -187,7 +278,13 @@
               "type": "number",
               "minimum": 0
             },
-            "minItems": 1
+            "minItems": 1,
+            "items": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
           }
         },
         "required": [
