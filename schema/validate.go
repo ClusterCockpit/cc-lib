@@ -39,12 +39,16 @@ var schemaFiles embed.FS
 //
 // The reader should contain JSON-encoded data to validate.
 // Returns nil if validation succeeds, or an error describing validation failures.
+// Validate is safe to call concurrently with separate readers.
 //
 // Example:
 //
 //	err := schema.Validate(schema.ClusterCfg, bytes.NewReader(clusterJSON))
 func Validate(k Kind, r io.Reader) error {
-	jsonschema.Loaders["embedfs"] = func(s string) (io.ReadCloser, error) {
+	// Keep loader registration local to this compiler. The package-level Loaders
+	// map is shared by all callers and cannot be changed during validation.
+	compiler := jsonschema.NewCompiler()
+	compiler.LoadURL = func(s string) (io.ReadCloser, error) {
 		f := filepath.Join("schemas", strings.Split(s, "//")[1])
 		return schemaFiles.Open(f)
 	}
@@ -53,11 +57,11 @@ func Validate(k Kind, r io.Reader) error {
 
 	switch k {
 	case Meta:
-		s, err = jsonschema.Compile("embedfs://job-meta.schema.json")
+		s, err = compiler.Compile("embedfs://job-meta.schema.json")
 	case Data:
-		s, err = jsonschema.Compile("embedfs://job-data.schema.json")
+		s, err = compiler.Compile("embedfs://job-data.schema.json")
 	case ClusterCfg:
-		s, err = jsonschema.Compile("embedfs://cluster.schema.json")
+		s, err = compiler.Compile("embedfs://cluster.schema.json")
 	default:
 		return fmt.Errorf("SCHEMA/VALIDATE > unknown schema kind: %#v", k)
 	}
