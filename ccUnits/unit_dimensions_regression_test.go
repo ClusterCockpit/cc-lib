@@ -32,10 +32,14 @@ func TestUnitDenominatorValidation(t *testing.T) {
 		measure     Measure
 		denominator Measure
 	}{
-		{"B", Bytes, InvalidMeasure}, {"KB", Bytes, InvalidMeasure},
-		{"B/s", Bytes, Time}, {"Flops/B", Flops, Bytes},
-		{"W/B", Watt, Bytes}, {"degC", TemperatureC, InvalidMeasure},
-		{"degC/s", TemperatureC, Time}, {"degF/J", TemperatureF, Joule},
+		{"B", Bytes, InvalidMeasure},
+		{"KB", Bytes, InvalidMeasure},
+		{"B/s", Bytes, Time},
+		{"Flops/B", Flops, Bytes},
+		{"W/B", Watt, Bytes},
+		{"degC", TemperatureC, InvalidMeasure},
+		{"degC/s", TemperatureC, Time},
+		{"degF/J", TemperatureF, Joule},
 	} {
 		unit := NewUnit(tc.input)
 		if !unit.Valid() || unit.GetMeasure() != tc.measure || unit.GetUnitDenominator() != tc.denominator {
@@ -46,9 +50,15 @@ func TestUnitDenominatorValidation(t *testing.T) {
 
 func TestUnitTemperatureDenominatorCompatibility(t *testing.T) {
 	for _, tc := range []struct{ in, out string }{
-		{"degC/s", "degF"}, {"degC", "degF/s"}, {"degC/s", "degF/J"},
-		{"degF/s", "degC"}, {"degF", "degC/s"}, {"degF/J", "degC/s"},
-		{"degC/s", "degC"}, {"degF/s", "degF"}, {"KB/s", "MB/J"},
+		{"degC/s", "degF"},
+		{"degC", "degF/s"},
+		{"degC/s", "degF/J"},
+		{"degF/s", "degC"},
+		{"degF", "degC/s"},
+		{"degF/J", "degC/s"},
+		{"degC/s", "degC"},
+		{"degF/s", "degF"},
+		{"KB/s", "MB/J"},
 	} {
 		in, out := NewUnit(tc.in), NewUnit(tc.out)
 		if !in.Valid() || !out.Valid() {
@@ -62,8 +72,10 @@ func TestUnitTemperatureDenominatorCompatibility(t *testing.T) {
 		in, out     string
 		value, want float64
 	}{
-		{"degC", "degF", 0, 32}, {"degC", "degF", 100, 212},
-		{"degF", "degC", 32, 0}, {"degF", "degC", 212, 100},
+		{"degC", "degF", 0, 32},
+		{"degC", "degF", 100, 212},
+		{"degF", "degC", 32, 0},
+		{"degF", "degC", 212, 100},
 	} {
 		convert, err := GetUnitUnitFactor(NewUnit(tc.in), NewUnit(tc.out))
 		if err != nil || convert == nil {
@@ -81,8 +93,10 @@ func TestUnitDimensionCompatibility(t *testing.T) {
 		in, out     string
 		value, want float64
 	}{
-		{"KB/s", "MB/s", 2000, 2}, {"Flops/B", "MFlops/B", 2000000, 2},
-		{"us", "ns", 1, 1000}, {"ns", "us", 1000, 1},
+		{"KB/s", "MB/s", 2000, 2},
+		{"Flops/B", "MFlops/B", 2000000, 2},
+		{"us", "ns", 1, 1000},
+		{"ns", "us", 1000, 1},
 	} {
 		convert, err := GetUnitUnitFactor(NewUnit(tc.in), NewUnit(tc.out))
 		if err != nil || convert == nil {
@@ -115,8 +129,10 @@ func TestUnitDimensionCompatibility(t *testing.T) {
 		in, out         string
 		value, observed float64
 	}{
-		{"KdegC", "degF", 1, 33.8}, {"degC", "KdegF", 1, 33.8},
-		{"degC/s", "degF/s", 1, 33.8}, {"degF/s", "degC/s", 33.8, 1},
+		{"KdegC", "degF", 1, 33.8},
+		{"degC", "KdegF", 1, 33.8},
+		{"degC/s", "degF/s", 1, 33.8},
+		{"degF/s", "degC/s", 33.8, 1},
 	} {
 		convert, err := GetUnitUnitFactor(NewUnit(tc.in), NewUnit(tc.out))
 		if err != nil || convert == nil {

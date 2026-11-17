@@ -52,15 +52,43 @@ func TestNewUnit_MicroNanoPrefixes(t *testing.T) {
 		short string
 		value Prefix
 	}{
-		{"", Base}, {"K", Kilo}, {"M", Mega}, {"G", Giga}, {"T", Tera}, {"P", Peta}, {"E", Exa}, {"Z", Zetta}, {"Y", Yotta},
-		{"m", Milli}, {"Ki", Kibi}, {"Mi", Mebi}, {"Gi", Gibi}, {"Ti", Tebi}, {"Pi", Pebi}, {"Ei", Exbi}, {"Zi", Zebi}, {"Yi", Yobi},
+		{"", Base},
+		{"K", Kilo},
+		{"M", Mega},
+		{"G", Giga},
+		{"T", Tera},
+		{"P", Peta},
+		{"E", Exa},
+		{"Z", Zetta},
+		{"Y", Yotta},
+		{"m", Milli},
+		{"Ki", Kibi},
+		{"Mi", Mebi},
+		{"Gi", Gibi},
+		{"Ti", Tebi},
+		{"Pi", Pebi},
+		{"Ei", Exbi},
+		{"Zi", Zebi},
+		{"Yi", Yobi},
 	}
 	measures := []struct {
 		short string
 		value Measure
 	}{
-		{"B", Bytes}, {"Flops", Flops}, {"%", Percentage}, {"degC", TemperatureC}, {"degF", TemperatureF}, {"RPM", Rotation}, {"Hz", Frequency},
-		{"s", Time}, {"W", Watt}, {"J", Joule}, {"cyc", Cycles}, {"requests", Requests}, {"packets", Packets}, {"events", Events},
+		{"B", Bytes},
+		{"Flops", Flops},
+		{"%", Percentage},
+		{"degC", TemperatureC},
+		{"degF", TemperatureF},
+		{"RPM", Rotation},
+		{"Hz", Frequency},
+		{"s", Time},
+		{"W", Watt},
+		{"J", Joule},
+		{"cyc", Cycles},
+		{"requests", Requests},
+		{"packets", Packets},
+		{"events", Events},
 	}
 	denominators := append([]struct {
 		short string

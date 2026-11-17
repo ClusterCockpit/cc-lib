@@ -46,7 +46,7 @@ int main(void) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "children.c")
 	binary := filepath.Join(dir, "children")
-	if err := os.WriteFile(input, fixture, 0600); err != nil {
+	if err := os.WriteFile(input, fixture, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if output, err := exec.Command(cc, "-Ihwloc", "-I.", input, "-o", binary).CombinedOutput(); err != nil {

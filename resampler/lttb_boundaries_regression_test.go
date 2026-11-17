@@ -6,8 +6,9 @@
 package resampler
 
 import (
-	"github.com/ClusterCockpit/cc-lib/v2/schema"
 	"testing"
+
+	"github.com/ClusterCockpit/cc-lib/v2/schema"
 )
 
 func TestLTTB_SingleTargetUsesConsistentResolution(t *testing.T) {

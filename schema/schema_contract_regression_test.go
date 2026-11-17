@@ -8,10 +8,11 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/santhosh-tekuri/jsonschema/v5"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
 func schemaContractCompile(t *testing.T, name string) *jsonschema.Schema {
@@ -29,9 +30,11 @@ func schemaContractCompile(t *testing.T, name string) *jsonschema.Schema {
 	}
 	return result
 }
+
 func schemaContractMetric() map[string]any {
 	return map[string]any{"unit": map[string]any{"base": "B"}, "timestep": 1, "series": []any{map[string]any{"hostname": "node001", "data": []any{1, 2, 3}, "statistics": map[string]any{"min": 1, "avg": 2, "max": 3}}}}
 }
+
 func schemaContractData() map[string]any {
 	result := map[string]any{}
 	for _, name := range []string{"cpu_user", "cpu_load", "mem_used", "flops_any", "mem_bw", "net_bw"} {
@@ -39,6 +42,7 @@ func schemaContractData() map[string]any {
 	}
 	return result
 }
+
 func schemaContractJSON(t *testing.T, value any) any {
 	t.Helper()
 	data, err := json.Marshal(value)
@@ -51,6 +55,7 @@ func schemaContractJSON(t *testing.T, value any) any {
 	}
 	return decoded
 }
+
 func TestSchemaContract_ScopeMapsRejectScalars(t *testing.T) {
 	schema := schemaContractCompile(t, "job-data.schema.json")
 	if err := schema.Validate(schemaContractJSON(t, schemaContractData())); err != nil {

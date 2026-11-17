@@ -45,7 +45,7 @@ func TestTopology_LoadFailureReleasesContext(t *testing.T) {
 	}
 	t.Setenv("HWLOC_SYNTHETIC", "")
 	xml := filepath.Join(t.TempDir(), "truncated.xml")
-	if err := os.WriteFile(xml, []byte(`<topology version="2.0">`), 0600); err != nil {
+	if err := os.WriteFile(xml, []byte(`<topology version="2.0">`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("HWLOC_XMLFILE", xml)

@@ -584,8 +584,10 @@ func (t *topology) init() error {
 	return nil
 }
 
-var _ccTopology_local_topo *topology = nil
-var localTopologyMu sync.Mutex
+var (
+	_ccTopology_local_topo *topology = nil
+	localTopologyMu        sync.Mutex
+)
 
 func LocalTopology() (Topology, error) {
 	localTopologyMu.Lock()
