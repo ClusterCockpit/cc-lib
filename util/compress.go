@@ -25,6 +25,10 @@ func CompressFile(fileIn string, fileOut string) error {
 	}
 	defer originalFile.Close()
 
+	if err := checkDistinctDestination(originalFile, fileOut); err != nil {
+		return err
+	}
+
 	gzippedFile, err := os.Create(fileOut)
 	if err != nil {
 		cclog.Errorf("CompressFile() error: %v", err)
@@ -40,7 +44,22 @@ func CompressFile(fileIn string, fileOut string) error {
 		cclog.Errorf("CompressFile() error: %v", err)
 		return err
 	}
-	gzipWriter.Flush()
+	if err := gzipWriter.Flush(); err != nil {
+		cclog.Errorf("CompressFile() error: %v", err)
+		return err
+	}
+	if err := gzipWriter.Close(); err != nil {
+		cclog.Errorf("CompressFile() error: %v", err)
+		return err
+	}
+	if err := gzippedFile.Close(); err != nil {
+		cclog.Errorf("CompressFile() error: %v", err)
+		return err
+	}
+	if err := originalFile.Close(); err != nil {
+		cclog.Errorf("CompressFile() error: %v", err)
+		return err
+	}
 	if err := os.Remove(fileIn); err != nil {
 		cclog.Errorf("CompressFile() error: %v", err)
 		return err
@@ -61,6 +80,10 @@ func UncompressFile(fileIn string, fileOut string) error {
 	}
 	defer gzippedFile.Close()
 
+	if err := checkDistinctDestination(gzippedFile, fileOut); err != nil {
+		return err
+	}
+
 	gzipReader, err := gzip.NewReader(gzippedFile)
 	if err != nil {
 		cclog.Errorf("UncompressFile() error creating gzip reader: %v", err)
@@ -77,6 +100,18 @@ func UncompressFile(fileIn string, fileOut string) error {
 
 	_, err = io.Copy(uncompressedFile, gzipReader)
 	if err != nil {
+		cclog.Errorf("UncompressFile() error: %v", err)
+		return err
+	}
+	if err := gzipReader.Close(); err != nil {
+		cclog.Errorf("UncompressFile() error: %v", err)
+		return err
+	}
+	if err := uncompressedFile.Close(); err != nil {
+		cclog.Errorf("UncompressFile() error: %v", err)
+		return err
+	}
+	if err := gzippedFile.Close(); err != nil {
 		cclog.Errorf("UncompressFile() error: %v", err)
 		return err
 	}
